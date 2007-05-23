@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Wed May 23 15:59:07 CEST 2007 - lslezak@suse.cz
+
+- 2.13.1
+
+-------------------------------------------------------------------
 Wed May 23 08:54:36 CEST 2007 - lslezak@suse.cz
 
 - copy the downloaded packages (moving might fail due to restricted
