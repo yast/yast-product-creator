@@ -1,0 +1,56 @@
+/**
+ * File:	include/product-creator/routines.ycp
+ * Package:	Configuration of product-creator
+ * Summary:	Miscelanous functions for configuration of product-creator.
+ * Authors:	Anas Nashif <nashif@suse.de>
+ *
+ * $Id$
+ */
+
+{
+
+textdomain "product-creator";
+import "Progress";
+import "Popup";
+import "SourceManager";
+
+/* FIXME: Remove this file if you do not need it! */
+
+/**
+ * Abort function
+ * @return blah blah lahjk
+ */
+global define boolean Abort() ``{
+    if(AbortFunction != nil)
+	return eval(AbortFunction) == true;
+    return false;
+}
+
+/**
+ * Check for pending Abort press
+ * @return true if pending abort
+ */
+global define boolean PollAbort() ``{
+    return UI::PollInput() == `abort;
+}
+
+/**
+ * If modified, ask for confirmation
+ * @return true if abort is confirmed
+ */
+global define boolean ReallyAbort() ``{
+    return !Modified() || Popup::ReallyAbort(true);
+}
+
+/**
+ * Progress::NextStage and Progress::Title combined into one function
+ * @param title progressbar title
+ */
+global define void ProgressNextStage(string title) ``{
+    Progress::NextStage();
+    Progress::Title(title);
+}
+
+
+/* EOF */
+}

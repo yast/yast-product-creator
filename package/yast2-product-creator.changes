@@ -1,0 +1,89 @@
+-------------------------------------------------------------------
+Wed May 23 08:54:36 CEST 2007 - lslezak@suse.cz
+
+- copy the downloaded packages (moving might fail due to restricted
+  permissions)
+- use cd:/// URL scheme in add_on_products file to automatically
+  add the addons during installation
+
+-------------------------------------------------------------------
+Tue May 22 16:49:28 CEST 2007 - lslezak@suse.cz
+
+- run the package selector when there is an unresolved dependency
+  when creating installation ISO
+
+-------------------------------------------------------------------
+Tue May 22 14:05:39 CEST 2007 - lslezak@suse.cz
+
+- escape XML entities in URL when writing the config file
+  (fixed saving of ISO file URL)
+
+-------------------------------------------------------------------
+Mon May 21 16:58:32 CEST 2007 - lslezak@suse.cz
+
+- fixed the default boot item in isolinux.cfg for AutoYast
+  installation (#275911)
+
+-------------------------------------------------------------------
+Mon May 21 14:34:30 CEST 2007 - lslezak@suse.cz
+
+- fixed workflow: display the GPG dialog also if an AutoYast
+  profile is used for package selection (#275913)
+
+-------------------------------------------------------------------
+Mon May 21 11:10:16 CEST 2007 - lslezak@suse.cz
+
+- always store isolinux.cfg into the config file, even if there
+  is no change (#275914)
+
+-------------------------------------------------------------------
+Wed May 16 14:23:57 CEST 2007 - jsuchome@suse.cz
+
+- added widgets for 'root' and 'config' directory editation
+- updated 'type' value of config.xml to kiwi 1.33
+- 2.13.0
+
+-------------------------------------------------------------------
+Fri Apr 27 15:18:22 CEST 2007 - jsuchome@suse.cz
+
+- added support for virtual disk systems (qemu, VMware) 
+
+-------------------------------------------------------------------
+Thu Apr 26 16:15:01 CEST 2007 - jsuchome@suse.cz
+
+- added support for USB stick images
+
+-------------------------------------------------------------------
+Thu Apr 26 12:59:54 CEST 2007 - lslezak@suse.cz
+
+- added runPackageSelector() function - general package selection
+- start "add" workflow if there is no configuration
+- added CDCreator::LoadConfig()/CommitConfig()
+
+-------------------------------------------------------------------
+Thu Apr 26 12:22:55 CEST 2007 - jsuchome@suse.cz
+
+- save the configuration to cd-creator xml
+- read the kiwi configuration from config.xml (ag_kiwi)
+- added support for more values (size, unit)
+- added XEN image support
+
+-------------------------------------------------------------------
+Thu Apr 19 15:48:59 CEST 2007 - jsuchome@suse.cz
+
+- run add-on-creator to create new installation sources
+- dialogs for Live ISO configuration (F301945)
+- install inst-source-utils instead of autoyast2-utils
+
+-------------------------------------------------------------------
+Thu Apr 19 15:44:34 CEST 2007 - lslezak@suse.cz
+
+- remember and set "taboo" packages
+- don't loose user selected packages when changing software selection
+- added content file cache - download each content file only once
+- detect base product
+- copy addons to Addons subdirectory
+- create "add_on_products" file
+- move downloaded packages (save space, might be faster)
+- fixed help text (network sources can be used as the package repository)
+- display source aliases

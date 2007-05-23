@@ -1,0 +1,2211 @@
+/**
+ * File:	modules/ProductCreator.ycp
+ * Package:	Configuration of product-creator
+ * Summary:	Data for configuration of product-creator, input and output functions.
+ * Authors:	Anas Nashif <nashif@suse.de>
+ *
+ * $Id$
+ *
+ * Representation of the configuration of product-creator.
+ * Input and output routines.
+ */
+
+{
+
+module "ProductCreator";
+textdomain "product-creator";
+
+import "Progress";
+import "Report";
+import "Summary";
+import "XML";
+import "URL";
+import "Profile";
+import "Misc";
+import "Directory";
+import "Profile";
+import "AutoinstSoftware";
+import "Arch";
+import "PackageAI";
+import "String";
+import "GPG";
+import "GPGWidgets";
+import "Mode";
+import "CommandLine";
+
+
+global define void enableSources();
+global define integer checkProductDependency();
+global define boolean readControlFile(string filename);
+global define boolean EnableSource();
+
+list<integer> old_enabled = [];
+
+// content file cache - avoid multiple content file downloading
+map<integer, map<string,string> > content_cache = $[];
+
+global string AYRepository = "";
+
+global map meta = $[];
+global map meta_local = $[];
+
+global list<string> missing_packages = [];
+
+// packages to copy
+// $[ source_id : $[ media_id : list<packages> ] ]
+map<integer, map<integer, list<map> > > toCopy = $[];
+
+/* Local variables */
+
+global string skel_root = "";
+
+
+global boolean profile_parsed = false;
+
+
+/* Configuration Map */
+global map<string, any> Config = $[];
+
+/* All Configurations */
+global map<string, map<string, any> > Configs = $[];
+
+/* Configuration Repository */
+global string Rep = "/var/lib/YaST2/cd-creator";
+
+/* Configuration file */
+global string ConfigFile = Rep + "/cdcreator.xml";
+
+global string gpg_passphrase = "";
+
+/**
+ * Abort function
+ * return boolean return true if abort
+ */
+global block<boolean> AbortFunction = nil;
+
+/**
+ * Data was modified?
+ */
+global boolean modified = false;
+
+global boolean proposal_valid = false;
+
+// What we want to create with kiwi
+global string kiwi_task	= "iso";
+
+/**
+ * Data was modified?
+ * @return true if modified
+ */
+global define boolean Modified() ``{
+    y2debug("modified=%1",modified);
+    return modified;
+};
+
+include "product-creator/routines.ycp";
+
+
+// set the packages to 'taboo' state
+global void MarkTaboo(list<string> packages_taboo)
+{
+    // remove packages (set to taboo)
+    if (packages_taboo != nil && size(packages_taboo) > 0)
+    {
+	foreach(string p, packages_taboo,
+	    {
+		y2milestone("marking taboo package: %1 -> %2", p, Pkg::PkgTaboo(p));
+	    }
+	);
+    }
+}
+
+global boolean isCode10Source()
+{
+    boolean code10 = false;
+    foreach (string url , ProductCreator::Config["sources"]:[],
+    {
+	integer i = SourceManager::getSourceId(url);
+
+	y2milestone("Downloading %1/boot/directory.yast...", url);
+	string local_directory_yast = Pkg::SourceProvideOptionalFile(i, 1, "/boot/directory.yast");
+
+	if (local_directory_yast != nil && local_directory_yast != "")
+	{
+	    // read directory.yast file
+	    string dir_listing = (string)SCR::Read(.target.string, local_directory_yast);
+
+	    if (dir_listing != nil && dir_listing != "")
+	    {
+		list<string> items = splitstring(dir_listing, "\n");
+
+		code10 = code10 || contains(items, Arch::architecture() + "/");
+	    }
+	}
+    });
+
+    y2milestone("CODE10 source: %1", code10);
+
+    return code10;
+}
+
+global void CheckCode10Source()
+{
+    // add code10 flag - /boot directory layout
+    ProductCreator::Config["code10"] = isCode10Source();
+}
+
+symbol autoyastPackages ()
+{
+    string base_selection = "";
+    //Pkg::TargetFinish ();
+    Popup::ShowFeedback(_("Reading data from Package Database..."), _("Please wait..."));
+
+    Pkg::TargetFinish ();
+    string tmp = (string)SCR::Read( .target.tmpdir );
+    SCR::Execute(.target.mkdir, tmp + "/tmproot");
+    Pkg::TargetInit( tmp + "/tmproot" , true);
+
+    // add code10 flag if the new source type is detected
+    CheckCode10Source();
+
+    boolean  success =  ProductCreator::EnableSource();
+
+    // Pkg::SourceStartManager(true);
+
+    if (ProductCreator::Config["profile"]:""!= "" && ! ProductCreator::profile_parsed)
+    {
+	if(!ProductCreator::readControlFile(ProductCreator::Config["profile"]:""))
+	    return `overview;
+	// set the new selection
+	y2debug("Config: %1", ProductCreator::Config );
+
+	if (ProductCreator::Config["type"]:`unknown == `patterns)
+	{
+	    string base_pat = ProductCreator::Config["base"]:"";
+
+	    if (size(base_pat) > 0)
+	    {
+		Pkg::ResolvableInstall(base_pat, `pattern);
+		y2milestone("Selecting pattern: %1", base_pat);
+	    }
+
+	    if (size(ProductCreator::Config["addons"]:[]) > 0)
+	    {
+		foreach(string addon, ProductCreator::Config["addons"]:[], ``{
+			Pkg::ResolvableInstall(addon, `pattern);
+			y2milestone("Selecting pattern: %1", addon);
+		});
+	    }
+	}
+	else
+	{
+	    boolean pkgret = Pkg::SetSelection( ProductCreator::Config["base"]:"" );
+
+	    foreach(string addon, ProductCreator::Config["addons"]:[], ``{
+		    Pkg::SetSelection( addon );
+		    });
+	}
+
+	if (size(ProductCreator::Config["packages"]:[] ) > 0)
+	{
+	    foreach(string p, ProductCreator::Config["packages"]:[], ``{
+		    y2milestone("selecting package for installation: %1 -> %2", p, Pkg::PkgInstall(p));
+		    });
+	}
+
+	// mark taboo packages
+	MarkTaboo(ProductCreator::Config["taboo"]:[]);
+
+	Pkg::PkgSolve(true);
+
+	list allpacs = Pkg::GetPackages(`selected, true);
+	y2milestone("All packages: %1 ( %2 )", allpacs, size(allpacs));
+    }
+    Popup::ClearFeedback();
+    return `next;
+}
+
+global boolean LoadConfig(string config_name)
+{
+    ProductCreator::Config = ProductCreator::Configs[config_name]:$[];
+
+    return haskey(ProductCreator::Configs, config_name);
+}
+
+global void CommitConfig()
+{
+    if (ProductCreator::Config["profile"]:""!="")
+	autoyastPackages();
+
+    string name = ProductCreator::Config["name"]:"";
+    string old_name = ProductCreator::Config["old_name"]:"";
+
+    if (haskey(ProductCreator::Configs, old_name) && old_name != "")
+    {
+
+	ProductCreator::Configs = filter(string k, map<string,any> v, ProductCreator::Configs, ``(k!=old_name));
+	remove(ProductCreator::Config, "old_name");
+    }
+
+    ProductCreator::Configs[name] = ProductCreator::Config;
+}
+
+
+global integer PackageCount()
+{
+    integer ret = 0;
+
+    foreach(integer source, map<integer, list<map> > srcmapping, toCopy,
+	{
+	    foreach(integer medium, list<map> packages, srcmapping,
+		{
+		    ret = ret + size(packages);
+		}
+	    );
+	}
+    );
+
+    return ret;
+}
+
+
+global define list<integer> UrlToId(list<string> urls)
+{
+    // all sources
+    list<integer> all = Pkg::SourceGetCurrent(false);
+
+    list<integer> sources = maplist(string url , urls,
+    {
+	integer id = -1;
+	foreach (integer i, all,
+	{
+	    map generalData = Pkg::SourceGeneralData(i);
+	    if (generalData["url"]:"" == url)
+	    {
+		id = i;
+		break;
+	    }
+	});
+
+	return id;
+    });
+
+    return sources;
+}
+
+
+global map<string,string> ReadContentFile(integer srcid) {
+    if (haskey(content_cache, srcid))
+    {
+	return content_cache[srcid]:$[];
+    }
+
+    string content = Pkg::SourceProvideFile(srcid, 1, "content");
+    map<string,string> contentmap = (map<string,string>)SCR::Read(.content_file, content);
+
+    content_cache[srcid] = contentmap;
+    y2debug("content_cache: %1", content_cache);
+
+    return contentmap;
+}
+
+
+/**
+ * Read all product-creator settings
+ * @return true on success
+ */
+global define boolean Read() ``{
+
+    /* ProductCreator read dialog caption */
+    string caption = _("Initializing CD Creator Configuration");
+
+    integer steps = 1;
+
+    integer sl = 2;
+    sleep(sl);
+
+    // We do not set help text here, because it was set outside
+    Progress::New( caption, " ", steps, [
+	    // translators: progress stage 1/1
+	    _("Read the configuration")
+	], [
+	    // translators: progress step 1/1
+	    _("Reading the database..."),
+	    // translators: progress finished
+	    _("Finished")
+	],
+	""
+    );
+
+    // read database
+    if(Abort()) return false;
+    Progress::NextStage();
+
+    map c = $[];
+    if (SCR::Read(.target.size, ConfigFile) != -1 )
+    {
+	c = XML::XMLToYCPFile(ConfigFile);
+    }
+    list<map<string, any> > all = c["configurations"]:[];
+    Configs = listmap (map<string,any> i, all, ``{
+	string name = i["name"]:"";
+	return($[name: i]);
+    });
+    y2milestone("Configs: %1", Configs);
+
+    // translators: error message
+    if(false) Report::Error(_("Cannot read the configuration."));
+    sleep(sl);
+
+
+    if(Abort()) return false;
+    // translators: progress finished
+    ProgressNextStage(_("Finished"));
+    sleep(sl);
+
+    if(Abort()) return false;
+    modified = false;
+    return true;
+}
+
+
+
+/**
+ * Prepare map for writing  into XML
+ * @return lists of configurations
+ */
+global define list PrepareConfigs() ``{
+
+    list c = maplist(string k, map v, Configs, ``{
+
+	list<string> sources = v["sources"]:[];
+
+	// escape XML entities in URL
+	// (e.g. iso:///?iso=image.iso&url=file:///local/images/ cannot be stored by the XML agent)
+	if (size(sources) > 0)
+	{
+	    sources = maplist(string src, sources,
+		{
+		    return String::EscapeTags(src);
+		}
+	    );
+
+	    y2internal("Escaped sources: %1", sources);
+
+	    v["sources"] = sources;
+	}
+
+	return(v);
+    });
+    return (c);
+}
+
+/**
+ * Write all product-creator settings
+ * @return true on success
+ */
+global define boolean Write() ``{
+
+    /* ProductCreator read dialog caption */
+    string caption = _("Saving CD Creator Configuration");
+
+    integer steps = 2;
+
+    integer sl = 50;
+    sleep(sl);
+
+    // We do not set help text here, because it was set outside
+    Progress::New(caption, " ", steps, [
+	    // translators: progress stage 1/2
+	    _("Write the settings"),
+	], [
+	    // translators: progress step 1/1
+	    _("Writing the settings..."),
+	    // translators: progress finished
+	    _("Finished")
+	],
+	""
+    );
+
+    // write settings
+    if(Abort()) return false;
+    Progress::NextStage();
+
+    list c = PrepareConfigs();
+    map xml = $["configurations": c];
+
+    if (SCR::Read(.target.size, Rep) < 0)
+    {
+	SCR::Execute(.target.bash, "mkdir -p " + Rep);
+    }
+
+    y2milestone("Writing XML file %1: %2", ConfigFile, xml);
+    boolean ret = XML::YCPToXMLFile(`cdcreator, xml, ConfigFile);
+
+    // translators: error message
+    if(!ret) Report::Error (_("Error while writing settings."));
+
+
+    // run SuSEconfig
+    if(Abort()) return false;
+    Progress::NextStage ();
+    // translators: error message
+    if(false) Report::Error (_("SuSEconfig script failed."));
+    sleep(sl);
+
+    if(Abort()) return false;
+    // translators: progress finished
+    ProgressNextStage(_("Finished"));
+    sleep(sl);
+
+    if(Abort()) return false;
+    return true;
+}
+
+/**
+ * Get all product-creator settings from the first parameter
+ * (For use by autoinstallation.)
+ * @param settings The YCP structure to be imported.
+ * @return boolean True on success
+ */
+global define boolean Import (map settings) ``{
+    return true;
+}
+
+/**
+ * Dump the product-creator settings to a single map
+ * (For use by autoinstallation.)
+ * @return map Dumped settings (later acceptable by Import ())
+ */
+global define map Export () ``{
+    return $[];
+}
+
+/**
+ * Create a textual summary and a list of unconfigured cards
+ * @return summary of the current configuration
+ */
+global define list Summary() ``{
+    // translators: Configuration summary text for autoyast
+    return [ _("Configuration summary ..."), [] ];
+}
+
+/**
+ * Create an overview table with all configured cards
+ * @return table items
+ */
+global define list Overview() ``{
+    y2milestone("Configs: %1", Configs);
+    list overview = maplist(string name , map cfg, Configs , ``{
+            string isofile = cfg["iso-directory"]:"" + "/" +  cfg["isofile"]:"";
+            if (SCR::Read(.target.size, isofile) < 0 )
+                isofile = _("No Files");
+	return(`item(`id(name), name, cfg["product"]:"", isofile, cfg["gpg_key"]:""));
+    });
+    return overview;
+}
+
+
+/**
+ * Get media urls
+ * @param list list of ids
+ * @return list list of urls
+ */
+global define list getSourceURLs ( list<integer> ids ) ``{
+    list<string> urls = maplist(integer i , ids, ``{
+	map media = Pkg::SourceMediaData(i);
+
+	return(media["url"]:"");
+    });
+
+    return urls;
+}
+
+
+/**
+ * get path to directory source
+ * @param string url
+ * @return string path
+ */
+global define string getSourceDir(string url) ``{
+    map urlsegs = URL::Parse(url);
+    return(urlsegs["path"]:"");
+}
+
+/**
+ * Return contents of isolinux.cfg from the given source
+ * @return string with contents of file.
+ */
+global define string Readisolinux() ``{
+
+    string bootconfig = Config["bootconfig"]:"";
+    if (bootconfig != "")
+    {
+	return bootconfig;
+    }
+
+    string bootconfig_path = "";
+    if (Config["pkgtype"]:"" == "autoyast")
+    {
+        bootconfig_path = sformat("%1/product-creator/isolinux.cfg",
+                Directory::datadir);
+    }
+    else
+    {
+	bootconfig_path = sformat("boot/%1/loader/isolinux.cfg", Arch::architecture());
+
+	list<integer> srcids = [checkProductDependency()];
+
+	foreach(integer srcid, srcids,
+	    {
+		y2milestone("Downloading %1 from source %2", bootconfig_path, srcid);
+		bootconfig_path = Pkg::SourceProvideOptionalFile(srcids[0]:0, 1, bootconfig_path);
+		y2debug("bootconfig_path: %1", bootconfig_path);
+
+		if (bootconfig_path == nil)
+		{
+		    // try the old path as a fallback
+		    bootconfig_path = "boot/loader/isolinux.cfg";
+		    bootconfig_path = Pkg::SourceProvideOptionalFile(srcids[0]:0, 1, bootconfig_path);
+		    y2debug("bootconfig_path: %1", bootconfig_path);
+
+		    if (bootconfig_path != nil)
+		    {
+			break;
+		    }
+		}
+		else
+		{
+		    y2milestone("Found bootconfig in source %1", srcid);
+		    break;
+		}
+	    }
+	);
+    }
+    if (SCR::Read(.target.size, bootconfig_path) >= 0)
+          bootconfig = (string)SCR::Read(.target.string, bootconfig_path );
+    else
+    {
+	y2error("cannot read file %1", bootconfig_path);
+    }
+
+
+    // replace tabs by spaces in ncurses UI (workaround for #142509)
+    if (UI::GetDisplayInfo()["TextMode"]:false == true)
+    {
+	// tab -> 8 spaces
+	bootconfig = String::Replace(bootconfig, "\t", "        ");
+    }
+
+    return bootconfig;
+}
+
+/**
+ * Create XML Configuration
+ */
+global define void configSetup()
+    ``{
+    map doc = $[];
+    doc["listEntries"] =
+	$[
+	  "packages":"package",
+	  "addons":"addon",
+	  "configurations": "config"
+	];
+    doc["cdataSections"] = ["bootconfig"];
+    doc["rootElement"] = "product-creator";
+    doc["systemID"] = "/usr/share/autoinstall/dtd/product-creator.dtd";
+    doc["nameSpace"] = "http://www.suse.com/1.0/yast2ns";
+    doc["typeNamespace"] = "http://www.suse.com/1.0/configns";
+    XML::xmlCreateDoc(`cdcreator, doc);
+    return;
+}
+
+boolean ExportPublicKey(string keyid, string dir)
+{
+    // export the public key
+    boolean ret = GPG::ExportAsciiPublicKey(keyid, dir + "/content.key");
+
+    // export the public key
+    ret = ret && GPG::ExportAsciiPublicKey(keyid, dir + "/media.1/products.key");
+
+    // export the public key
+    ret = ret && GPG::ExportAsciiPublicKey(keyid, dir + sformat("/gpg-pubkey-%1.asc", tolower(keyid)));
+
+    y2milestone("exported public key %1: %2", keyid, ret);
+    return ret;
+}
+
+boolean SignSourceFiles(string keyid, string dir, string passphrase)
+{
+    // sign the content file
+    boolean ret = GPG::SignAsciiDetached(keyid, dir + "/content", passphrase);
+
+    // sign the product file
+    ret = ret && GPG::SignAsciiDetached(keyid, dir + "/media.1/products", passphrase);
+
+    y2milestone("Signed source: %1", ret);
+    return ret;
+}
+
+string SHA1Meta(string dir, string product_dir)
+{
+    // generate new sha1 sums for files in descr subdirectory
+    // remove './' from the file names, ignore directory.yast file, sort the output
+    string command = sformat("(cd '%1/%2' && find . -type f -exec sha1sum \\{\\} \\; | sed -e 's#^\\(.\\{40\\}\\)  ./#META SHA1 \\1  #' | grep -v '^.\\{40\\}  directory.yast$' | LC_ALL=C sort -k 2)", String::Quote(dir), String::Quote(product_dir));
+
+    y2milestone("Generating SHA1 sums: %1", command);
+
+    // execute the command
+    map ret = (map)SCR::Execute(.target.bash_output, command);
+    y2milestone("Result: %1", ret);
+    string meta_sha1 = ret["stdout"]:"";
+
+    return meta_sha1;
+}
+
+string SHA1Key(string dir)
+{
+    // generate new sha1 sums for files in descr subdirectory
+    // remove './' from the file names, ignore directory.yast file, sort the output
+    string command = sformat("(cd '%1' && find . -type f -name 'gpg-pubkey-*.asc' -exec sha1sum \\{\\} \\; | sed -e 's#^\\(.\\{40\\}\\)  ./#KEY SHA1 \\1  #' | LC_ALL=C sort -k 2)", String::Quote(dir));
+
+    y2milestone("Generating SHA1 key sums: %1", command);
+
+    // execute the command
+    map ret = (map)SCR::Execute(.target.bash_output, command);
+    y2milestone("Result: %1", ret);
+    string key_sha1 = ret["stdout"]:"";
+
+    return key_sha1;
+}
+
+global boolean UpdateContentFile(string dir, string prod_dir)
+{
+    boolean ret = true;
+
+    string meta_sha1 = SHA1Meta(dir, prod_dir);
+    string key_sha1 = SHA1Key(dir);
+
+    string command = sformat("/usr/bin/grep -v -e '^KEY ' -e '^META ' %1/content", dir);
+    map out = (map)SCR::Execute(.target.bash_output, command);
+    if (out["exit"]:-1 != 0)
+    {
+	return false;
+    }
+
+    string read_content = out["stdout"]:"";
+    y2debug("content file: %1", read_content);
+
+    // add trailing new line char if it's missing
+    if (size(read_content) > 0 && substring(read_content, size(read_content) - 1, 1) != "\n")
+    {
+	read_content = read_content + "\n";
+    }
+
+    // add trailing new line char if it's missing
+    if (size(meta_sha1) > 0 && substring(meta_sha1, size(meta_sha1) - 1, 1) != "\n")
+    {
+	meta_sha1 = meta_sha1 + "\n";
+    }
+
+    // concatenate the meta and the key sums
+    read_content = read_content + meta_sha1 + key_sha1;
+    y2debug("new content file: %1", read_content);
+
+    // write the file
+    ret = SCR::Write(.target.string, dir + "/content", read_content);
+    y2milestone("Updated content file %1: %2", dir + "/content", ret);
+
+    return ret;
+}
+
+global boolean UpdateMD5File(string directory)
+{
+    string command = sformat("/usr/bin/create_md5sums '%1'", String::Quote(directory));
+    boolean ret = SCR::Execute(.target.bash, command) == 0;
+
+    y2milestone("MD5SUMS updated: %1", ret);
+
+    return ret;
+}
+
+// execute a command
+boolean Exec(string command)
+{
+    y2milestone("executing: %1", command);
+    integer ret = (integer)SCR::Execute (.target.bash, command);
+
+    if (ret == 0)
+    {
+	y2milestone("result: %1", ret);
+    }
+    else
+    {
+	y2error("result: %1", ret);
+    }
+
+    return ret == 0;
+}
+
+boolean CopyFile(integer srcid, integer mid, string src, string target)
+{
+    string local_file = Pkg::SourceProvideFile(srcid, mid, src);
+    y2debug("local_file: %1", local_file);
+
+    return Exec(sformat("/bin/cp -a -f -- '%1' '%2'", String::Quote(local_file), String::Quote(target)));
+}
+
+boolean CopyOptionalFile(integer srcid, integer mid, string src, string target)
+{
+    string local_file = Pkg::SourceProvideOptionalFile(srcid, mid, src);
+    y2debug("local_file: %1", local_file);
+
+    if (local_file != nil && local_file != "")
+    {
+	return Exec(sformat("/bin/cp -a -f -- '%1' '%2'", String::Quote(local_file), String::Quote(target)));
+    }
+    else
+    {
+	y2warning("Optional file [%1:%2]%3 is missing", srcid, mid, src);
+    }
+
+    return true;
+}
+
+boolean CopyDirectoryRec(integer srcid, integer mid, string src, string target)
+{
+    y2milestone("CopyDirectoryRec: srcid: %1, mid: %2, src: %3, target: %4", srcid, mid, src, target);
+
+    string local_dir = Pkg::SourceProvideDir(srcid, mid, src);
+    y2milestone("local_dir: %1", local_dir);
+
+    if (local_dir == nil || local_dir == "")
+    {
+	// an error message, %1 is the directory, %2 is URL of the source
+	Report::Error(sformat(_("Cannot read directory %1\nfrom source %2."), src, Pkg::SourceGeneralData(srcid)["url"]:""));
+	return false;
+    }
+
+    return Exec(sformat("/bin/cp -a -f -- '%1' '%2'", String::Quote(local_dir), String::Quote(target)));
+}
+
+boolean CopyDirectoryNonRec(integer srcid, integer mid, string src, string target)
+{
+    // get file list from directory.yast
+    string file_list = Pkg::SourceProvideOptionalFile(srcid, 1, "directory.yast");
+
+    if (file_list == nil || file_list == "")
+    {
+	y2error("directory.yast was not found, a YUM source?");
+	return false;
+    }
+
+    string f = (string)SCR::Read(.target.string, file_list);
+    list<string> files = splitstring(f, "\n");
+    y2milestone("Remote objects: %1", files);
+
+    files = filter(string file, files, {return !regexpmatch(file, "/$") && file != "";});
+    y2milestone("Remote files: %1", files);
+
+    foreach(string remote_file, files,
+	{
+	    // copy the file as optional, the directory.yast file can be broken
+	    CopyOptionalFile(srcid, mid, sformat("%1/%2", src, remote_file), sformat("%1/%2", target, remote_file));
+	}
+    );
+
+    return true;
+}
+
+boolean CopyPPCBoot(integer srcid, string target)
+{
+    return CopyDirectoryRec(srcid, 1, "/ppc", target)
+        && CopyDirectoryRec(srcid, 1, "/etc", target)
+	&& CopyDirectoryRec(srcid, 1, "/suseboot", target);
+}
+
+string UpDir(string input)
+{
+    list<string> parts = splitstring(input, "/");
+
+    if (size(parts) < 1)
+    {
+	return "";
+    }
+
+    // remove the last element
+    parts = remove(parts, size(parts) - 1);
+
+    return mergestring(parts, "/");
+}
+
+
+boolean CopyFilesRegExp(integer srcid, integer mid, string src, string target, string regexp)
+{
+    // get file list from directory.yast
+    string file_list = Pkg::SourceProvideOptionalFile(srcid, 1, "directory.yast");
+
+    if (file_list == nil || file_list == "")
+    {
+	y2error("directory.yast was not found, a YUM source?");
+	return false;
+    }
+
+    string f = (string)SCR::Read(.target.string, file_list);
+    list<string> files = splitstring(f, "\n");
+    y2milestone("Remote objects: %1", files);
+
+    files = filter(string file, files, {return !regexpmatch(file, "/$") && regexpmatch(file, regexp) && file != "";});
+    y2milestone("Remote files: %1", files);
+
+
+    foreach(string remote_file, files,
+	{
+	    CopyOptionalFile(srcid, mid, sformat("%1/%2", src, remote_file), sformat("%1/%2", target, remote_file));
+	}
+    );
+
+    return true;
+}
+
+// map additional products to "Addon" directory
+map<integer,string> product_map = $[];
+
+global map<integer,string> CreateProductDirectoryMap(integer base_src)
+{
+    map<integer,string> ret = $[];
+    list<integer> enabled_srcs = Pkg::SourceGetCurrent(true);
+    list known_products = [];
+
+    foreach(integer id, enabled_srcs, ``{
+	    if (id == base_src)
+	    {
+		// this is the base source
+		ret[id] = "/";
+	    }
+	    else
+	    {
+		map productData = Pkg::SourceProductData(id);
+		string prod_name = productData["productname"]:"";
+
+		if (prod_name == nil && prod_name == "")
+		{
+		    prod_name = "add_on";
+		}
+
+		string prod_name_base = prod_name;
+		integer addon_index = 2;
+
+		while(contains(known_products, prod_name))
+		{
+		    prod_name = prod_name_base + sformat("_%1", addon_index);
+		    addon_index = addon_index + 1;
+		}
+
+		known_products = add(known_products, prod_name);
+		ret[id] = "Addons/" + prod_name + "/";
+
+		y2milestone("Using directory '%1' for source %2 (%3)", prod_name, id, productData["productname"]:"");
+	    }
+	}
+    );
+
+    y2milestone("Directory mapping: %1", ret);
+
+    return ret;
+}
+
+
+/**
+ * Check Product dependencies and determine product to be used for
+ * booting. Also determine what is the main product.
+ *
+ */
+global define integer checkProductDependency() ``{
+
+    list<integer> sources = UrlToId(Config["sources"]:[]);
+
+    // we have to sort the products according to requires to get the base product
+    string tsort_input = "";
+
+    map<string,integer> provide_map = $[];
+
+    string base_product_name = "";
+
+    foreach(integer id , sources, ``{
+
+	map general_info = Pkg::SourceGeneralData(id);
+
+	// a YUM source cannot contain base product
+	// only YaST source is supported
+	if (general_info["type"]:"" == "YaST")
+	{
+	    map content_file = ReadContentFile(id);
+
+	    string requires = content_file["REQUIRES"]:"";
+	    string provides = content_file["PROVIDES"]:"";
+
+	    if (provides == "")
+	    {
+		//provides = sformat("%1-%2", productData["productname"]:"", productData["productversion"]:"" );
+		provides = sformat("%1-%2", content_file["PRODUCT"]:"", content_file["VERSION"]:"" );
+	    }
+
+	    string provides_tsort = String::Replace(provides, " ", "_");
+
+	    base_product_name = provides;
+
+	    tsort_input = tsort_input + provides_tsort + " " +  String::Replace(requires, " ", "_") + "\n";
+	    provide_map[provides_tsort] = id;
+	}
+    });
+
+    integer base = sources[0]:0;
+
+    if (size(sources) > 1)
+    {
+	y2debug("tsort_input: %1", tsort_input);
+	// run tsort
+	map sorted = (map)SCR::Execute(.target.bash_output, sformat("echo '%1' | tsort | tac", String::Quote(tsort_input)));
+	list<string> sorted_prods = splitstring(sorted["stdout"]:"", "\n");
+
+	// remove requires
+	sorted_prods = filter(string p, sorted_prods, {return haskey(provide_map, p);});
+	y2milestone("Sorted products: %1", sorted_prods);
+
+	base = provide_map[sorted_prods[0]:""]:0;
+    }
+
+    y2milestone("Found base source: id: %1, %2", base, Pkg::SourceGeneralData(base));
+
+    return base;
+}
+
+global string CreateAddonFile(map<integer,string> products)
+{
+    y2milestone("Product map: %1", products);
+
+    string ret = "";
+
+    foreach(integer srcid, string subdir, products,
+	{
+	    if (subdir != nil && subdir != "" && subdir != "/")
+	    {
+		if (size(ret) > 0)
+		{
+		    ret = ret + "\n";
+		}
+
+		ret = ret + "cd:///" + subdir;
+	    }
+	}
+    );
+
+    y2milestone("addon_products content: %1", ret);
+
+    return ret;
+}
+
+
+/**
+ * Create Skeleton
+ * @return boolean true on success
+ */
+global define boolean  CreateSkeleton () ``{
+
+    integer ret = 0;
+    boolean success = true;
+    boolean savespace = Config["savespace"]:false;
+    boolean sp = false;
+    string sles_path = "";
+    integer sles_src = 0;
+    string descr_dir = "";
+    string arch = Arch::architecture();
+
+    y2milestone("Config: %1", Config);
+
+    // Create skeleton directory
+    skel_root = sformat("%1/%2", Config["iso-directory"]:"", Config["name"]:"");
+    SCR::Execute(.target.mkdir, skel_root);
+
+    Exec(sformat("/bin/mkdir -p %1/boot/%2", skel_root, arch));
+
+    list<integer> enabled = Pkg::SourceGetCurrent(true);
+    if (size(enabled) == 0 )
+        return false;
+    y2milestone("enabled sources: %1", enabled );
+    string source = "";
+    string descrDir = "";
+    string dataDir = "";
+
+    if (Arch::i386() || Arch::x86_64())
+    {
+	if (Config["code10"]:false)
+	{
+	    Exec(sformat("/bin/mkdir -p %1/boot/%2/loader", skel_root, arch));
+	}
+	else
+	{
+	    Exec(sformat("/bin/mkdir -p %1/boot/loader", skel_root));
+	}
+    }
+    else if (Arch::ppc() || Arch::ppc64())
+    {
+	Exec(sformat("/bin/mkdir -p %1/etc", skel_root));
+	Exec(sformat("/bin/mkdir -p %1/ppc", skel_root));
+	Exec(sformat("/bin/mkdir -p %1/suseboot", skel_root));
+    }
+
+    // detect the base source
+    integer base_source = checkProductDependency();
+    product_map = CreateProductDirectoryMap(base_source);
+
+    // create directories for the addons
+    foreach(integer srcid, string dir, product_map, {
+	    if (dir != "/")
+	    {
+		Exec(sformat("/bin/mkdir -p %1/%2", skel_root, dir));
+	    }
+	}
+    );
+
+    string main_skel_root = skel_root;
+
+    foreach(integer id, enabled, ``{
+	map general_info = Pkg::SourceGeneralData(id);
+
+	// no extra data for YUM sources
+	if (general_info["type"]:"" == "YUM")
+	{
+	    return false;
+	}
+
+	map this_source = meta[id]:$[];
+	source   = this_source["path"]:"";
+	meta_local = ReadContentFile(id);
+
+	skel_root = main_skel_root + "/" + product_map[id]:"";
+	y2milestone("Using directory %1 for source %2", skel_root, id);
+
+	if (source == "")
+	    return false;
+
+	y2milestone("source: %1", source);
+	descr_dir = this_source["productData","descrdir"]:"suse/setup/descr";
+
+	y2debug("content: %1", meta_local);
+	if (this_source["productData","baseproductname"]:"" != "" &&
+	    issubstring(meta_local["FLAGS"]:"", "SP"))
+	{
+	    y2milestone("Service pack detected");
+	    y2debug("this source: %1", this_source );
+	    descrDir = this_source["productData","descrdir"]:"suse/setup/descr";
+	    dataDir  = this_source["productData", "datadir"]:"suse";
+	    y2debug("source data: %1", this_source["sourceData", "url"]:"" );
+	     // Service Pack
+	    if (savespace)
+	    {
+		// Installation, rescue images
+		if (Config["code10"]:false)
+		{
+		    CopyFile(id, 1, sformat("boot/%1/rescue", arch),
+			sformat("%1/boot/%2", skel_root, arch));
+		}
+		else
+		{
+		    // use the old directory
+		    CopyFile(id, 1, "boot/rescue", sformat("%1/boot", skel_root));
+		}
+		// Loader, x86 specific
+		if (Arch::i386() || Arch::x86_64())
+		{
+		    if (Config["code10"]:false)
+		    {
+			// recursive copy of /boot/$arch/loader/*
+			CopyDirectoryRec(id, 1, sformat("boot/%1/loader", arch), sformat("%1/boot/%2", skel_root, arch));
+
+			// nonrecursive copy of /boot/$arch/*
+			CopyDirectoryNonRec(id, 1, sformat("boot/%1", arch), sformat("%1/boot", skel_root));
+		    }
+		    else
+		    {
+			// recursive copy of /boot/loader/*
+			CopyDirectoryRec(id, 1, "boot/loader", sformat("%1/boot", skel_root));
+		    }
+		}
+		else if (Arch::ppc() || Arch::ppc64())
+		{
+		    // recursive copy of /boot
+		    CopyDirectoryRec(id, 1, "boot", skel_root);
+		    CopyPPCBoot(id, skel_root);
+		} else
+		{
+		    CopyDirectoryRec(id, 1, "boot", skel_root);
+		}
+	    }
+	    else
+	    {
+		CopyDirectoryRec(id, 1, "boot", skel_root);
+
+		if (Arch::ppc() || Arch::ppc64())
+		{
+		    CopyPPCBoot(id, skel_root);
+		}
+	    }
+
+	    // copy the driver update
+	    CopyOptionalFile(id, 1, "driverupdate", skel_root);
+
+
+	    // copy the descr directory
+	    Exec(sformat("/bin/mkdir -p %1/%2", skel_root, descrDir));
+	    CopyDirectoryRec(id, 1, descrDir, sformat("%1/%2", skel_root, UpDir(descrDir)));
+
+	    sp = true;
+	}
+	else if  (this_source["productData","baseproductname"]:"" != "" )
+	{
+	    // SLES
+	    y2milestone("SLES source detected");
+
+	    sles_path = source;
+	    sles_src = id;
+	    y2milestone("this source: %1", this_source );
+	    descrDir = this_source["productData","descrdir"]:"suse/setup/descr";
+	    dataDir  = this_source["productData", "datadir"]:"suse";
+	    y2debug("source data: %1", this_source["sourceData", "url"]:"" );
+	    success = (boolean)SCR::Execute(.target.mkdir, sformat("%1/%2", skel_root, dataDir));
+	    if (!success)
+	    {
+		y2error("Cannot create directory: %1", sformat("%1/%2", skel_root, dataDir));
+		return false;
+	    }
+	 
+	    Exec(sformat("/bin/mkdir -p %1/%2",  skel_root, descrDir));	    
+
+	    if (savespace)
+	    {
+		// Installation, rescue images
+		if (Config["code10"]:false)
+		{
+		    CopyFile(id, 1, sformat("boot/%1/rescue", arch), sformat("%1/boot/%2", skel_root, arch));
+		    CopyFile(id, 1, sformat("boot/%1/root", arch), sformat("%1/boot/%2", skel_root, arch));
+		    CopyOptionalFile(id, 1, sformat("boot/%1/root.fonts", arch), sformat("%1/boot/%2", skel_root, arch));
+		}
+		else
+		{
+		    CopyFile(id, 1, "boot/rescue", sformat("%1/boot", skel_root));
+		    CopyFile(id, 1, "boot/root", sformat("%1/boot", skel_root));
+		}
+
+		// copy content* files
+		CopyFilesRegExp(id, 1, "/", skel_root, "^content");
+
+		CopyFile(id, 1, "control.xml", skel_root);
+	    }
+	    else
+	    {
+		if (Config["code10"]:false)
+		{
+		    CopyFile(id, 1, sformat("boot/%1/root", arch), sformat("%1/boot/%2", skel_root, arch));
+		    CopyOptionalFile(id, 1, sformat("boot/%1/root.fonts", arch), sformat("%1/boot/%2", skel_root, arch));
+		}
+		else
+		{
+		    CopyFile(id, 1, "boot/root", sformat("%1/boot", skel_root));
+		}
+
+		// copy base files, skip all directories
+		CopyDirectoryNonRec(id, 1, "/", skel_root);
+	    }
+
+	    y2milestone("source: %1, descrDir: %2, skel_root: %3", source, descrDir, skel_root);
+	    // Descriptions, Selections and package databases
+	    CopyDirectoryRec(id, 1, descrDir, sformat("%1/%2", skel_root, UpDir(descrDir)));
+
+	    // Prepare media files
+	    CopyDirectoryRec(id, 1, "media.1", skel_root);
+	    Exec(sformat("/usr/bin/head -n 2 %1/media.1/media  >   %2/media.1/media.tmp && mv %2/media.1/media.tmp %2/media.1/media",  skel_root, skel_root));
+	}
+	else
+	{
+	    // copy base files, skip all directories
+	    CopyDirectoryNonRec(id, 1, "/", skel_root);
+	}
+    });
+
+    // set the root directory back
+    skel_root = main_skel_root;
+
+    if (!sp)
+    {
+	y2milestone("NOT SP");
+
+
+	if (sles_path != "")
+	{
+	    source = sles_path;
+	    base_source = sles_src;
+	}
+
+	if (descrDir == "")
+	{
+	    descrDir = descr_dir;
+	}
+
+	if (dataDir == "")
+	{
+	    dataDir = String::FirstChunk(descr_dir, "/");
+
+	    if (dataDir == "")
+	    {
+		dataDir = "suse";
+	    }
+	}
+
+	if (savespace)
+	{
+	    // Installation, rescue images
+	    if (Config["code10"]:false)
+	    {
+		CopyFile(base_source, 1, sformat("boot/%1/rescue", arch), sformat("%1/boot/%2", skel_root, arch));
+		CopyFile(base_source, 1, sformat("boot/%1/root", arch), sformat("%1/boot/%2", skel_root, arch));
+		CopyFile(base_source, 1, sformat("boot/%1/root.fonts", arch), sformat("%1/boot/%2", skel_root, arch));
+	    }
+	    else
+	    {
+		CopyFile(base_source, 1, "boot/rescue", sformat("%1/boot", skel_root));
+		CopyFile(base_source, 1, "boot/root", sformat("%1/boot", skel_root));
+	    }
+
+	    // Loader, x86 specific
+	    if (Arch::i386() || Arch::x86_64())
+	    {
+		if (Config["code10"]:false)
+		{
+		    // recursive copy of /boot/$arch/loader/*
+		    CopyDirectoryRec(base_source, 1, sformat("boot/%1/loader", arch), sformat("%1/boot/%2", skel_root, arch));
+
+		    // nonrecursive copy of /boot/$arch/*
+		    CopyDirectoryNonRec(base_source, 1, sformat("boot/%1", arch), sformat("%1/boot", skel_root));
+		}
+		else
+		{
+		    // recursive copy of /boot/loader/*
+		    CopyDirectoryRec(base_source, 1, "boot/loader", sformat("%1/boot", skel_root));
+		}
+	    }
+	    else
+	    {
+		// recursive copy of /boot/loader/*
+		CopyDirectoryRec(base_source, 1, "boot", skel_root);
+	    }
+	}
+	else
+	{
+	    CopyDirectoryRec(base_source, 1, "/boot", skel_root);
+	}
+    }
+
+foreach(integer source_id, enabled, ``{
+    map general_info = Pkg::SourceGeneralData(source_id);
+
+    // no extra action for YUM sources
+    if (general_info["type"]:"" == "YUM")
+    {
+	return;
+    }
+
+    map this_source = meta[source_id]:$[];
+    source   = this_source["path"]:"";
+    meta_local = ReadContentFile(source_id);
+
+    skel_root = main_skel_root + "/" + product_map[source_id]:"";
+    y2milestone("Using directory %1 for source %2", skel_root, source_id);
+
+    // copy descriptions
+    string descrdir = meta[source_id, "productData","descrdir"]:"suse/setup/descr";
+    Exec(sformat("/bin/mkdir -p %1/%2", skel_root, descrdir));
+    CopyDirectoryRec(source_id, 1, descrdir, sformat("%1/%2", skel_root, UpDir(descrdir)));
+
+    string datadir  = meta[source_id, "productData", "datadir"]:"suse";
+    string slidedir = datadir + "/setup/slide/";
+
+    if (!savespace)
+    {
+	y2milestone("slidedir: %1", slidedir);
+
+	// check whether the slideshow directory is present
+	string l_dirlist = Pkg::SourceProvideOptionalFile(source_id, 1, slidedir + "directory.yast");
+	if (l_dirlist != nil)
+	{
+	    string l_slidedir = Pkg::SourceProvideDir(source_id, 1, slidedir);
+
+	    if (l_slidedir != nil && l_slidedir != "")
+	    {
+		// copy slide show
+		Exec(sformat("/bin/mkdir -p %1/%2", skel_root, slidedir));
+		Exec(sformat("/bin/cp -a %1/* %2/%3", l_slidedir, skel_root, slidedir));
+	    }
+	}
+	else
+	{
+	    y2milestone("Slideshow is missing");
+	    Exec(sformat("/bin/mkdir -p %1/%2", skel_root, slidedir));
+	    Exec(sformat("> %1/%2/directory.yast", skel_root, slidedir));
+	}
+    }
+    else
+    {
+	y2milestone("Save space - do not copy the slideshow");
+	Exec(sformat("/bin/mkdir -p %1/%2", skel_root, slidedir));
+	Exec(sformat("> %1/%2/directory.yast", skel_root, slidedir));
+    }
+
+    y2milestone("source: %1, descrDir: %2, skel_root: %3", source, descrDir, skel_root);
+
+
+    // copy media.1 directory
+    CopyDirectoryRec(source_id, 1, "media.1", skel_root);
+    Exec(sformat("/usr/bin/head -n 2 %1/media.1/media  >   %2/media.1/media.tmp && mv %2/media.1/media.tmp %2/media.1/media",  skel_root, skel_root));
+
+    // create a copy of the autoyast profile (the new profile accepts even unsigned source)
+    string autoyast_copy = "";
+
+    // the copy is not needed if the sourse will be signed with a gpg key
+    if (Config["profile"]:""!="" && Config["gpg_key"]:"" != "")
+    {
+	string prof = Config["profile"]:"";
+
+	if (!Profile::ReadXML(prof))
+	{
+	    Report::Error(_("Error reading control file."));
+	}
+	else
+	{
+	    y2milestone("Current profile: %1", Profile::current);
+
+	    if ( Profile::current["general", "signature-handling" ]:nil == nil)
+	    {
+		Profile::current["general", "signature-handling" ] = $[];
+	    }
+
+	    Profile::current["general", "signature-handling", "accept_unsigned_file"] = true;
+
+	    // add prefix to the name
+	    list<string> parts = splitstring(prof, "/");
+	    parts[size(parts) - 1] = "install_"+ parts[size(parts) - 1]:"";
+	    prof = mergestring(parts, "/");
+
+	    boolean saved = Profile::Save(prof);
+	    y2milestone("Modified profile saved to %1: %2", prof, saved);
+
+	    if (saved)
+	    {
+		autoyast_copy = prof;
+	    }
+	    else
+	    {
+		// saving to the original location has failed, save copy to tmpdir
+		string tmpdir = (string)SCR::Read(.target.tmpdir);
+		prof = tmpdir + "/product-creator-autoyast_profile.xml";
+
+		// save the copy
+		saved = Profile::Save(prof);
+
+		y2milestone("Copy of the profile saved to %1: %2", prof, saved);
+		if (saved)
+		{
+		    autoyast_copy = prof;
+		}
+	    }
+	}
+    }
+
+    // copy autoyast profile
+    if (Config["profile"]:""!="" && Config["copy_profile"]:false)
+    {
+	if (autoyast_copy != "")
+	{
+	    // save the original file and the copy
+	    Exec(sformat("/bin/cp %1 %2/autoinst.xml", autoyast_copy, skel_root));
+	    Exec(sformat("/bin/cp %1 %2/autoinst.orig.xml", Config["profile"]:"", skel_root));
+	}
+	else
+	{
+	    // save the original file (a copy is not available)
+	    Exec(sformat("/bin/cp %1 %2/autoinst.xml", Config["profile"]:"", skel_root));
+	}
+    }
+
+    // Media nr.
+    integer count = 1;
+
+    Exec(sformat("/bin/echo %1 >> %2/media.1/media ", count,  skel_root));
+
+    // make the source digitally unsigned (because signed descr/packages file has been modified)
+    if (Config["code10"]:false)
+    {
+	// remove the key and the checksum
+	Exec(sformat("/bin/rm %1/content.asc %1/content.key", skel_root));
+	// remove the meta information from content file
+	Exec(sformat("/usr/bin/grep -v -e '^KEY ' -e '^META ' %1/content > %1/content.new", skel_root));
+	Exec(sformat("/bin/mv %1/content.new %1/content", skel_root));
+
+	// recreate the index file
+	Exec(sformat("/bin/rm -f %1/directory.yast && /usr/bin/create_directory.yast %1", skel_root));
+    }
+
+
+    // remove unused patterns (they cannot be used due to missing packages)
+    if (Config["type"]:`unknown == `patterns)
+    {
+        list<string> used_patterns = Config["addons"]:[];
+        if (Config["base"]:"" != "")
+	{
+	    used_patterns = prepend(used_patterns, Config["base"]:"");
+        }
+	y2milestone("used patterns: %1", used_patterns);
+
+	list<string> files = (list<string>)SCR::Read(.target.dir, sformat("%1/%2", skel_root, descrDir));
+	if (files == nil)
+	{
+	    files = [];
+	}
+
+	files = filter(string f, files, {return regexpmatch(f, "\\.pat$");});
+
+	y2milestone("found pattern files: %1", files);
+
+	list<string> used_files_regexps = maplist(string p, used_patterns, {return sformat("^%1-.*\\.pat$", p);});
+	y2debug("used_files_regexps: %1", used_files_regexps);
+
+	boolean refresh_diryast = false;
+	foreach(string f, files,
+	    {
+		boolean match = false;
+
+		foreach(string r, used_files_regexps,
+		    {
+			if (regexpmatch(f, r))
+			{
+			    match = true;
+			}
+		    }
+		);
+
+		if (!match)
+		{
+		    // remove the pattern
+		    string cmd = sformat("/bin/rm %1/%2/%3", skel_root, descrDir, f);
+		    y2milestone("removing pattern %1", f);
+		    success = success && Exec(cmd);
+		    y2debug("success: %1", success);
+		    refresh_diryast = true;
+		}
+	    }
+	);
+
+	if (refresh_diryast)
+	{
+	    // regenerate directory.yast and patterns file
+	    string cmd = sformat("/bin/rm -f '%1/%2/directory.yast' && /usr/bin/create_directory.yast '%1/%2'", String::Quote(skel_root), String::Quote(descrDir));
+	    success = success && Exec(cmd);
+	    y2debug("success: %1", success);
+
+	    cmd =  sformat("cd %1/%2; ls *.pat > %1/%2/patterns", skel_root, descrDir);
+	    success = success && Exec(cmd);
+	    y2debug("success: %1", success);
+	}
+    }
+
+    // update MD5SUMS file
+    success = success && UpdateMD5File(sformat("%1/%2", skel_root, descrDir));
+    y2debug("success: %1", success);
+});
+
+    string addon_file = CreateAddonFile(product_map);
+    if (size(addon_file) > 0)
+    {
+	string target_addon_file = main_skel_root + "/add_on_products";
+	y2milestone("Writing addon products to %1", target_addon_file);
+	success = success && SCR::Write(.target.string, target_addon_file, addon_file);
+    }
+
+    y2debug("success: %1", success);
+    return success;
+}
+
+// see http://en.opensuse.org/Secure_Installation_Sources
+boolean InsertKeyToInitrd(string gpg_key, string initrd_file)
+{
+    y2milestone("Adding GPG key %1 to initrd %2", gpg_key, initrd_file);
+    // initrd is cpio.gz archive
+
+    list<string> parts = splitstring(initrd_file, "/");
+    if (size(parts) > 1)
+    {
+	// remove the last element
+	parts = remove(parts, size(parts) - 1);
+    }
+    string base = mergestring(parts, "/");
+
+    boolean ret = GPG::ExportPublicKey(gpg_key, sformat("%1/gpg-%2.gpg", base, gpg_key));
+    if (!ret) return false;
+
+    // uncompress the archive and add the GPG key
+    string command = sformat("cd '%1' && gunzip < '%2' > '%2.cpio' && echo 'gpg-%3.gpg' | cpio -o -H newc -A -F '%2.cpio'", String::Quote(base), String::Quote(initrd_file), gpg_key);
+    y2milestone("command: %1", command);
+
+    map out = (map)SCR::Execute(.target.bash_output, command);
+    y2milestone("output: %1", out);
+    ret = out["exit"]:-1 == 0;
+    if (!ret) return false;
+
+    // compress the archive, remove the temporary files
+    command = sformat("gzip --best < '%1.cpio' > '%1' && rm -f '%1.cpio' '%2/gpg-%3.gpg'", String::Quote(initrd_file), String::Quote(base), gpg_key);
+    y2milestone("command: %1", command);
+
+    out = (map)SCR::Execute(.target.bash_output, command);
+    y2milestone("output: %1", out);
+    ret = out["exit"]:-1 == 0;
+
+    return ret;
+}
+
+global boolean InsertKeyToInitrds(string gpg_key, string base_dir)
+{
+    // get initrd list
+    string command = "";
+    map out = $[];
+    string find_output = "";
+
+    if (SCR::Read(.target.size, base_dir + "/boot") >= 0)
+    {
+	y2milestone("Searching for 'initrd' in %1/boot...", base_dir);
+	command = sformat("cd '%1' && find boot -type f -name 'initrd'", String::Quote(base_dir));
+	out = (map)SCR::Execute(.target.bash_output, command);
+	find_output = out["stdout"]:"";
+    }
+
+    if (SCR::Read(.target.size, base_dir + "/suseboot") >= 0)
+    {
+	y2milestone("Searching for 'initrd*' in %1/suseboot...", base_dir);
+	command = sformat("cd '%1' && find suseboot -type f -name 'initrd*'", String::Quote(base_dir));
+	out = (map)SCR::Execute(.target.bash_output, command);
+	find_output = find_output + out["stdout"]:"";
+    }
+
+    list<string> initrds = splitstring(find_output, "\n");
+    // remove empty strings
+    initrds = filter(string initrd, initrds, {return initrd != "";});
+    y2milestone("Found initrds: %1", initrds);
+
+    boolean ret = true;
+    foreach(string initrd, initrds,
+	{
+	    boolean inserted = InsertKeyToInitrd(gpg_key, base_dir + "/" + initrd);
+
+	    if (!inserted)
+	    {
+		Report::Error(sformat(_("Could not add GPG key %1 to initrd\n%2"), gpg_key, initrd));
+		ret = false;
+	    }
+	}
+    );
+
+    return ret;
+}
+
+global boolean SignSUSEtagsSource(string gpg_key, string dir, string passphrase)
+{
+    // export the key
+    boolean success = ExportPublicKey(gpg_key, dir);
+    // update SHA1 sums
+    success = success && UpdateContentFile(dir, "suse/setup/descr");
+
+    if (!success)
+    {
+	return false;
+    }
+
+    // sign the source
+    success = SignSourceFiles(gpg_key, dir, passphrase);
+
+    if (success)
+    {
+	// update directory.yast file
+	string command = sformat("/bin/rm -f '%1/directory.yast' && /usr/bin/create_directory.yast '%1'", String::Quote(dir));
+	y2milestone("Updating %1/directory.yast ...", dir);
+	integer updated = (integer)SCR::Execute(.target.bash, command);
+	y2milestone("Updated: %1", updated == 0);
+	success = success && updated == 0;
+    }
+
+    return success;
+}
+
+global boolean SignYUMSource(string gpg_key, string dir, string passphrase)
+{
+    boolean ret = GPG::SignAsciiDetached(gpg_key, dir + "/repodata/repomd.xml", passphrase);
+    ret = ret && GPG::ExportAsciiPublicKey(gpg_key, dir + "/repodata/repomd.xml.key");
+
+    return ret;
+}
+
+global boolean SignSourceStep()
+{
+    boolean success = true;
+
+    // sign the files
+    string gpg_key = Config["gpg_key"]:"";
+
+    if (gpg_key != "")
+    {
+	string passphrase = (Mode::commandline()) ? gpg_passphrase : GPGWidgets::AskPassphrasePopup(gpg_key);
+
+	// not aborted
+	if (passphrase != nil)
+	{
+	    // sign each product
+	    foreach(integer srcid, string dir, product_map, {
+		    boolean signed = false;
+		    map general_info = Pkg::SourceGeneralData(srcid);
+
+		    while (!signed)
+		    {
+			if (general_info["type"]:"" == "YaST")
+			{
+			    // sign the source
+			    signed = SignSUSEtagsSource(gpg_key, skel_root + "/" + dir, passphrase);
+			}
+			else
+			{
+			    // sign the source
+			    signed = SignYUMSource(gpg_key, skel_root + "/" + dir, passphrase);
+			}
+
+			// yes/no popup: error message
+			if (!signed)
+			{
+			    if (Popup::YesNo(_("Error: Could not digitally sign the source.\nTry it again?")))
+			    {
+				passphrase = (Mode::commandline()) ? gpg_passphrase : GPGWidgets::AskPassphrasePopup(gpg_key);
+			    }
+			    else
+			    {
+				break;
+			    }
+			}
+		    }
+
+		    success = success && signed;
+		}
+	    );
+	}
+	else
+	{
+	    success = false;
+	}
+
+	// insert the key into the installation initrd
+	success = success && InsertKeyToInitrds(gpg_key, skel_root);
+    }
+
+    y2milestone("Source signed: %1", success);
+    return success;
+}
+
+
+/**
+ * CopyMiscFiles
+ * Copy other files to directory tree
+ * @return boolean true on success
+ */
+global define boolean CopyMiscFiles() ``{
+
+    string cpCmd = "";
+    string arch = Arch::architecture();
+    y2debug("isolinux.cfg: %1", Config["bootconfig"]:"" );
+    if (Config["bootconfig"]:"" != "") 
+    {
+        y2debug("custom config available");
+
+	string fname = (Config["code10"]:false)
+	    ? sformat("%1/boot/%2/loader/isolinux.cfg", skel_root, arch)
+	    : sformat("%1/boot/loader/isolinux.cfg", skel_root);
+
+        SCR::Write(.target.string, fname, Config["bootconfig"]:"" );
+    }
+    cpCmd = (Config["code10"]:false)
+	? sformat("cp %1/product-creator/message %2/boot/%3/loader", Directory::datadir, skel_root, arch)
+	: sformat("cp %1/product-creator/message %2/boot/loader", Directory::datadir, skel_root);
+    SCR::Execute (.target.bash, cpCmd);
+
+    cpCmd = (Config["code10"]:false)
+	? sformat("cp %1/product-creator/options.msg %2/boot/%3/loader", Directory::datadir, skel_root, arch)
+	: sformat("cp %1/product-creator/options.msg %2/boot/loader", Directory::datadir, skel_root);
+    SCR::Execute (.target.bash, cpCmd);
+
+
+    return true;
+}
+
+
+
+/**
+ * Enable source and get source meta data
+ * @return true on success
+ */
+global define boolean EnableSource() ``{
+    y2milestone("Config: %1", Config);
+    enableSources();
+
+    list<integer> sources = UrlToId(ProductCreator::Config["sources"]:[]);
+
+    list ids = Pkg::SourceStartCache(true);
+
+    if (size(ids) == 0 )
+	return false;
+
+    foreach(integer i , sources, ``{
+	map<string, any> m = $[];
+	m["productData"] = Pkg::SourceProductData(i);
+	m["mediaData"] = Pkg::SourceMediaData(i);
+	m["sourceData"]	= Pkg::SourceGeneralData(i);
+        string p = m["sourceData", "url"]:"";
+        map parsed = URL::Parse(p);
+        m["path"] = parsed["path"]:"";
+	meta[i] = m;
+    });
+
+    y2milestone("meta: %1", meta);
+    return true;
+}
+
+
+/**
+ * Get all possible sources
+ * @return available enabled sources list for widget
+ */
+global define list<term> GetDirSources(string source) ``{
+    list<integer> ids = Pkg::SourceStartCache(true);
+    list<term> sources = [];
+    foreach(integer i , ids, ``{
+        map prod = Pkg::SourceProductData(i);
+        map media = Pkg::SourceMediaData(i);
+	map url = URL::Parse(media["url"]:"");
+	if (url["scheme"]:"" == "dir")
+	{
+	    boolean selected = (source == url["path"]:"");
+	    sources = add(sources, `item(`id(url["path"]:""), url["path"]:"", selected));
+
+	}
+    });
+
+    return sources;
+}
+
+
+global define void enableSources()``{
+
+    Pkg::SourceStartManager(false);
+
+    y2milestone("sources: %1", ProductCreator::Config["sources"]:[]);
+    list<integer> sources = UrlToId(ProductCreator::Config["sources"]:[]);
+    y2milestone("source IDs: %1", sources);
+
+    foreach(integer id , Pkg::SourceGetCurrent(true), ``{
+		y2milestone("Disabling source %1", id);
+                Pkg::SourceSetEnabled (id, false);
+	});
+
+
+    foreach(integer id , sources, ``{
+		y2milestone("Enabling source %1", id);
+		Pkg::SourceSetEnabled(id, true);
+	});
+
+    Pkg::SourceStartManager(true);
+
+    y2milestone("All sources: %1", Pkg::SourceGetCurrent(false));
+    y2milestone("Enabled sources: %1", Pkg::SourceGetCurrent(true));
+
+    return;
+}
+
+
+
+/**
+ * Set packages to be copied to iso image tree
+ * @return boolean
+ */
+global define boolean setPackages() ``{
+    string base = Config["base"]:"";
+    list<string> addons = Config["addons"]:[];
+    list<string> packages  = Config["packages"]:[];
+    list<string> post_packages  = Config["post-packages"]:[];
+    string kernel = Config["kernel"]:"";
+    list<string> kernels = [];
+
+    if (kernel == "") {
+        kernels = [
+                   "kernel-64k-pagesize",
+                   "kernel-bigsmp",
+                   "kernel-debug",
+                   "kernel-default",
+                   "kernel-iseries64",
+                   "kernel-pmac64",
+                   "kernel-pseries64",
+                   "kernel-s390",
+                   "kernel-s390x",
+                   "kernel-smp",
+                   "kernel-sn2",
+		   "kernel-xen",
+                   "kernel-um"
+		   ];
+    } else {
+        kernels = add(kernels, kernel);
+    }
+
+
+    if (Config["type"]:`unknown == `patterns)
+    {
+	// base pattern
+	if (base != "")
+	{
+	    Pkg::ResolvableInstall(base, `pattern);
+	}
+
+	if (size(addons) > 0 )
+	{
+	    foreach(string p, addons, ``{
+		Pkg::ResolvableInstall(p, `pattern);
+	    });
+	}
+    }
+    else
+    {
+	// Base Selection
+	if (base!="")
+	{
+	    Pkg::SetSelection(base);
+	}
+
+	// Addons
+	if (size(addons) > 0 )
+	{
+	    foreach(string s, addons, ``{
+		Pkg::SetSelection(s);
+	    });
+	}
+    }
+
+    packages = (list<string>) union(packages, post_packages);
+    packages = (list<string>)union(packages, kernels);
+
+    y2milestone("Selected packages: %1", packages);
+
+    Pkg::DoProvide(packages);
+
+    boolean ret = Pkg::PkgSolve(false);
+
+    return (ret);
+}
+
+global boolean removeDestination()
+{
+    string isodir = Config["iso-directory"]:"" + "/"  + Config["name"]:"";
+    return (integer)SCR::Execute(.target.bash, "rm -rf " + isodir ) == 0;
+}
+
+global boolean confirmDestinationRemoving()
+{
+    // popup question, %1 is directory name
+    if (Popup::YesNo(sformat(_("Remove the destination directory %1?"), Config["iso-directory"]:"" + "/"  + Config["name"]:"")))
+    {
+	// remove the destination
+	return removeDestination();
+    }
+
+    return false;
+}
+
+global define boolean verifyDestination() ``{
+    string isodir = Config["iso-directory"]:"" + "/"  + Config["name"]:"";
+    if ((integer)SCR::Read(.target.size, isodir) > 0 ) { // its a file!
+
+	if (Mode::commandline())
+	{
+	    CommandLine::Print(sformat(_("The destination %1 already exists."), isodir));
+
+	    // TODO ask in interactive mode
+
+	    return false;
+	}
+        if (Popup::YesNo(sformat(_("Destination directory exists or is a file.
+Remove directory %1?") , isodir)))
+	{
+	    y2milestone("Removing directory %1", isodir);
+	    return removeDestination();
+	}
+        else
+	{
+            return false;
+	}
+    }
+
+    return true;
+}
+
+/**
+ * Check if selected packages are available
+ * @return string error message
+ */
+global define string checkPackageAvail() ``{
+
+    string error_msg = "";
+
+    Progress::Title(_("Checking for package availability..."));
+
+    list<string> selectedPackages = Pkg::GetPackages (`selected , true);
+    y2milestone("Selected %1 packages: %2", size(selectedPackages), sort(selectedPackages));
+
+    list<string> failed = [];
+    toCopy = $[];
+    foreach(string package, selectedPackages, ``{
+
+	list<map> package_data_list = Pkg::PkgPropertiesAll(package);
+	map package_data = nil;
+
+	// get the selected package
+	foreach(map pkg_data, package_data_list,
+	    {
+		if (pkg_data["status"]:`unknown == `selected)
+		{
+		    package_data = pkg_data;
+		}
+	    }
+	);
+
+	if (package_data == nil || package_data == $[])
+	{
+	    failed = add (failed, package);
+	}
+	else
+	{
+	    y2debug("package_data: %1", package_data);
+	    string arch =  package_data["arch"]:"noarch";
+	    integer src = package_data["srcid"]:0;
+	    integer medianr = package_data["medianr"]:1;
+
+	    list<map> pkglist = toCopy[src, medianr]:[];
+
+	    pkglist = add(pkglist, $["path": package_data["path"]:"", "name": package, "arch": arch]);
+
+	    // add an empty map if the source doesn't exist
+	    if (!haskey(toCopy, src))
+	    {
+		toCopy[src] = $[];
+	    }
+
+	    toCopy[src, medianr] = pkglist;
+	}
+    });
+    ProductCreator::missing_packages = failed;
+    if (size(failed) > 0 )
+    {
+	integer num = size(failed);
+	error_msg = sformat(_("%1 package not available.", "%1 packages not available.", num), num);
+    }
+    y2milestone("packages not found: %1", failed);
+    y2debug("Evaluated packages toCopy: %1", toCopy);
+
+    return error_msg;
+}
+
+
+global void CallbackSourceReportStart(integer source_id, string url, string task)
+{
+    y2debug("source_id: %1, url: %2, task: %3", source_id, url, task);
+}
+
+global boolean CallbackSourceReportProgress(integer value)
+{
+    y2debug("progress: %1%%", value);
+    return true;
+}
+
+global void CallbackSourceReportEnd(integer numeric_id, string url, string task, string error, string reason)
+{
+    y2debug("source_id: %1, url: %2, task: %3, error: %4, reason: %5", numeric_id, url, task, error, reason);
+}
+
+
+/**
+ * CopyPackages()
+ * Copy selected package to target tree
+ * @param integer id
+ * @return boolean
+ */
+global boolean CopyPackages()
+{
+    // TODO FIXME get datadir from the source
+    string datadir  = "suse";
+    string basedir = Config["iso-directory"]:"" + "/" + Config["name"]:"" + "/";
+
+    boolean ret = true;
+
+    // disable source report callbacks - there is a progress dialog
+    Pkg::CallbackSourceReportStart("ProductCreator::CallbackSourceReportStart");
+    Pkg::CallbackSourceReportProgress("ProductCreator::CallbackSourceReportProgress");
+    Pkg::CallbackSourceReportEnd("ProductCreator::CallbackSourceReportEnd");
+
+    y2milestone("Package summary: %1", toCopy);
+
+    // copy the packages
+    foreach(integer source, map<integer, list<map> > srcmapping, toCopy,
+	{
+	    foreach(integer medium, list<map> packages, srcmapping,
+		{
+		    y2milestone("Copying packages from source %1, medium %2", source, medium);
+
+		    foreach(map package, packages,
+			{
+			    Progress::Title(sformat(_("Copying %1"), package["name"]:"..." ));
+			    Progress::NextStep();
+			    //string dir = basedir + product_map[source]:"/" + datadir + "/" + package["arch"]:"";
+			    string dir = basedir + product_map[source]:"/" + "/" + package["path"]:"";
+
+			    list<string> dir_elements = splitstring(dir, "/");
+			    dir_elements = remove(dir_elements, size(dir_elements) - 1);
+			    dir = mergestring(dir_elements, "/");
+
+			    if (SCR::Read(.target.dir, dir) == nil )
+			    {
+				y2milestone("Creating dir: %1", dir);
+				SCR::Execute(.target.mkdir , dir);
+				y2debug("dir contents: %1", (list)SCR::Read(.target.dir, dir));
+			    }
+
+			    y2milestone("downloading package %1...", package["path"]:"");
+
+			    string l_packge = Pkg::SourceProvideFile(source, medium, package["path"]:"");
+
+			    if (l_packge == nil || l_packge == "")
+			    {
+				Report::Error(sformat(_("Cannot download package %1\n from source %2"), package["path"]:"", source));
+				ret = false;
+				break;
+			    }
+
+			    string cpCmd = sformat("cp -a %1 %2", l_packge, dir );
+
+			    y2debug("%1", cpCmd);
+
+			    any ret = SCR::Execute (.target.bash, cpCmd);
+			    if (ret!=0)
+			    {
+				Popup::Error(_("Error while copying packages. 
+		    Check the created directory for possible hints."));
+				ret = false;
+				break;
+			    }
+			}
+		    );
+		}
+	    );
+	}
+    );
+
+
+    foreach(integer src_ind, string subdir, product_map, {
+	    map general_info = Pkg::SourceGeneralData(src_ind);
+
+	    // regenerate the metadata
+	    if (general_info["type"]:"" == "YUM")
+	    {
+		ret = ret && Exec(sformat("/usr/bin/createrepo %1/%2", basedir, subdir));
+	    }
+	    else
+	    {
+		// TODO FIXME get datadir from the source
+		ret = ret && Exec(sformat("cd %1/%2/%3 && /usr/bin/create_package_descr -x setup/descr/EXTRA_PROV",
+		    basedir, subdir, datadir));
+	    }
+	}
+    );
+
+    // restore the source report callbacks
+    Pkg::CallbackSourceReportStart("PackageCallbacks::SourceReportStart");
+    Pkg::CallbackSourceReportProgress("PackageCallbacks::SourceReportProgress");
+    Pkg::CallbackSourceReportEnd("PackageCallbacks::SourceReportEnd");
+
+    return ret;
+}
+
+
+
+global define boolean readControlFile(string filename) ``{
+
+    if (profile_parsed)
+        return true;
+    if (!Profile::ReadXML(filename))
+    {
+        Report::Error(_("Error reading control file."));
+        return false;
+    }
+    y2debug("Current profile: %1", Profile::current);
+
+    map software = Profile::current["install", "software"]:$[];
+
+    if (size(software) == 0)
+    {
+	software = Profile::current["software"]:$[];
+    }
+
+    y2milestone("Software config: %1", software);
+
+    if (haskey(software, "patterns"))
+    {
+	y2milestone("Switching to profile based config");
+	Config["type"] = `patterns;
+	list<string> pats = software["patterns"]:[];
+	Config["base"] = pats[0]:"";
+
+	if (size(pats) > 1)
+	{
+	    Config["addons"] = remove(pats, 0);
+	}
+    }
+    else
+    {
+	y2milestone("Using selections based config");
+	Config["base"] = software["base"]:"";
+	Config["addons"] = software["addons"]:[];
+    }
+
+    PackageAI::toinstall = software["packages"]:[];
+    Config["packages"] = AutoinstSoftware::autoinstPackages();
+    y2milestone("Config: %1", Config );
+    profile_parsed = true;
+    return true;
+}
+
+/**
+ * Constructor
+ */
+global define void ProductCreator() ``{
+    configSetup();
+    AYRepository = Misc::SysconfigRead( .sysconfig.autoinstall.REPOSITORY, 
+            "/var/lib/autoinstall/repository/");
+
+//    // Store original status
+//    old_enabled = Pkg::SourceGetCurrent(true);
+//    y2debug("old_enabled=%1", old_enabled );
+}
+
+
+/* EOF */
+}

@@ -1,0 +1,114 @@
+/**
+ * File:	include/product-creator/helps.ycp
+ * Package:	Configuration of product-creator
+ * Summary:	Help texts of all the dialogs
+ * Authors:	Anas Nashif <nashif@suse.de>
+ *
+ * $Id$
+ */
+
+{
+
+textdomain "product-creator";
+
+/**
+ * All helps are here
+ */
+map HELPS = $[
+
+    "bootconfig": _("<p><b><big>Boot Options</big></b><br>
+Here, add additional boot menu entries with some boot options.
+</p>
+") +
+    _("<p>For example, 
+configure the CD for automatic installations and specify the installation
+source location. If you are not sure, leave the file untouched and the original is used.</p>
+"),
+
+    /* Read dialog help 1/2 */
+    "read" : _("<p><b><big>Initializing Configuration</big></b><br>
+Please wait...<br></p>
+") +
+
+    /* Read dialog help 2/2 */
+    _("<p><b><big>Aborting Initialization:</big></b><br>
+Safely abort the configuration utility by pressing <b>Abort</b> now.</p>
+"),
+
+    /* Write dialog help 1/2 */
+    "write" : _("<p><b><big>Saving Configuration</big></b><br>
+Please wait...<br></p>
+") +
+
+    /* Write dialog help 2/2 */
+_("<p><b><big>Aborting Saving:</big></b><br>
+Abort the save procedure by pressing <b>Abort</b>.
+An additional dialog informs whether it is safe to do so.
+</p>
+"),
+
+
+    /* Ovreview dialog help 1/3 */
+    "overview" : _("<p><b><big>CD Creator Configuration Overview</big></b><br>
+Obtain an overview of available configurations. Additionally
+edit those configuration.<br></p>
+") +
+
+    /* Ovreview dialog help 2/3 */
+_("<p><b><big>Adding a Configuration:</big></b><br>
+Press <b>Add</b> to create a new configuration.</p>") +
+
+    /* Ovreview dialog help 3/3 */
+_("<p><b><big>Editing or Deleting:</big></b><br>
+Choose a configuration to change or remove.
+Then press <b>Edit</b> or <b>Delete</b> as desired.</p>
+"),
+
+    /* Configure1 dialog help 1/4 */
+    "initial" : _("<p><b><big>Configuration Name and Packages</big></b><br>
+Choose a configuration name and the method with which to select 
+the packages to add to the ISO image.<br></p>
+") +
+
+    /* Configure1 dialog help 3/4 */
+_("<b>AutoYaST Profile</b><p>
+Select an AutoYaST profile with the software configuration.
+</p>
+") +
+    /* Configure1 dialog help 3/4 */
+_("<b>Package Manager</b><p>
+Use the package manager without any preselected packages. All
+packages that would be automatically selected during installation must be
+selected manually based on the hardware and architecture for which you are
+creating this CD.
+</p>
+"),
+
+    /* Configure2 dialog help 1/2 */
+    "sourceDialog" : _("<p><b><big>Select Package Sources</big></b><br>
+Select at least one package source.<br></p>
+"),
+
+    /* Configure2 dialog help 1/2 */
+    "dest" : _("<p><b><big>ISO Directory and Image</big></b><br>
+Enter the location in which to create the skeleton directory. All needed
+files will be copied to this directory. Select a location with enough disk
+space.
+<br></p>
+") +
+
+    /* Configure2 dialog help 2/3 */
+_("<p>Create an ISO image or just a directory that is suitable for 
+creating an ISO image at a later time.
+</p>
+") +
+    /* Configure2 dialog help 2/3 */
+_("<p>To save space, select the check box to copy only needed files 
+to the skeleton. 
+</p>
+"),
+
+];
+
+/* EOF */
+}

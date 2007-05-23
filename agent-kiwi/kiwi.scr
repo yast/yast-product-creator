@@ -1,0 +1,11 @@
+/**
+ * File:	kiwi.scr
+ * Summary:	Agent for accessing kiwi config.xml file
+ * Access:	read/write
+ * Authors:	Jiri Suchomel <jsuchome@suse.cz>
+ *
+ * $Id: kiwi.scr 9731 2003-04-14 07:55:21Z jsuchome $
+ */
+.kiwi
+
+`ag_kiwi ()

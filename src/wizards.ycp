@@ -1,0 +1,257 @@
+/**
+ * File:	include/product-creator/wizards.ycp
+ * Package:	Configuration of product-creator
+ * Summary:	Wizards definitions
+ * Authors:	Anas Nashif <nashif@suse.de>
+ *
+ * $Id$
+ */
+
+{
+
+textdomain "product-creator";
+
+import "Wizard";
+import "Popup";
+import "Package";
+import "Sequencer";
+
+include "product-creator/complex.ycp";
+include "product-creator/dialogs.ycp";
+include "product-creator/kiwi.ycp";
+
+
+/**
+ * Add a configuration of product-creator
+ * @return sequence result
+ */
+define symbol AddSequence() ``{
+
+
+    map aliases = $[
+	"source"	: ``( sourceDialog() ),
+	"config1"	: ``( Configure1Dialog() ),
+	"config2"	: ``( Configure2Dialog() ),
+	"isolinux"	: ``( isolinuxDialog() ),
+	"packagemanager": ``( packageSelector() ),
+	"gpgkey"	: ``( gpgKeyDialog() ),
+	"write"		: ``( WriteDialog() ),
+	"summary"	: ``( ConfigSummary() )
+    ];
+
+
+    map sequence = $[
+	"ws_start" : "config1",
+	"source" : $[
+	    `abort	: `abort,
+	    `next	: "config2"
+	],
+	"config1" : $[
+	    `abort	: `abort,
+	    `next	: "source"
+	],
+	"config2" : $[
+	    `abort	: `abort,
+	    `next	: "isolinux"
+	],
+	"isolinux": $[
+	   `abort	: `abort,
+	    `next	: "packagemanager",
+            `autoyast   : "gpgkey"
+	],
+	"packagemanager": $[
+	   `abort	: `abort,
+	    `next	: "gpgkey",
+	    `accept	: "gpgkey",
+	    `failed	: "summary"
+	],
+	"gpgkey"	: $[
+	   `abort	: `abort,
+	    `next	: "summary",
+	],
+	"summary" : $[
+		      `abort	: `abort,
+		      `next	: "write"
+		      ],
+	"write" : $[
+	    `abort	: `abort,
+	    `next	: `next
+	],
+
+    ];
+
+    return Sequencer::Run( aliases, sequence );
+}
+/**
+ * Create a CD image tree and ISO image
+ * @return sequence result
+ */
+define symbol CreateSequence() ``{
+   map aliases = $[
+	"verify"	: ``( VerifyDialog() ),
+	"create"	: ``( TreeDialog() )
+    ];
+
+
+    map sequence = $[
+	"ws_start" : "verify",
+	"verify" : $[
+	    `abort	: `abort,
+	    `next	: "create",
+	    `overview	: `next
+	],
+	"create": $[
+	    `abort	: `abort,
+	    `next	: `next,
+	    `overview	: `next
+	]
+
+    ];
+
+    return Sequencer::Run( aliases, sequence );
+}
+
+/**
+ * save current configuration into global map
+ */
+symbol CommitConfig () {
+    ProductCreator::CommitConfig ();
+    return `next;
+}
+
+/**
+ * Initialize the sources of selected configuration
+ */
+symbol InitSources () {
+
+    ProductCreator::EnableSource();
+    return `next;
+}
+
+/**
+ */
+define symbol KiwiSequence() ``{
+    map aliases = $[
+	"init_sources"	: [ ``( InitSources () ), true ],
+	"kiwi"		: ``( KiwiDialog () ),
+	"summary"	: ``( CommitConfig() ),
+	"write"		: ``( WriteDialog() ),
+    ];
+
+    map sequence = $[
+	"ws_start"	: "init_sources",
+	"init_sources"	: $[
+	    `next	: "kiwi",
+	],
+	"kiwi": $[
+	    `abort	: `abort,
+	    `next	: "summary",
+	],
+	"summary" : $[
+	    `next	: "write"
+	],
+	"write" : $[
+	    `abort	: `abort,
+	    `next	: `next
+	],
+    ];
+    return Sequencer::Run( aliases, sequence );
+}
+
+/**
+ * Main workflow of the product-creator configuration
+ * @return sequence result
+ */
+define symbol MainSequence() ``{
+
+
+    map aliases = $[
+	"overview"	:   ``( OverviewDialog() ),
+	"configure"	: [ ``( AddSequence() ), true ],
+	"add"		: [ ``( AddSequence() ), true ],
+	"edit"		: [ ``( AddSequence() ), true ],
+	"create"	: [ ``( CreateSequence() ), true ],
+	"kiwi"		: [ ``( KiwiSequence() ), true ],
+    ];
+
+    map sequence = $[
+	"ws_start" : "overview",
+	"overview" : $[
+	    `abort	: `abort,
+	    `add	: "add",
+	    `edit	: "edit",
+	    `create	: "create",
+	    `kiwi	: "kiwi",
+	    `next	: `next
+	],
+	"configure" : $[
+	    `abort	: `abort,
+	    `next	: "overview",
+	],
+	"add" : $[
+	    `abort	: `abort,
+	    `next	: "overview",
+	],
+	"edit" : $[
+	    `abort	: `abort,
+	    `next	: "overview",
+	    ],
+	"create" : $[
+	    `abort	: `abort,
+	    `next	: "overview"
+	],
+	"kiwi" : $[
+	    `abort	: `abort,
+	    `next	: "overview"
+	]
+    ];
+
+   symbol ret = Sequencer::Run(aliases, sequence);
+
+    return ret;
+}
+
+
+
+/**
+ * Whole configuration of product-creator
+ * @return sequence result
+ */
+define boolean ProductCreatorSequence() ``{
+
+    map aliases = $[
+	"main"	:   ``( MainSequence() ),
+	"read"  : [ ``( ReadDialog() ), true ],
+
+    ];
+
+    map sequence = $[
+	"ws_start" : "read",
+	"read" : $[
+	    `abort	: `abort,
+	    `next	: "main"
+	],
+	"main" : $[
+	    `abort	: `abort,
+	    `next	: `next
+	]
+    ];
+
+    Wizard::CreateDialog();
+    Wizard::SetDesktopIcon("cd-creator");
+    if (!Package::InstallAll(["inst-source-utils", "mkisofs"]))
+    {
+        Popup::Error(_("Installation of required packages
+failed."));
+        return false;
+    }
+
+    symbol ret = Sequencer::Run(aliases, sequence);
+
+    UI::CloseDialog();
+    return ret == `next;
+}
+
+
+/* EOF */
+}

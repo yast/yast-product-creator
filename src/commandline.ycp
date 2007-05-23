@@ -1,0 +1,87 @@
+/**
+ * File:	include/product-creator/commandline.ycp
+ * Package:	Configuration of product-creator
+ * Summary:	Dialogs definitions
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * $Id:$
+ */
+
+{
+    import "CommandLine";
+    import "Progress";
+
+    boolean ListHandler(map params)
+    {
+	foreach(string name, map<string, any> conf, ProductCreator::Configs,
+	    {
+		CommandLine::Print(name);
+	    }
+	);
+
+	return true;
+    }
+
+    boolean CreateIsoHandler(map params)
+    {
+	y2milestone("CreateIsoHandler parameters: %1", params);
+
+	string name = params["name"]:"";
+
+	if (name != "")
+	{
+	    CommandLine::PrintVerbose(sformat(_("Loading Configuration '%1'..."), name));
+	    // load the requested configuration
+
+	    if (!ProductCreator::LoadConfig(name))
+	    {
+		CommandLine::Print(sformat(_("Cannot load configuration '%1'"), name));
+		return false;
+	    }
+
+	    string file = params["passphrase"]:"";
+	    if (file != nil && file != "")
+	    {
+		y2milestone("Reading passphrase from file %1...", file);
+		ProductCreator::gpg_passphrase = (string)SCR::Read(.target.string, file);
+	    }
+
+	    // disable the progress
+	    boolean progress = Progress::set(false);
+
+	    // verify the destination
+	    if (VerifyDialog() != `next)
+	    {
+		CommandLine::Print("Cannot verify the destination");
+		return false;
+	    }
+
+	    // copy packages, create ISO image
+	    TreeDialog();
+
+	    // reset the passphrase
+	    ProductCreator::gpg_passphrase = "";
+
+	    string iso_name = ProductCreator::Config["iso-directory"]:"" + "/" +  ProductCreator::Config["isofile"]:"";
+	    integer image_size = (integer)SCR::Read(.target.size, iso_name);
+	    if (SCR::Read(.target.size, iso_name) < 0)
+	    {
+		CommandLine::Print(sformat(_("Cannot create ISO image %1"), iso_name));
+		return false;
+	    }
+	    else
+	    {
+		CommandLine::Print(sformat(_("ISO image %1 has been written."), iso_name));
+	    }
+
+	    Progress::set(progress);
+	}
+	else
+	{
+	    CommandLine::Print(_("Error: Configuration name cannot be empty."));
+	    return false;
+	}
+
+	return true;
+    }
+}

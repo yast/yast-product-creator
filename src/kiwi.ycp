@@ -1,0 +1,1462 @@
+/**
+ * File:	include/product-creator/kiwi.ycp
+ * Package:	Configuration of product-creator
+ * Summary:	Dialogs for kiwi configuration
+ * Authors:	Jiri Suchomel <jsuchome@suse.cz>
+ *
+ * $Id$
+ */
+{
+  textdomain "product-creator";
+
+  import "CWM";
+  import "CWMTab";
+  import "ProductCreator";
+  import "FileUtils";
+  import "Label";
+  import "Kiwi";
+  import "Popup";
+  import "Summary";
+  import "Wizard";
+
+  include "product-creator/dialogs.ycp";
+
+  // map of current Live ISO configuration
+  map<string,any> KiwiConfig	= $[];
+
+  // what are we configuring now ("iso"/"xen"/...)
+  string kiwi_task	= "";
+
+  // directory with kiwi images
+  string images_dir	= "";
+
+  // return the id of actual widget for boot image
+  string boot_image_widget () {
+    return kiwi_task + "boot";
+  }
+
+  string get_name () {
+    return KiwiConfig["name"]:"";
+  }
+
+
+  // read available the images under /usr/share/kiwi/image/ directory
+  list<term> GetAvailableImages (string subdir) {
+
+    list<term> ret	= [];
+    map out = (map) SCR::Execute (.target.bash_output, sformat ("ls %1/%2", images_dir, subdir));
+    if (out["exit"]:0 != 0)
+	return ret;
+    foreach (string file, splitstring (out["stdout"]:"", "\n"), {
+	if (file != "" && FileUtils::IsDirectory (sformat ("%1/%2/%3", images_dir, subdir, file)))
+	{
+	    ret	= add (ret, `item (`id(file), file, file == KiwiConfig[subdir]:""));
+	}
+    });
+    return ret;
+  }
+
+  /********************************************************************************************
+   * widget handlers
+   *******************************************************************************************/
+
+  /**
+   * Initialize the widget with ignored packages
+   */
+  define void InitSWIgnore (string id) {
+    string sw_selection	= KiwiConfig["sw_selection"]:"image";
+    string ignore_key	= sw_selection == "image" ? "ignore" : (sw_selection + "_ignore");
+    UI::ChangeWidget (`id (id), `Value, mergestring (KiwiConfig[ignore_key]:[], "\n"));
+  }
+
+  define void StoreSWIgnore (string key, map event) {
+    string sw_selection	= KiwiConfig["sw_selection"]:"image";
+    string ignore_key	= sw_selection == "image" ? "ignore" : (sw_selection + "_ignore");
+    KiwiConfig[ignore_key]	= filter (string p,
+	splitstring ((string) UI::QueryWidget(`id(key), `Value), "\n"), ``(p != ""));
+  }
+
+  define symbol HandleSWIgnore (string key, map event) {
+    if (event["ID"]:nil == `next) StoreSWIgnore (key, event);
+    return nil;
+  }
+
+
+  /**
+   * Initialize the contents of richtext with selected software
+   */
+  define void InitSWRichText (string id) {
+
+    string sw_selection	= KiwiConfig["sw_selection"]:"image";
+    string pattern_key	= sw_selection == "image" ? "addons" : (sw_selection + "_patterns");
+    string rt	= "";
+    if (KiwiConfig[pattern_key]:[] != [])
+    {
+	// richtext header
+	rt	= Summary::AddHeader ("", _("Patterns"));
+	foreach (string pattern, (list<string>) KiwiConfig[pattern_key]:[], {
+	    rt	= Summary::AddListItem (rt, pattern);
+	});
+    }
+    string package_key	= sw_selection == "image" ? "packages" : (sw_selection + "_packages");
+    if (KiwiConfig[package_key]:[] != [])
+    {
+	// richtext header
+	rt	= Summary::AddHeader (rt, _("Packages"));
+	foreach (string package, (list<string>) KiwiConfig[package_key]:[], {
+	    rt	= Summary::AddListItem (rt, package);
+	});
+    }
+    UI::ChangeWidget (`id (id), `Value, rt);
+  }
+
+  /**
+   * Handler for software selection
+   */
+  define symbol HandleSWSelection (string key, map event) {
+    if (event["ID"]:nil == key)
+    {
+	string sw_selection	= KiwiConfig["sw_selection"]:"image";
+	if (sw_selection == "image" && packageSelector () != `cancel)
+	{
+	    KiwiConfig["addons"]	= ProductCreator::Config["addons"]:[];
+	    KiwiConfig["packages"]	= ProductCreator::Config["packages"]:[];
+	    InitSWRichText ("rt_sw");
+	    //FIXME will replace current tags...
+	    if (ProductCreator::Config["taboo"]:[] != nil)
+	    {
+		KiwiConfig["ignore"]	= ProductCreator::Config["taboo"]:[];
+		InitSWIgnore ("ignore");
+	    }
+	}
+	else if (sw_selection != "image")
+	{
+	    map<string,any> selected = runPackageSelector ("",
+		KiwiConfig[sw_selection + "_patterns"]:[],
+		KiwiConfig[sw_selection + "_packages"]:[],
+		KiwiConfig[sw_selection + "_ignore"]:[],
+		`packages
+	    );
+	    KiwiConfig[sw_selection + "_patterns"]	= selected["addons"]:[];
+	    KiwiConfig[sw_selection + "_packages"]	= selected["packages"]:[];
+	    InitSWRichText ("rt_sw");
+	    if (ProductCreator::Config["taboo"]:[] != nil)
+	    {
+		KiwiConfig["ignore"]	= ProductCreator::Config["taboo"]:[];
+		InitSWIgnore ("ignore");
+	    }
+	}
+    }
+    return nil;
+  }
+
+  /**
+   * initialize the combo box with package selection groups
+   */
+  define void InitSWSelectionCombo (string id) {
+    string sw_selection	= KiwiConfig["sw_selection"]:"image";
+    list items	= [
+	`item (`id ("image"), _("Image"), sw_selection == "image"),
+//	`item (`id ("boot"), _("Boot"), sw_selection == "boot"),
+    ];
+    if (kiwi_task == "xen")
+	items	= add (items, `item (`id ("xen"), _("XEN specific" ), sw_selection == "xen"));
+    UI::ChangeWidget (`id (id), `Items, items);
+  }
+
+  define void StoreSWSelectionCombo (string key, map event) {
+      KiwiConfig[key]	= (string) UI::QueryWidget(`id(key), `Value);
+  }
+
+  /**
+   * handler for combo box with isoboot items
+   */
+  define symbol HandleSWSelectionCombo (string key, map event) {
+    any id	= event["ID"]:nil;
+    // store the value on exiting
+    if (id == `next) StoreSWSelectionCombo (key, event);
+    else if (event["ID"]:nil == key)
+    {
+	string selected	= (string) UI::QueryWidget(`id(key), `Value);
+	if (selected != KiwiConfig["sw_selection"]:"image")
+	{
+	    StoreSWIgnore ("ignore", event);
+	    StoreSWSelectionCombo (key, event);
+	    InitSWRichText ("rt_sw");
+	    InitSWIgnore ("ignore");
+	}
+    }
+    return nil;
+  }
+
+
+  /**
+   * initialize the value of combo box with isoboot items
+   */
+  define void InitBootCombo (string id) {
+    UI::ChangeWidget (`id (id), `Items, GetAvailableImages (id));
+  }
+
+  /**
+   * store the value of current isoboot image
+   */
+  define void StoreBootCombo (string key, map event) {
+      KiwiConfig[key]	= (string) UI::QueryWidget(`id(key), `Value);
+  }
+  /**
+   * handler for combo box with isoboot items
+   */
+  define symbol HandleBootCombo (string key, map event) {
+    // store the value on exiting
+    if (event["ID"]:nil == `next) StoreBootCombo (key, event);
+    return nil;
+  }
+
+  /**
+   * initialize the value of compress checkbox
+   */
+  define void InitCompressCheckBox (string id) {
+    UI::ChangeWidget (`id (id), `Enabled, false);// FIXME squashfs not available?
+    UI::ChangeWidget (`id (id), `Value, KiwiConfig["compressed"]:false);
+  }
+
+  /**
+   * store the value of compress checkbox
+   */
+  define void StoreCompressCheckBox (string key, map event) {
+      KiwiConfig["compressed"]	= (boolean) UI::QueryWidget(`id(key), `Value);
+  }
+  /**
+   * handler for compress checkbox
+   */
+  define symbol HandleCompressCheckBox (string key, map event) {
+    // store the value on exiting
+    if (event["ID"]:nil == `next) StoreCompressCheckBox (key, event);
+    return nil;
+  }
+
+  /**
+   * initialize the value of version
+   */
+  define void InitVersion (string id) {
+    UI::ChangeWidget (`id (id), `Value, sformat ("%1", KiwiConfig[id]:"1"));
+  }
+
+  /**
+   * store the value of current version
+   */
+  define void StoreVersion (string key, map event) {
+      KiwiConfig[key]	= sformat ("%1", UI::QueryWidget(`id(key), `Value));
+  }
+
+  /**
+   * handler for version
+   */
+  define symbol HandleVersion (string key, map event) {
+    // store the value on exiting
+    if (event["ID"]:nil == `next) StoreVersion (key, event);
+    return nil;
+  }
+
+  /**
+   * initialize the value of combo box with isoboot items
+   */
+  define void InitSizeUnitCombo (string id) {
+    UI::ChangeWidget (`id (id), `Items, maplist (string u, [ "M", "G" ], ``(
+	`item (`id (u), u + "B", KiwiConfig[id]:"M" == u))
+    ));
+  }
+
+  /**
+   * initialize the value of version
+   */
+  define void InitSize (string id) {
+    UI::ChangeWidget (`id (id), `Value, KiwiConfig[id]:2700);
+  }
+
+  /**
+   * initialize the product label
+   */
+  define void InitLabel (string id) {
+    UI::ChangeWidget (`id ("name"), `Value, KiwiConfig["name"]:"");
+  }
+
+
+  /**
+   * universal widget: initialize the string value of widget @param
+   */
+  define void InitDescription (string id) {
+    UI::ChangeWidget (`id (id), `Value, KiwiConfig[id]:"");
+  }
+
+  /**
+   * store the string value of given widget
+   */
+  define void StoreDescription (string key, map event) {
+      KiwiConfig[key]	= UI::QueryWidget (`id(key), `Value);
+  }
+
+  /**
+   * handler for general string-value widgets: store their value on exit/save
+   */
+  define symbol HandleDescription (string key, map event) {
+    // store the value on exiting
+    if (event["ID"]:nil == `next) StoreDescription (key, event);
+    return nil;
+  }
+
+  define void InitOutputDir (string id) {
+    UI::ChangeWidget (`id (id), `Value, KiwiConfig["iso-directory"]:"");
+  }
+
+  /**
+   * initialize the table with users
+   */
+  define void InitUsersTable (string id) {
+
+    list items = maplist (string user, map usermap, (map<string,map>) KiwiConfig["users"]:$[],
+    ``(`item (`id (user), user, usermap["home"]:"")));
+    UI::ChangeWidget (`id ("table"), `Items, items);
+    UI::ChangeWidget (`id ("edituser"), `Enabled, size (items) > 0);
+    UI::ChangeWidget (`id ("deleteuser"), `Enabled, size (items) > 0);
+  }
+
+  /**
+   * Handle changes in users table
+   */
+  define symbol HandleAddEditUser (string key, map event) {
+    if (event["ID"]:nil != key && (key != "userstable" || event["ID"]:nil != "table"))	return nil;
+
+    if (key == "userstable") key = "edituser";
+    string current_user = (string) UI::QueryWidget (`id ("table"), `CurrentItem);
+
+    UI::OpenDialog (`opt(`decorated), `HBox (`HSpacing (0.5), `VBox (
+	`VSpacing (0.5),
+	// popup label
+	`Label (`id (`label), _("Add new user")),
+	// text entry label
+	`TextEntry (`id (`username), _("&Name")),
+	`Password (`id (`pw1), Label::Password(), ""),
+	`Password (`id(`pw2), Label::ConfirmPassword(), ""),
+	`TextEntry (`id (`home), _("&Home Directory")),
+	`HBox (
+	    `PushButton (`id(`ok),`opt(`key_F10), Label::OKButton()),
+	    `PushButton (`id(`cancel),`opt(`key_F9), Label::CancelButton())
+	),
+	`VSpacing (0.5)), `HSpacing (0.5))
+    );
+    if (key == "edituser")
+    {
+	UI::ChangeWidget (`id (`username), `Value, current_user);
+	UI::ChangeWidget (`id (`home), `Value, KiwiConfig["users", current_user, "home"]:"");
+	UI::ChangeWidget (`id (`pw1), `Value, "*****");
+	UI::ChangeWidget (`id (`pw2), `Value, "*****");
+	// popup label
+	UI::ChangeWidget (`id (`label), `Value, _("Edit user"));
+    }
+    any ret	= nil;
+    repeat
+    {
+	ret	= UI::UserInput ();
+	if (ret == `ok)
+	{
+	    string username	= (string) UI::QueryWidget (`id(`username), `Value);
+	    string pwd		= (string) UI::QueryWidget (`id(`pw1), `Value);
+	    if (username == "")
+	    {
+		// popup message
+		Report::Error (_("Enter the user name."));
+		ret     = `notnext;
+		continue;
+	    }
+	    if (pwd != UI::QueryWidget (`id(`pw2), `Value))
+	    {
+		// popup message
+		Report::Error (_("The passwords do not match.
+Try again."));
+		ret     = `notnext;
+		continue;
+	    }
+	    if (pwd == "")
+	    {
+		// popup message
+		Report::Error (_("Enter the user password."));
+		ret     = `notnext;
+		continue;
+	    }
+	    if (! haskey (KiwiConfig, "users"))
+		KiwiConfig["users"]	= $[];
+	    else if (key == "edituser" && username != current_user)
+		KiwiConfig["users"]	= remove (KiwiConfig["users"]:$[], current_user);
+	    KiwiConfig["users", username]	= $[
+		"pwd"	: pwd,
+		"home"	: UI::QueryWidget (`id(`home), `Value)
+	    ];
+	}
+    } until (ret == `ok || ret == `cancel);
+
+    UI::CloseDialog ();
+    if (ret == `ok) InitUsersTable ("table");
+    return nil;
+  }
+
+  /**
+   * handle delete user button
+   */
+  define symbol HandleDeleteUser (string key, map event) {
+    if (event["ID"]:nil != key)	return nil;
+
+    string current_user = (string) UI::QueryWidget (`id ("table"), `CurrentItem);
+    KiwiConfig["users"]	= remove (KiwiConfig["users"]:$[], current_user);
+    InitUsersTable ("table");
+    return nil;
+  }
+
+  /**
+   * initialize the table with root dir contents
+   */
+  define void InitRootDirTable (string id) {
+
+    list items = maplist (string file, (list<string>) KiwiConfig["root_dir"]:[], {
+//	return `item (`id (file), substring (file, findlastof (file, "/") + 1));
+	return `item (`id (file), file);
+    });
+    UI::ChangeWidget (`id ("roottable"), `Items, items);
+    UI::ChangeWidget (`id ("root_dir_delete"), `Enabled, size (items) > 0);
+  }
+
+  // add new subdir to the 'root' directory
+  define symbol HandleAddToRootDir (string key, map event) {
+
+    if (event["ID"]:nil != key)	return nil;
+    // popup for file selection dialog
+    string dir	= UI::AskForExistingDirectory ("", _("Choose the directory to import"));
+    if (dir!= nil)
+    {
+	KiwiConfig["root_dir"]	= union (KiwiConfig["root_dir"]:[], [dir]);
+	InitRootDirTable ("roottable");
+    }
+    return nil;
+  }
+
+  // delete subdir from the 'root' directory
+  define symbol HandleDeleteFromRootDir (string key, map event) {
+    if (event["ID"]:nil != key)	return nil;
+    string current	= (string) UI::QueryWidget (`id ("roottable"), `Value);
+    KiwiConfig["root_dir"]	= filter (string f, KiwiConfig["root_dir"]:[], ``(f != current));
+    InitRootDirTable ("roottable");
+    return nil;
+  }
+
+  /**
+   * initialize the table with config dir contents
+   */
+  define void InitConfigDirTable (string id) {
+
+    list items = maplist (string file, (list<string>) KiwiConfig["config_dir"]:[], {
+//	return `item (`id (file), substring (file, findlastof (file, "/") + 1));
+	return `item (`id (file), file);
+    });
+    UI::ChangeWidget (`id ("configtable"), `Items, items);
+    UI::ChangeWidget (`id ("config_dir_delete"), `Enabled, size (items) > 0);
+  }
+
+  // add new subdir to the 'config' directory
+  define symbol HandleAddToConfigDir (string key, map event) {
+
+    if (event["ID"]:nil != key)	return nil;
+    // popup for file selection dialog
+    string dir	= UI::AskForExistingFile ("", "", _("Choose the script to import"));
+    if (dir!= nil)
+    {
+	KiwiConfig["config_dir"]	= union (KiwiConfig["config_dir"]:[], [dir]);
+	InitConfigDirTable ("configtable");
+    }
+    return nil;
+  }
+
+  // delete subdir from the 'config' directory
+  define symbol HandleDeleteFromConfigDir (string key, map event) {
+    if (event["ID"]:nil != key)	return nil;
+    string current	= (string) UI::QueryWidget (`id ("configtable"), `Value);
+    KiwiConfig["config_dir"]	= filter (string f, KiwiConfig["config_dir"]:[], ``(f != current));
+    InitConfigDirTable ("configtable");
+    return nil;
+  }
+
+  /**
+   * universal handler for directory browsing
+   */
+  string BrowseDirectoryHandler (string key, string label) {
+
+    string current	= (string) UI::QueryWidget (`id (key), `Value);
+    if (current == nil) current = "";
+    string dir	= UI::AskForExistingDirectory (current, label);
+    if (dir!= nil)
+    {
+	UI::ChangeWidget (`id (key), `Value, dir);
+	StoreDescription (key, $[]);
+    }
+    return dir;
+  }
+
+
+
+  /**
+   * handler for 'root' directory browse
+   */
+  symbol HandleBrowseRootDirectory (string key, map event) {
+    if (event["ID"]:nil != key) return nil;
+    // popup for file selection dialog
+    BrowseDirectoryHandler ("root_dir", _("Choose the path to 'root' directory"));
+    return nil;
+  }
+
+  /**
+   * handler for 'config' directory browse
+   */
+  symbol HandleBrowseConfigDirectory (string key, map event) {
+    if (event["ID"]:nil != key) return nil;
+    // popup for file selection dialog
+    BrowseDirectoryHandler ("config_dir", _("Choose the path to 'config' directory"));
+    return nil;
+  }
+
+  /**
+   * handler for output directory browse
+   */
+  symbol HandleBrowseOutputDirectory (string key, map event) {
+    if (event["ID"]:nil != key) return nil;
+    // popup for file selection dialog
+    BrowseDirectoryHandler ("output_dir", _("Choose the path to the output directory"));
+    return nil;
+  }
+
+  /**
+   * universal handler for file browsing
+   */
+  string BrowseFileHandler (string key, string label) {
+
+    string current	= (string) UI::QueryWidget (`id (key), `Value);
+    if (current == nil) current = "";
+    string file = UI::AskForExistingFile (current, "", label);
+    if (file != nil && key != "config.sh")
+    {
+	UI::ChangeWidget (`id (key), `Value, file);
+	StoreDescription (key, $[]);
+    }
+    return file;
+  }
+
+  /**
+   * Handler for browsing for images.sh file
+   */
+  symbol HandleBrowseImagesFile (string key, map event) {
+    if (event["ID"]:nil != key) return nil;
+    // popup for file selection dialog
+    BrowseFileHandler ("images_path", _("Choose the path to 'images.sh' file"));
+    return nil;
+  }
+
+  /**
+   * Handler for browsing for autoyast profile
+   */
+  symbol HandleBrowseAutoYaSTFile (string key, map event) {
+    if (event["ID"]:nil != key) return nil;
+    // popup for file selection dialog
+    BrowseFileHandler ("autoyast_path", _("Choose the path to autoYaST profile"));
+    return nil;
+  }
+
+  /**
+   * Handler for importing config.sh file
+   */
+  symbol HandleImportConfigFile (string key, map event) {
+    if (event["ID"]:nil != key) return nil;
+    // popup for file selection dialog
+    string file	= BrowseFileHandler ("config.sh", _("Choose the path to 'config.sh' file"));
+    if (file != nil)
+    {
+	if (FileUtils::Exists (file))
+	{
+	    string configsh	= (string) SCR::Read (.target.string, file);
+	    if (configsh != nil)
+	    {
+		UI::ChangeWidget (`id ("config.sh"), `Value, configsh);
+		StoreDescription ("config.sh", event);
+	    }
+	}
+    }
+    return nil;
+  }
+
+  /**
+   * Handler for importing images.sh file
+   * TODO same function as HandleImportConfigFile
+   */
+  symbol HandleImportImagesFile (string key, map event) {
+    if (event["ID"]:nil != key) return nil;
+    // popup for file selection dialog
+    string file	= BrowseFileHandler ("images.sh", _("Choose the path to 'images.sh' file"));
+    if (file != nil)
+    {
+	if (FileUtils::Exists (file))
+	{
+	    string imagessh	= (string) SCR::Read (.target.string, file);
+	    if (imagessh != nil)
+	    {
+		UI::ChangeWidget (`id ("images.sh"), `Value, imagessh);
+		StoreDescription ("images.sh", event);
+	    }
+	}
+    }
+    return nil;
+  }
+
+  // generic popup
+  define symbol NotImplementedHandler (string key, map event) {
+    if (event["ID"]:nil == key)
+    {
+	Popup::Message (_("Feature not implemented yet."));
+    }
+    return nil;
+  }
+
+  /**
+   * handler for main action: create the iso image with kiwi
+   */
+  define boolean CreateImage (string key, map event) {
+    if (event["ID"]:nil != `next)
+	return true;
+    boolean ret	= false;
+
+    map question	= $[
+	// popup question
+	"iso"	: _("Create ISO image now?"),
+	// popup question
+	"xen"	: _("Create XEN image now?"),
+	// popup question
+	"usb"	: _("Create USB stick image now?"),
+	// popup question
+	"vmx"	: _("Create virtual disk image now?"),
+    ];
+
+    map success		= $[
+	// popup message, %1 is a dir
+	"iso"	: _("ISO image successfully created in
+%1
+directory."),
+	// popup message, %1 is a dir
+	"xen"	: _("XEN image files successfully created in
+%1
+directory."),
+	// popup message, %1 is a dir
+	"usb"	: _("USB stick image successfully created in
+%1
+directory."),
+	// popup message, %1 is a dir
+	"vmx"	: _("Virtual disk image successfully created in
+%1
+directory."),
+    ];
+
+    if (Popup::YesNo (question[kiwi_task]:""))
+    {
+	if (Kiwi::WriteConfigXML (KiwiConfig, kiwi_task))
+	{
+	    if (Kiwi::PrepareAndCreate ())
+	    {
+		string dir	= Kiwi::MoveOutput (KiwiConfig["iso-directory"]:"");
+		Popup::Message (sformat (success[kiwi_task]:"", dir));
+		ret	= true;
+	    }
+	}
+    }
+    if (ret)
+    {
+	string dir	= Kiwi::SaveConfiguration (KiwiConfig, kiwi_task);
+	if (dir != nil && dir != "")
+	{
+	    ProductCreator::Config["kiwi_configuration_" + kiwi_task] = dir;
+	}
+    }
+    return ret;
+  }
+
+  /**
+   * Global init function for Kiwi image dialog
+   * - read saved settings and fill in defaults
+   */
+  define void InitImageConfiguration () {
+
+    kiwi_task	= ProductCreator::kiwi_task;
+    images_dir	= Kiwi::images_dir;
+
+    // read the information from the base product
+    integer src_id	= ProductCreator::checkProductDependency ();
+    map<string,string> content = ProductCreator::ReadContentFile(src_id);
+
+    KiwiConfig	= ProductCreator::Config;
+
+    // busy popup
+    Popup::ShowFeedback (_("Reading current Live image configuration..."), _("Please wait..."));
+
+    map default_dirmap	= $[
+	"iso"	: sformat ("%1/kwliveDVD-suse-10.3", images_dir),
+	"xen"	: sformat ("%1/buildhost-suse-10.1", images_dir),
+	"usb"	: sformat ("%1/kwliveDVD-suse-10.3", images_dir),
+	"vmx"	: sformat ("%1/kwliveDVD-suse-10.3", images_dir),
+    ];
+
+    // path to current config directory
+    string default_dir	= default_dirmap[kiwi_task]:"";
+    string kiwi_configuration = KiwiConfig["kiwi_configuration_" + kiwi_task]:default_dir;
+
+    if (!FileUtils::Exists (kiwi_configuration))
+    {
+	y2warning ("directory %1 is not available, using %2", kiwi_configuration, default_dir);
+	kiwi_configuration	= default_dir;
+    }
+
+    if (FileUtils::Exists (kiwi_configuration + "/root"))
+    {
+//	KiwiConfig["root_dir"]	= kiwi_configuration + "/root";
+	// read all entries from root_dir and save to list
+	map out = (map) SCR::Execute (.target.bash_output,
+	    sformat ("ls -A1 -d %1/root/* 2>/dev/null", kiwi_configuration));
+	KiwiConfig["root_dir"]	= filter (string f, splitstring(out["stdout"]:"", "\n"), ``(f!=""));
+    }
+    if (FileUtils::Exists (kiwi_configuration + "/config"))
+    {
+//	KiwiConfig["config_dir"]	= kiwi_configuration + "/config";
+	map out = (map) SCR::Execute (.target.bash_output,
+	    sformat ("ls -A1 -d %1/config/* 2>/dev/null", kiwi_configuration));
+	KiwiConfig["config_dir"] = filter (string f, splitstring(out["stdout"]:"", "\n"),``(f!=""));
+    }
+    /*
+    if (FileUtils::Exists (kiwi_configuration + "/images.sh"))
+	KiwiConfig["images_path"]	= kiwi_configuration + "/images.sh";
+    */
+
+    foreach (string file, [ "images.sh", "config.sh" ], {
+	string file_path	= kiwi_configuration + "/" + file;
+	if (FileUtils::Exists (file_path))
+	{
+	    string contents	= (string) SCR::Read (.target.string, file_path);
+	    if (contents != nil)
+		KiwiConfig[file]	= contents;
+	}
+    });
+    KiwiConfig = (map<string,any>)union(KiwiConfig, Kiwi::ReadConfigXML (kiwi_configuration));
+
+    map label2boot	= $[
+	    "openSUSE 10.2"	: "suse-10.2",
+	    "openSUSE 10.3"	: "suse-10.3",
+	    "SUSE Linux 10.1"	: "suse-10.1",
+	    "SUSE Linux Enterprise Server 10"	: "sles10"
+    ];
+    string type	= KiwiConfig["type",kiwi_task,"boot"]:"";
+    list l	= splitstring (type, ",");
+    if (issubstring (type, "isoboot/") && kiwi_task == "iso")
+    {
+	KiwiConfig["isoboot"]	= substring (l[0]:"", search (l[0]:"","isoboot/") + 8);
+    }
+    else if (issubstring (type, "xenboot/"))
+    {
+	KiwiConfig["xenboot"]	= substring (l[0]:"", search (l[0]:"","xenboot/") + 8);
+    }
+    else if (issubstring (type, "usbboot/"))
+    {
+	KiwiConfig["usbboot"]	= substring (l[0]:"", search (l[0]:"","usbboot/") + 8);
+    }
+    else if (issubstring (type, "vmxboot/"))
+    {
+	KiwiConfig["vmxboot"]	= substring (l[0]:"", search (l[0]:"","vmxboot/") + 8);
+    }
+
+    // guess some default boot image value
+    if (kiwi_task == "iso" && !haskey (KiwiConfig, "isoboot") && content["LABEL"]:"" != "")
+    {
+// FIXME label2boot mapping is not used because we are reading default configuration
+// but could we ALWAYS replace the default string???
+	KiwiConfig["isoboot"]	= label2boot[content["LABEL"]:""]:"";
+    }
+    else if (kiwi_task == "usb")
+    {
+	if (!haskey (KiwiConfig, "usbboot") && content["LABEL"]:"" != "")
+	    KiwiConfig["usbboot"]	= label2boot[content["LABEL"]:""]:"";
+	if (kiwi_configuration == default_dir)
+	{
+	    KiwiConfig	= remove (KiwiConfig, "type");
+	}
+    }
+    else if (kiwi_task == "vmx")
+    {
+	if (!haskey (KiwiConfig, "vmxboot") && content["LABEL"]:"" != "")
+	    KiwiConfig["vmxboot"]	= label2boot[content["LABEL"]:""]:"";
+	if (kiwi_configuration == default_dir)
+	{
+	    KiwiConfig	= remove (KiwiConfig, "type");
+	}
+    }
+    else if (kiwi_task == "xen")
+    {
+	/* FIXME still no other image/xenboot image than suse-10.2...
+	if (!haskey (KiwiConfig, "xenboot"))
+	    KiwiConfig["xenboot"]	= label2boot[content["LABEL"]:""]:"";
+	*/
+	// adapt the default buildhost-suse-10.1 for xen usage
+	if (kiwi_configuration == default_dir)
+	{
+	    KiwiConfig	= remove (KiwiConfig, "type");
+	}
+    }
+    string name		= KiwiConfig["name"]:"";
+    if (!haskey (KiwiConfig, "specification"))
+	KiwiConfig["specification"]	= KiwiConfig["name"]:"";
+    Popup::ClearFeedback ();
+  }
+
+
+  /********************************************************************************************
+   * widget descriptions
+   *******************************************************************************************/
+
+  // return map with description of tabs
+  // it is a function, to be able to adapt to actual state (e.g. boot_image_widget ())
+  map tabs_descr () {
+
+    return $[
+    "config.xml" : $[
+	// tab header
+	"header"	: _("Image configuration"),
+	"contents"	: `HBox (`HSpacing(1),
+	    `VBox (
+		`VSpacing (0.2),
+		`HBox (
+		    `HWeight (1, `HBox (
+			boot_image_widget ()
+//			`VBox (`Label (""), "configure_boot")
+		    )),
+		    `HWeight (1, `VBox (`Label (""), `Left ("compressed")))
+		),
+		`VSpacing (0.2),
+		`HBox (
+		    `HWeight (1, "version"),
+		    `HWeight (1, `HBox ("size", "sizeunit"))
+		),
+		"sw_selection",
+		`HBox (
+		    `HWeight (1, `VBox (
+//			`Left (`Label (_("Software for image"))), "rt_sw", `Right ("configure_sw")
+			`Left (`Label (_("Installed software"))), "rt_sw", `Right ("configure_sw")
+		    )),
+		    `HWeight (1, "ignore")
+		    /*
+		    `VBox (
+			`Left (`Label (_("Packages to ignore"))),
+			"rt_sw_ignore",
+			`Right ("configure_sw_ignore")
+		    )
+		    */
+		    /*
+		    `VBox (
+			`Left (`Label (_("Software for build"))),
+			"rt_sw_boot",
+			`Right ("configure_sw_boot")
+		    )
+		    */
+		),
+		/*
+		`HBox (
+		    "output_dir",
+		    `VBox (`Label (""), "browse_output_dir")
+		),
+		*/
+		`VSpacing (0.2)
+	    ), `HSpacing(1)),
+	"widget_names" : [
+//	    "isoboot",
+	    boot_image_widget (),
+//	    "configure_boot",
+	    "compressed",
+	    "version",
+	    "size", "sizeunit",
+	    "sw_selection",
+	    "rt_sw", "configure_sw",
+	    "ignore",
+//	    "rt_sw_ignore", "configure_sw_ignore",
+//	    "rt_sw_boot", "configure_sw_boot",
+//	    "output_dir", "browse_output_dir",
+	],
+    ],
+    "description" : $[
+	// tab header
+	"header"	: _("Description"),
+	"contents"	: `HBox (`HSpacing(1),
+	    `VBox (
+		`VSpacing (0.2),
+		"author",
+		`VSpacing (0.2),
+		"contact",
+		`VSpacing (0.2),
+		"specification",
+		`VStretch ()
+	    ), `HSpacing (1)),
+	"widget_names" : [ "author", "contact", "specification" ],
+    ],
+    "users" : $[
+	// tab header
+	"header"	: _("Users"),
+	"contents"	: `HBox (`HSpacing(1),
+	    `VBox (
+		"general_users",
+		`VSpacing (0.2),
+		"group",
+		`VSpacing (0.2),
+		"userstable",
+		`VSpacing (0.2),
+		`HBox ("adduser", "edituser", "deleteuser", `HStretch ()),
+		`VSpacing (0.2)
+	    ), `HSpacing (1)),
+	"widget_names" : [
+	    "general_users", "group", "userstable", "adduser", "edituser", "deleteuser"
+	]
+    ],
+    "scripts" : $[
+	// tab header
+	"header"	: _("Scripts"),
+	"contents"	: `HBox (`HSpacing(1),
+	    `VBox (
+		"general_scripts",
+		`VSpacing (0.2),
+		/*
+		`HBox (
+		    "autoyast_path",
+		    `VBox (`Label (""), "browse_autoyast")
+		),
+		*/
+		/*
+		`HBox (
+		    "images_path",
+		    `VBox (`Label (""), "browse_images_path")
+		),
+		*/
+		`HBox ("config.sh", `Bottom ("import_config.sh")),
+		`HBox ("images.sh", `Bottom ("import_images.sh")),
+		`VSpacing (0.2)
+	    ), `HSpacing (1)),
+	"widget_names" : [
+	    "general_scripts",
+//	    "root_dir", "browse_root_dir", "config_dir", "browse_config_dir",
+//	    "autoyast_path", "browse_autoyast",
+//	    "images_path", "browse_images_path",
+	    "config.sh", "import_config.sh",
+	    "images.sh", "import_images.sh",
+	],
+    ],
+    "directories" : $[
+	// tab header
+	"header"	: _("Directories"),
+	"contents"	: `HBox (`HSpacing(1),
+	    `VBox (
+		"general_directories",
+		`VSpacing (0.2),
+		/*
+		`HBox (
+		    "root_dir",
+		    `VBox (`Label (""), "browse_root_dir")
+		),
+		*/
+		"root_dir_table",
+		`VSpacing (0.2),
+		`HBox ("root_dir_add", `Left ("root_dir_delete")),
+		`VSpacing (0.2),
+		"config_dir_table",
+		`VSpacing (0.2),
+		`HBox ("config_dir_add", `Left ("config_dir_delete")),
+		`VSpacing (0.2),
+		/*
+		`HBox (
+		    "config_dir",
+		    `VBox (`Label (""), "browse_config_dir")
+		),
+		*/
+		/*
+		`HBox (
+		    "autoyast_path",
+		    `VBox (`Label (""), "browse_autoyast")
+		),
+		*/
+		`VSpacing (0.2)
+	    ), `HSpacing (1)),
+	"widget_names" : [
+	    "general_directories",
+//	    "root_dir", "browse_root_dir",
+	    "root_dir_table", "root_dir_add", "root_dir_delete",
+	    "config_dir_table", "config_dir_add", "config_dir_delete",
+//	    "config_dir", "browse_config_dir",
+	],
+    ],
+    ];
+  }
+
+  map<string, map> get_widget_description () {
+    return $[
+    // global widgets
+    "global"		:$[
+	"widget"	: `empty,
+	"validate_type"	: `function,
+	"validate_function"	: CreateImage,
+	"no_help"	: true,
+    ],
+    // widgets for config.xml tab
+    "isoboot" : $[
+	"widget"	: `combobox,
+	"opt"		: [ `hstretch, `notify ],
+	// combo box label
+	"label"		: _("C&D Boot Image"),
+	// help text for "C&D Boot Image", %1/%2 is path (on extra line)
+	"help"		: sformat (_("<p>Choose one <b>CD Boot Image</b> from <br>
+<tt>%1/%2</tt><br>
+directory.</p>"),
+	    Kiwi::images_dir, boot_image_widget ()),
+	"items"		: [],
+	"init"		: InitBootCombo,
+	"store"		: StoreBootCombo,
+	"handle"	: HandleBootCombo,
+    ],
+    "xenboot" : $[
+	"widget"	: `combobox,
+	"opt"		: [ `hstretch, `notify ],
+	// combo box label
+	"label"		: _("&XEN Boot Image"),
+	// help text for "XEN Boot Image"
+	"help"		: sformat (_("<p>Choose one <b>XEN Boot Image</b> from <br>
+<tt>%1/%2</tt><br>
+directory.</p>"),
+	    Kiwi::images_dir, boot_image_widget ()),
+	"items"		: [],
+	"init"		: InitBootCombo,
+	"store"		: StoreBootCombo,
+	"handle"	: HandleBootCombo,
+    ],
+    "usbboot" : $[
+	"widget"	: `combobox,
+	"opt"		: [ `hstretch, `notify ],
+	// combo box label
+	"label"		: _("&USB stick Boot Image"),
+	// help text for "XEN Boot Image"
+	"help"		: sformat (_("<p>Choose one <b>USB stick Boot Image</b> from<br>
+<tt>%1/%2</tt><br>
+directory.</p>"),
+	    Kiwi::images_dir, boot_image_widget ()),
+	"items"		: [],
+	"init"		: InitBootCombo,
+	"store"		: StoreBootCombo,
+	"handle"	: HandleBootCombo,
+    ],
+    "vmxboot" : $[
+	"widget"	: `combobox,
+	"opt"		: [ `hstretch, `notify ],
+	// combo box label
+	"label"		: _("&Virtual Disk Boot Image"),
+	// help text for "XEN Boot Image"
+	"help"		: sformat (_("<p>Choose one <b>Virtual Disk Boot Image</b> from<br>
+<tt>%1/%2</tt><br>
+directory.</p>"),
+	    Kiwi::images_dir, boot_image_widget ()),
+	"items"		: [],
+	"init"		: InitBootCombo,
+	"store"		: StoreBootCombo,
+	"handle"	: HandleBootCombo,
+    ],
+    "configure_boot"	: $[
+	"widget"	: `push_button,
+	// pusbutton label
+	"label"		: _("C&onfigure..."),
+	"help"		: _("<p>Create new boot image with <b>Configure</b>.</p>"),
+	"handle"        : NotImplementedHandler
+     ],
+    "compressed" : $[
+	"widget"	: `checkbox,
+	// textentry label
+	"label"		: _("Co&mpress"),
+	"help"		: _("<p>compressed: FIXME - still not supported?</p>"),
+	"init"		: InitCompressCheckBox,
+	"store"		: StoreCompressCheckBox,
+	"handle"	: HandleCompressCheckBox,
+    ],
+    "sw_selection"	: kiwi_task == "xen" ? $[
+	"widget"	: `combobox,
+	"opt"		: [ `hstretch, `notify ],
+	// combo box label
+	"label"		: _("So&ftware selection"),
+	// help text for "So&ftware selection"
+	"help"		: "",
+	"items"		: [],
+	"init"		: InitSWSelectionCombo,
+	"store"		: StoreSWSelectionCombo,
+	"handle"	: HandleSWSelectionCombo,
+    ] : $[
+	"widget"	: `empty,
+	"no_help"	: true,
+    ],
+    "rt_sw"		: $[
+	"widget"	: `richtext,
+	"init"		: InitSWRichText,
+	"help"		: "",
+	"label"		: "&L",
+    ],
+    "configure_sw"	: $[
+	"widget"        : `push_button,
+	// pusbutton label
+	"label"         : _("Ch&ange..."),
+	"help"		: _("<p>Adapt software selection with <b>Change</b>.</p>"),
+	"handle"	: HandleSWSelection
+    ],
+    "ignore"	: $[
+	"widget"	: `multi_line_edit,
+	// label
+	"label"		: _("&Ignored software"),
+	"init"		: InitSWIgnore,
+	"store"		: StoreSWIgnore,
+	"handle"	: HandleSWIgnore,
+	// help text for "&Ignored software"
+	"help"		: _("<p>For <b>ignored software</b>, enter each entry (like 'smtp_daemon') on new line</p>"),
+    ],
+    "output_dir" : $[
+	"widget"	: `textentry,
+	// textentry label
+	"label"		: _("O&utput directory"),
+	"help"		: _("help for output dir"),
+	"init"		: InitOutputDir,
+    ],
+    "browse_output_dir"	: $[
+	"widget"	: `push_button,
+	"label"		: Label::BrowseButton (),
+	"help"		: "",
+	"handle"	: HandleBrowseOutputDirectory
+    ],
+    "version" : $[
+	"widget"	: `textentry,
+	// textentry label
+	"label"		: _("&Version"),
+	"help"		: _("<p>Enter the <b>version</b> of your image configuration.</p>"),
+	"valid_chars"	: String::CDigit () + ".",
+	"init"		: InitVersion,
+	"store"		: StoreVersion,
+	"handle"	: HandleVersion,
+    ],
+    "size" : $[
+	"widget"	: `intfield,
+	"opt"		: [ `hstretch ],
+	// textentry label
+	"label"		: _("&Size"),
+	"help"		: _("<p>Set the image <b>size</b> in specified <b>unit</b>.</p>"),
+	"init"		: InitSize,
+	"store"		: StoreDescription,
+	"handle"	: HandleDescription,
+    ],
+    "sizeunit" : $[
+	"widget"	: `combobox,
+	// textentry label
+	"label"		: _("&Unit"),
+	"no_help"	: true,
+	"items"		: [],
+	"init"		: InitSizeUnitCombo,
+	"store"		: StoreDescription,
+	"handle"	: HandleDescription,
+    ],
+    // ---------------- widgtes for directory structure
+    "general_scripts"	: $[
+	"widget"	: `empty,
+	// general help for directory structure tab
+	"help"		: _("<p>Here, edit configuration scripts that are used to build your image.</p>"),
+    ],
+    "general_directories"	: $[
+	"widget"	: `empty,
+	// general help for directory structure tab
+	"help"		: _("<p>Here, point to the configuration directories that should help to build your image.</p>"),
+    ],
+    "root_dir"		: $[
+	"widget"	: `textentry,
+	// textentry label
+	"label"		: _("P&ath to directory with system configuration"),
+	// help text
+	"help"		: _("<p>Define the path to the <b>directory with system configuration</b> (the <tt>root</tt> directory). The entire directory is copied into the root of the image tree using <tt>cp -a</tt>.</p>"),
+	"init"		: InitDescription,
+	"store"		: StoreDescription,
+	"handle"	: HandleDescription,
+    ],
+    "browse_root_dir"	: $[
+	"widget"	: `push_button,
+	"label"		: Label::BrowseButton (),
+	"help"		: "",
+	"handle"	: HandleBrowseRootDirectory
+    ],
+    "root_dir_table" : $[
+	"widget"	: `custom,
+	"custom_widget" : `VBox (
+	    // label (above table)
+	    `Left (`Label (_("Directory with system configuration"))),
+	    `Table (`id("roottable"), `header (
+		// table header
+		_("Path to Directory"))
+	    )
+	),
+	// help for table with users
+	"help"		: _("<p>Configure the <b>directory with system configuration</b> (the <tt>root</tt> directory). The entire directory is copied into the root of the image tree using <tt>cp -a</tt>.</p>"),
+	"init"		: InitRootDirTable,
+    ],
+    "root_dir_add"	: $[
+	"widget"	: `push_button,
+	"label"		: Label::AddButton (),
+	"no_help"	: true,
+	"handle"	: HandleAddToRootDir,
+    ],
+    "root_dir_delete"	: $[
+	"widget"	: `push_button,
+	"label"		: Label::DeleteButton (),
+	"no_help"	: true,
+	"handle"	: HandleDeleteFromRootDir,
+    ],
+    "config_dir_table" : $[
+	"widget"	: `custom,
+	"custom_widget" : `VBox (
+	    // label (above table)
+	    `Left (`Label (_("Directory with scripts"))),
+	    `Table (`id("configtable"), `header (
+		// table header
+		_("Path to File"))
+	    )
+	),
+	// help for table with users
+	"help"		: _("<p>Configure the <b>directory with scripts</b> (the <tt>config</tt> directory). It contains scripts that are called after the installation of all the image packages.</p>"),
+	"init"		: InitConfigDirTable,
+    ],
+    "config_dir_add"	: $[
+	"widget"	: `push_button,
+	"label"		: Label::AddButton (),
+	"no_help"	: true,
+	"handle"	: HandleAddToConfigDir,
+    ],
+    "config_dir_delete"	: $[
+	"widget"	: `push_button,
+	"label"		: Label::DeleteButton (),
+	"no_help"	: true,
+	"handle"	: HandleDeleteFromConfigDir,
+    ],
+
+    "config.sh" : $[
+	"widget"	: `multi_line_edit,
+	// textentry label
+	"label"		: _("I&mage configuration script"),
+	"help"		: _("<p>Edit your <b>Image configuration script</b>, called <tt>config.sh</tt>. This script is called at the end of the installation but before the package scripts have run.</p>"),
+	"init"		: InitDescription,
+	"store"		: StoreDescription,
+	"handle"	: HandleDescription,
+    ],
+    "import_config.sh" : $[
+	"widget"	: `push_button,
+	// textentry label
+	"label"		: _("&Import..."),
+	"help"		: "",
+	"handle"	: HandleImportConfigFile
+    ],
+    "config_dir" : $[
+	"widget"	: `textentry,
+	// textentry label
+	"label"		: _("Pa&th to directory with scripts"),
+	"help"		: _("<p>Optional <b>directory with scripts</b> (<tt>config</tt> directory) contains scripts that are called after the installation of all the image packages.</p>"),
+	"init"		: InitDescription,
+	"store"		: StoreDescription,
+	"handle"	: HandleDescription,
+    ],
+    "browse_config_dir"	: $[
+	"widget"	: `push_button,
+	// push button label
+	"label"		: _("Br&owse..."),
+	"help"		: "",
+	"handle"	: HandleBrowseConfigDirectory
+    ],
+    "autoyast_path" : $[
+	"widget"	: `textentry,
+	// textentry label
+	"label"		: _("Path to Auto&YaST profile"),
+	"help"		: _("<p>this is 'config-yast.xml'</p>"),
+    ],
+    "browse_autoyast"	: $[
+	"widget"	: `push_button,
+	// push button label
+	"label"		: _("Brow&se..."),
+	"help"		: "",
+	"handle"	: HandleBrowseAutoYaSTFile
+    ],
+    /*
+    "images_path" : $[
+	"widget"	: `textentry,
+	// textentry label
+	"label"		: _("Pat&h to cleanup script"),
+	"help"		: _("<p>Choose the path to optional <b>cleanup script</b> (<tt>images.sh</tt>). This script is called at the beginning of the image creation process.</p>"),
+	"init"		: InitDescription,
+	"store"		: StoreDescription,
+	"handle"	: HandleDescription,
+    ],
+    "browse_images_path": $[
+	"widget"	: `push_button,
+	// push button label
+	"label"		: _("Brows&e..."),
+	"help"		: "",
+	"handle"	: HandleBrowseImagesFile
+    ],
+    */
+    "images.sh" : $[
+	"widget"	: `multi_line_edit,
+	// textentry label
+	"label"		: _("C&leanup script"),
+	"help"		: _("<p>Edit your <b>cleanup script</b> (<tt>images.sh</tt>). This script is called at the beginning of the image creation process.</p>"),
+	"init"		: InitDescription,
+	"store"		: StoreDescription,
+	"handle"	: HandleDescription,
+    ],
+    "import_images.sh" : $[
+	"widget"	: `push_button,
+	// textentry label
+	"label"		: _("Im&port..."),
+	"help"		: "",
+	"handle"	: HandleImportImagesFile
+    ],
+    // ---------------- widgtes for description tab
+    "author" : $[
+	"widget"	: `textentry,
+	// textentry label
+	"label"		: _("&Author"),
+	// help text for Author, Contact and Specification widgets
+	"help"		: _("<p>Set the values for <b>author</b> of the image, <b>contact information</b> and the image <b>specification</b>.</p>"),
+	"init"		: InitDescription,
+	"store"		: StoreDescription,
+	"handle"	: HandleDescription,
+    ],
+    "contact" : $[
+	"widget"	: `textentry,
+	// textentry label
+	"label"		: _("C&ontact"),
+	"init"		: InitDescription,
+	"store"		: StoreDescription,
+	"handle"	: HandleDescription,
+	"no_help"	: true,
+    ],
+    "specification" : $[
+	"widget"	: `multi_line_edit,
+	// textentry label
+	"label"		: _("&Specification"),
+	"init"		: InitDescription,
+	"store"		: StoreDescription,
+	"handle"	: HandleDescription,
+	"no_help"	: true,
+    ],
+    // ---------------- widgtes for users tab
+    "general_users"	: $[
+	"widget"	: `empty,
+	// general help for users tab
+	"help"		: _("<p>Here, create users that should be available in the target system.</p>"),
+    ],
+    "group" : $[
+	"widget"	: `textentry,
+	// textentry label
+	"label"		: _("&Group name"),
+	"help"		: _("<p>Select the <b>group name</b> the users belong to.</p>"),
+	"init"		: InitDescription,
+	"store"		: StoreDescription,
+	"handle"	: HandleDescription,
+    ],
+    "userstable" : $[
+	"widget"	: `custom,
+	"custom_widget" : `Table (`id("table"), `opt (`notify), `header(
+			    // table header
+			    _("Name"),
+			    // table header
+			    _("Home Directory"))),
+	// help for table with users
+	"help"		: _("<p>For each user, specify its <b>name</b>, <b>password</b> and <b>home directory</b>.</p>"),
+	"init"		: InitUsersTable,
+	"handle"	: HandleAddEditUser,
+    ],
+    "adduser"	: $[
+	"widget"	: `push_button,
+	"label"		: Label::AddButton (),
+	"no_help"	: true,
+	"handle"	: HandleAddEditUser,
+    ],
+    "edituser"	: $[
+	"widget"	: `push_button,
+	"label"		: Label::EditButton (),
+	"no_help"	: true,
+	"handle"	: HandleAddEditUser,
+    ],
+    "deleteuser"	: $[
+	"widget"	: `push_button,
+	"label"		: Label::DeleteButton (),
+	"no_help"	: true,
+	"handle"	: HandleDeleteUser,
+    ],
+    // ------------------
+    ];
+  }
+
+  /**
+   * Main dialog for Kiwi image configuration
+   */
+  define symbol KiwiDialog () {
+
+    InitImageConfiguration ();
+
+    map<string, map> widget_descr	= get_widget_description ();
+    widget_descr["tab"] = CWMTab::CreateWidget($[
+        "tab_order"	: ["config.xml", "description", "users", "scripts", "directories"],
+	"tabs"		: tabs_descr (),
+	"widget_descr"	: widget_descr,
+	"initial_tab"	: "config.xml",
+    ]);
+    Wizard::SetContentsButtons("", `VBox (), "", Label::BackButton(), Label::NextButton());
+
+    term contents	= `VBox (
+	`Left (`Label (KiwiConfig["name"]:"")),
+	"tab",
+	`VSpacing (0.3),
+	"global"
+    );
+
+    map caption		= $[
+	// dialog caption
+	"iso"	: _("Live CD Configuration"),
+	// dialog caption
+	"xen"	: _("XEN Image Configuration"),
+	// dialog caption
+	"usb"	: _("USB stick Image Configuration"),
+	// button label
+	"vmx"	: _("Virtual Disk Image Image"),
+    ];
+    map next_button	= $[
+	// button label
+	"iso"	: _("&Create ISO"),
+	// button label
+	"xen"	: _("&Create XEN Image"),
+	// button label
+	"usb"	: _("&Create USB stick Image"),
+	// button label
+	"vmx"	: _("&Create Virtual Disk Image"),
+    ];
+    symbol ret = CWM::ShowAndRun ($[
+	"widget_names"		: [ "global", "tab" ],
+	"widget_descr"		: widget_descr,
+	"contents"		: contents,
+	"caption"		: caption[kiwi_task]:"",
+	"back_button"		: Label::BackButton (),
+	"next_button"		: next_button[kiwi_task]:Label::NextButton (),
+    ]);
+    y2milestone("Returning %1", ret);
+    return ret;
+  }
+}

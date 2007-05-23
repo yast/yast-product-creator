@@ -1,0 +1,361 @@
+#!/bin/bash
+
+CD_PREPARER=${CD_PREPARER:-"CD-Team, http://www.suse.de/feedback"}
+CD_PUBLISHER=${CD_PUBLISHER:-"Novell, Inc."}
+M_VERSION=`mkisofs --version 2>&1 | sed -e "s@^.* \([0-9.]*\) .*@\1@"`
+
+case $M_VERSION in
+   2.*)
+	PUB_OPT="-publisher"
+	;;
+   *)
+	PUB_OPT="-P"
+	;;
+esac
+
+
+# modified to use "-r" instead of "-R" to normalize file attributes
+if [ "$1" = "-nojoliet" ] ; then
+  PARAMS="-r -pad"
+  shift
+else
+  PARAMS="-r -J -f -pad"
+fi
+
+XPARAMS=
+
+SOURCE=$1
+DEST=$2
+BOOT_ARCH=$3
+
+function usage()
+{
+echo "This script creates an ISO image from an existing directory containing a SuSE source."
+echo "The directory has to have files according to the SuSE media specification. This script"
+echo "will also search for the needed files to make a bootable CD and will create one if "
+echo "all files are available"
+echo
+echo "$0 <directory> <iso file name>"
+
+}
+if [ -z "$SOURCE" -o -z "$DEST" ]; then
+    echo "Missing parameters."
+    usage
+    exit 1
+fi
+SOURCE2=`mktemp -d /var/tmp/m_cd-XXXXXX`
+SORTFILE=`mktemp /var/tmp/m_cd-XXXXXX`
+ROOT_ON_CD=suse
+DESCRDIR=suse/setup/descr
+BOOT_BASE_DIR=suse/images
+BOOT_IMAGE=$BOOT_BASE_DIR/boot
+BOOT_ISOLINUX=$BOOT_BASE_DIR/boot/$BOOT_ARCH
+if [ -z "$BOOT_ARCH" ]; then
+    BOOT_ISOLINUX=$BOOT_BASE_DIR/loader
+fi
+# set it later in pmac branch
+PPC_HFS_APPID=""
+if [ -f $SOURCE/content ] ; then
+   BOOT_BASE_DIR=boot
+   BOOT_IMAGE=$BOOT_BASE_DIR/image
+   BOOT_ISOLINUX=$BOOT_BASE_DIR/$BOOT_ARCH/loader
+   if [ -z "$BOOT_ARCH" ]; then
+	BOOT_ISOLINUX=$BOOT_BASE_DIR/loader
+   fi
+   while read KEY VALUE ; do
+	case $KEY in
+		DATADIR)
+			ROOT_ON_CD=$VALUE
+			;;
+		DESCRDIR)
+			DESCRDIR=$VALUE
+			;;
+		DISTPRODUCT)
+			DISTPRODUCT=$VALUE
+			;;
+		DISTVERSION)
+			DISTVERSION=$VALUE
+			;;
+		VENDOR)
+			case $VALUE in
+				UnitedLinux*)
+					CD_PREPARER="SuSE Linux AG, suse@suse.de"
+					CD_PUBLISHER="UnitedLinux LLC"
+					;;
+			esac
+			;;
+	esac
+   done < $SOURCE/content
+   DISTVERSION=`echo $DISTVERSION | tr '-' '#'`
+   DISTIDENT="$DISTPRODUCT-$DISTVERSION"
+   for i in $SOURCE/media.? ; do
+      test -d $i || continue
+      {
+	read VENDOR
+	read CREATIONDATE
+      } < $i/media
+   done
+else
+  if [ -d $SOURCE/boot/$BOOT_ARCH/loader -a -d $SOURCE/i386/update ]; then
+    # We have a bootable Patch-CD
+    BOOT_BASE_DIR=boot
+    BOOT_IMAGE=$BOOT_BASE_DIR/image
+    BOOT_ISOLINUX=$BOOT_BASE_DIR/$BOOT_ARCH/loader
+  fi
+fi
+
+
+TMP_LS=`/bin/ls -d $SOURCE/*/update 2> /dev/null`
+if [ -d $SOURCE/$BOOT_BASE_DIR -o -d $SOURCE/$ROOT_ON_CD -o ! -z "$TMP_LS" ] ; then
+
+    if test -e $SOURCE/$ROOT_ON_CD/inst-sys-test ; then
+        echo $SOURCE/$ROOT_ON_CD/inst-sys-test exist.  Please remove it.
+        exit
+    fi
+
+    if test -f $SOURCE/$BOOT_IMAGE -o -f $SOURCE/.boot \
+            -o -d $SOURCE/$BOOT_ISOLINUX \
+	    -o -f $SOURCE/ppc/bootinfo.txt -o -d $SOURCE/suseboot \
+            -o -d $SOURCE/etc -o -f $SOURCE/boot/silo.conf ; then
+        #test -d $SOURCE2 && { echo "tmpdir $SOURCE2 already exists" ; exit 1 ; }
+	mkdir -p $SOURCE2 || { echo "can't create tmpdir $SOURCE2" ; exit 1 ; }
+	chmod 755 $SOURCE2
+        if [ -f $SOURCE/.boot ] ; then
+            PARAMS="$PARAMS -b .boot -c boot.catalog"
+            echo found boot image. Making CD bootable.
+            mkdir -p $SOURCE2/$BOOT_BASE_DIR || exit 1
+        elif [ -f $SOURCE/$BOOT_IMAGE ] ; then
+            # needed for ia64
+            xx=`filesize $SOURCE/$BOOT_IMAGE`
+            if [ \( "$xx" -ne 1474560 \) -a \( "$xx" -ne 2949120 \) ] ; then
+	      if head -c 200 $SOURCE/$BOOT_IMAGE | grep -a -q 'Sorry, didn.t find boot loader, stopped.' ; then
+		PARAMS="$PARAMS -hard-disk-boot"
+	      else
+		PARAMS="$PARAMS -no-emul-boot"
+	      fi
+            fi
+            echo "$SOURCE2/$BOOT_BASE_DIR/boot.catalog 2" >$SORTFILE
+            echo "$SOURCE/$BOOT_IMAGE 1" >>$SORTFILE
+            PARAMS="$PARAMS -sort $SORTFILE -b $BOOT_IMAGE -c $BOOT_BASE_DIR/boot.catalog \
+                    -hide $BOOT_BASE_DIR/boot.catalog -hide-joliet $BOOT_BASE_DIR/boot.catalog"
+            echo found boot image. Making CD bootable.
+            mkdir -p $SOURCE2/$BOOT_BASE_DIR || exit 1
+        elif [ -d $SOURCE/$BOOT_ISOLINUX ] ; then
+            echo "$SOURCE2/$BOOT_BASE_DIR/boot.catalog 3" >$SORTFILE
+            echo "$BOOT_BASE_DIR/boot.catalog 3" >>$SORTFILE
+            echo "$SOURCE/$BOOT_BASE_DIR/boot.catalog 3" >>$SORTFILE
+            find $SOURCE/$BOOT_ISOLINUX -printf "%p 1\n" >>$SORTFILE
+            # last priority wins
+            echo "$SOURCE/$BOOT_ISOLINUX/isolinux.bin 2" >>$SORTFILE
+	    echo "sortfile has"
+            cat $SORTFILE
+            echo "end sortfile"
+            # isolinux expects a directory
+	    PARAMS="$PARAMS -sort $SORTFILE -no-emul-boot -boot-load-size 4 -boot-info-table \
+                    -b $BOOT_ISOLINUX/isolinux.bin -c $BOOT_BASE_DIR/boot.catalog \
+	            -hide $BOOT_BASE_DIR/boot.catalog -hide-joliet $BOOT_BASE_DIR/boot.catalog"
+            echo found boot image. Making CD bootable.
+            mkdir -p $SOURCE2/$BOOT_BASE_DIR || exit 1
+	elif [ -f $SOURCE/ppc/bootinfo.txt -o -d $SOURCE/suseboot ] ; then
+	    # various ppc boards, no -J option
+	    echo removing follow-symlinks and joilet from mkisofs options
+	    echo adding long filenames, translation table, Untranslated filenames
+	    echo "old: $PARAMS"
+	    PARAMS="`echo $PARAMS | sed 's/-f//g'`"
+	    PARAMS="`echo $PARAMS | sed 's/-J//g'` -T -U -l"
+	    echo "new: $PARAMS"
+	    #
+	    # iSeries reads an 'ISERIES64' file, -l is important to get rid of 8.3
+	    #
+	    # CHRP (pSeries) reads \ppc\bootinfo.txt
+	    # this file loads \yaboot.chrp,
+	    # again, -U is important to keep lowercase,
+	    # -l to get rid of 8.3
+	    # mkisofs up to 8.2 requires the --generic-boot option, together with 2 blocks from an AIX CD
+	    # mkisofs from 9.0 knows about the -chrp-boot option,
+	    # this generates a required msdos partition table, to load files from subdirectories ...
+	    # the hardcoded --generic-boot bootblock is incompatible with PReP and pmac
+	    # the 9.0 mkisofs can create an iso for PReP, CHRP and pmac, via -chrp-boot
+	    #
+	    # PReP usses the -prep-boot option to load some fixed blocks from the CD
+	    #
+	    # PowerMacs require a hfs partition and hfs filename translation
+
+	    # check first if mkisofs knows about -chrp-boot
+	    if  mkisofs -help 2>&1 | grep -q -- '-chrp-boot' ; then
+		echo "mkisofs knows about -chrp-boot, one CD for chrp/prep/pmac/iseries possible"
+		PPC_MKISOFS_CHRPBOOT=yes
+	    else
+		echo "mkisofs too old, CD for either chrp/iseries or prep/pmac"
+		PPC_MKISOFS_CHRPBOOT=no
+	    fi
+	    # check now for CHRP/iSeries vs PReP/pmac if the above is false
+	    if [ "$PPC_MKISOFS_CHRPBOOT" = "no" ] ; then
+		if [ -f $SOURCE/ppc/bootinfo.txt ] ; then
+		# assume thats a pSeries/iSeries CD
+			echo generic chrp bootblock missing
+			echo upgrade mkisofs
+			exit 1
+		else
+		# assume thats a PReP/Pmac CD
+		   # check if a PReP install file is available
+		   if [ -f $SOURCE/boot/zImage.prep.initrd ] ; then
+		   	PARAMS="$PARAMS -prep-boot boot/zImage.prep.initrd"
+			echo using boot/zImage.prep.initrd for PReP boot
+		   elif [ -f $SOURCE/suse/images/zImage.prep.initrd ] ; then
+		   	PARAMS="$PARAMS -prep-boot suse/images/zImage.prep.initrd"
+			echo using suse/images/zImage.prep.initrd for PReP boot
+		   fi
+		   # check if a pmac kernel is available
+		   if [ -d $SOURCE/suseboot ] ; then
+		   	# create a mac partition table
+			# use netatalk and macbinary filename translation
+			# bless a directory named suseboot, mark it bootable
+			echo using suseboot for hfs boot
+			PARAMS="$PARAMS -part --netatalk --macbin -hfs-bless $SOURCE/suseboot"
+			FILE_MAPPING="/usr/share/YaST2/data/product-creator/HFS_mapping"
+			if [ -f $FILE_MAPPING ] ; then
+			    echo using $FILE_MAPPING for hfs mapping
+			    PARAMS="$PARAMS -map $FILE_MAPPING"
+			else
+			    echo $FILE_MAPPING not found
+			    echo not a blocker, but should be fixed
+			fi
+			PPC_HFS_APPID="not_yet_set"
+		   fi
+
+		fi
+	    else
+	    # new mkisofs with -chrp-boot option
+		if [ -f $SOURCE/ppc/bootinfo.txt ] ; then
+		# assume thats a pSeries/iSeries CD
+			echo "adding -chrp-boot for CHRP boot"
+			PARAMS="$PARAMS -chrp-boot"
+		fi
+		# check if a PReP install file is available
+		if [ -f $SOURCE/boot/zImage.prep.initrd ] ; then
+			PARAMS="$PARAMS -prep-boot boot/zImage.prep.initrd"
+			echo using boot/zImage.prep.initrd for PReP boot
+		elif [ -f $SOURCE/suse/images/zImage.prep.initrd ] ; then
+			PARAMS="$PARAMS -prep-boot suse/images/zImage.prep.initrd"
+			echo using suse/images/zImage.prep.initrd for PReP boot
+		fi
+		# check if a pmac kernel is available
+		if [ -d $SOURCE/suseboot ] ; then
+			# create a mac partition table
+			# use netatalk and macbinary filename translation
+			# bless a directory named suseboot, mark it bootable
+			echo using suseboot for hfs boot
+			PARAMS="$PARAMS -part --netatalk --macbin -hfs-bless $SOURCE/suseboot"
+			FILE_MAPPING="/usr/share/YaST2/data/product-creator/HFS_mapping"
+			if [ -f $FILE_MAPPING ] ; then
+			echo using $FILE_MAPPING for hfs mapping
+			PARAMS="$PARAMS -map $FILE_MAPPING"
+			else
+			echo $FILE_MAPPING not found
+			echo not a blocker, but should be fixed
+			fi
+			PPC_HFS_APPID="not_yet_set"
+		fi
+	    fi
+	    # end ppc boards
+        else
+          if [ -d $SOURCE/etc ] ; then
+              echo found $SOURCE/etc.  making sure, it is at the beginning of iso image.
+              mkdir -p $SOURCE2/etc || exit 1
+          else
+            if [ -f $SOURCE/boot/silo.conf ] ; then
+                PARAMS="$PARAMS -silo-boot boot/second.b -s /boot/silo.conf"
+                echo found SPARC boot config. Making CD bootable.
+                mkdir -p $SOURCE2/boot || exit 1
+            fi
+          fi
+        fi
+        XPARAMS="$SOURCE2"
+    else 
+        echo found no boot image. No bootable CD.
+    fi
+
+    if test -f $SOURCE/content -a -z "$TMP_LS" ; then
+	# we already collected this above
+	APPID=$DISTIDENT
+    elif test -f $SOURCE/$DESCRDIR/info ; then
+        set -- `fgrep DIST_IDENT $SOURCE/$DESCRDIR/info`
+        APPID=$2
+    else
+        # If we have directory "update" in the second level, we assume
+	# this is a Patch-CD
+        if test ! -z "$TMP_LS" ; then
+	    if test -f $SOURCE/media.1/patches ; then
+		APPID="`cat $SOURCE/media.1/patches | sed -e "s|/ ||g" | tr " " _`"
+	    else
+	    	APPID="`cat $SOURCE/.S.u.S.E-disk-* | tr " " _`"
+	    fi
+	fi
+    fi
+    if test -z "$APPID" \
+            -a -f $SOURCE/$ROOT_ON_CD/MD5SUMS -a -f $SOURCE/.S.u.S.E-disk-* ; then
+        APPID=`cat $SOURCE/.S.u.S.E-disk-* | tr " " - | sed -e "s@-Version-@-@"`
+        APPID="$APPID.0#0"
+    fi
+    APPID=`echo $APPID | tr " " -`
+    test -n "$APPID" && PARAMS="$PARAMS -A $APPID"
+
+    if test -f $SOURCE/content ; then
+	MEDIANUMBER=1
+	for i in $SOURCE/media.? ; do
+	    test -d $i || continue
+	    MEDIADIR=`ls -d $SOURCE/media.?`
+	    MEDIANUMBER=${MEDIADIR##$SOURCE/media.}
+	done
+	VOL="0$MEDIANUMBER"
+    elif test -f $SOURCE/.S.u.S.E-disk-* ; then
+        BASE=`basename $SOURCE/.S.u.S.E-disk-*`
+        VOL=`echo $BASE | cut -c 16-17`
+    fi
+    if test -n "$VOL" ; then
+        DIS=`echo $APPID | sed -e "s/.*-//" | tr -d \.\#`
+	VOL_PREFIX="SU"
+
+	case "$APPID" in
+	    *UnitedLinux*)
+		VOL_PREFIX="UL"
+		KND="U"
+		;;
+	    *)
+		KND="0"
+		;;
+	esac
+
+	if [ "$PPC_HFS_APPID" = "not_yet_set" ] ; then
+	    # this string appears in the MacOS Finder, max 27 chars
+	    echo "adding HFS Finder volume: `echo $APPID | cut -b 1-27`"
+	    PARAMS="$PARAMS -hfs-volid `echo $APPID | cut -b 1-27`"
+	fi
+
+	VOL="$VOL_PREFIX$DIS.$KND$VOL"
+        if test -n "$VOL" ; then
+            PARAMS="$PARAMS -V $VOL"
+        fi
+    fi
+fi
+
+set -x
+mkisofs \
+    -p "$CD_PREPARER" \
+    $PUB_OPT "$CD_PUBLISHER" \
+    $PARAMS -o $DEST $XPARAMS $SOURCE
+set +x
+
+
+if [ -d "$SOURCE2" ] ; then
+    echo removing $SOURCE2
+    rm -r $SOURCE2
+fi
+
+
+if [ -e "$SORTFILE" ] ; then
+    echo removing $SORTFILE
+    rm -f "$SORTFILE"
+fi
+

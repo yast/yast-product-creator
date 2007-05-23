@@ -1,0 +1,58 @@
+# Example filename mapping file for mkhybrid HFS parts
+# !!!!            !!!!      !!!!
+# EXTN   XLate   CREATOR   TYPE     Comment
+.tif     Raw     '8BIM'    'TIFF'   "Photoshop TIFF image"
+.tiff    Raw     '8BIM'    'TIFF'   "Photoshop TIFF image"
+.gif     Raw     'ogle'    'GIFf'   "GIF Image"
+.jpg     Raw     'ogle'    'JPEG'   "JPEG Image"
+.jpeg    Raw     'ogle'    'JPEG'   "JPEG Image"
+
+.htm     Ascii   'iCAB'    'TEXT'   "iCab HTML Page"
+.html    Ascii   'iCAB'    'TEXT'   "iCab HTML Page"
+
+.hqx     Ascii   'BnHq'    'TEXT'   "BinHex file"
+.sit     Raw     'SITx'    'SITD'   "StuffIt Expander Archive"
+.gz      Raw     'Gzip'    'Gzip'   "GNU gzip Data"
+.doc     Raw     'MSWD'    'WDBN'   "Word file"
+.mov     Raw     'TVOD'    'MooV'   "QuickTime Movie"
+.pdf     Raw     'CARO'    'PDF '   "Acrobat Reader"
+
+.mac     Ascii   'ttxt'   'TEXT'   "README files in MacOS format"
+
+
+.pl      Raw     'R*ch'    'TEXT'   "BBEdit Text"
+.sh      Raw     'R*ch'    'TEXT'   "BBEdit Text"
+.fil     Raw     'R*ch'    'TEXT'   "BBEdit Text"
+.inf     Raw     'R*ch'    'TEXT'   "BBEdit Text"
+.pkd     Raw     'R*ch'    'TEXT'   "BBEdit Text"
+.sel     Raw     'R*ch'    'TEXT'   "BBEdit Text"
+.ser     Raw     'R*ch'    'TEXT'   "BBEdit Text"
+.txt     Raw     'R*ch'    'TEXT'   "BBEdit Text"
+.TXT     Raw     'R*ch'    'TEXT'   "BBEdit Text"
+.ycp     Raw     'R*ch'    'TEXT'   "BBEdit Text"
+.conf    Ascii   'ttxt'    'TEXT'   "BBEdit Text"
+
+Finder   Raw     'MACS'    'FNDR'   "Finder dummy file"
+System   Raw     'MACS'    'zsys'   "System fake, miboot"
+yaboot   Raw     'UNIX'    'UNIX'   "yaboot bootloader"
+os-chooser Ascii  'chrp'   'tbxi'   "os-chooser between MacOS and yaboot"
+os-chooser.example Ascii  'ttxt'   'TEXT'   "os-chooser between MacOS and yaboot"
+
+generate_os_chooser.sh        Raw    'R*ch'    'TEXT'   "BBEdit Text"
+
+Changelog        Raw    'R*ch'    'TEXT'   "BBEdit Text"
+COPYING          Raw    'R*ch'    'TEXT'   "BBEdit Text"
+COPYING.tex      Raw    'R*ch'    'TEXT'   "BBEdit Text"
+Changelog        Raw    'R*ch'    'TEXT'   "BBEdit Text"
+COPYRIGHT        Raw    'R*ch'    'TEXT'   "BBEdit Text"
+COPYRIGHT.yast   Raw    'R*ch'    'TEXT'   "BBEdit Text"
+MD5SUMS          Raw    'R*ch'    'TEXT'   "BBEdit Text"
+.english         Raw    'R*ch'    'TEXT'   "BBEdit Text"
+.german          Raw    'R*ch'    'TEXT'   "BBEdit Text"
+README           Raw    'R*ch'    'TEXT'   "BBEdit Text"
+README.japanese  Raw    'R*ch'    'TEXT'   "BBEdit Text"
+
+*        Raw     '????'    '????'   "Unknown File"
+
+
+

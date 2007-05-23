@@ -1,0 +1,513 @@
+/**
+ * File:	include/product-creator/complex.ycp
+ * Package:	Configuration of product-creator
+ * Summary:	Dialogs definitions
+ * Authors:	Anas Nashif <nashif@suse.de>
+ *
+ * $Id$
+ */
+
+{
+
+    textdomain "product-creator";
+
+    import "Wizard";
+    import "Popup";
+    import "Wizard_hw";
+    import "Report";
+    import "Arch";
+
+    import "ProductCreator";
+
+    import "Label";
+    import "Mode";
+    import "CommandLine";
+
+    include "product-creator/helps.ycp";
+    include "product-creator/dialogs.ycp";
+
+    /**
+     * Return a modification status
+     * @return true if data was modified
+     */
+    define boolean Modified() ``{
+        return ProductCreator::Modified();
+    }
+
+    /**
+     * Read settings dialog
+     * @return `abort if aborted and `next otherwise
+     */
+    define symbol ReadDialog() ``{
+        Wizard::RestoreHelp(HELPS["read"]:"");
+        ProductCreator::AbortFunction = ``{ return ProductCreator::PollAbort();};
+        boolean ret = ProductCreator::Read();
+        return ret ? `next : `abort;
+    }
+
+    /**
+     * Write settings dialog
+     * @return `abort if aborted and `next otherwise
+     */
+    define symbol WriteDialog() ``{
+        Wizard::RestoreHelp(HELPS["write"]:"");
+        ProductCreator::AbortFunction = ``{ return ProductCreator::PollAbort();};
+        boolean ret = ProductCreator::Write();
+        return ret ? `next : `abort;
+    }
+
+    boolean first_start = true;
+
+    /**
+     * Overview dialog
+     * @return dialog result
+     */
+    define symbol OverviewDialog() ``{
+
+        /* ProductCreator overview dialog caption */
+        string caption = _("Product Creator Configuration Overview");
+
+        list overview = ProductCreator::Overview();
+
+	// start "add" workflow if there is no configuration
+	if (first_start)
+	{
+	    first_start = false;
+
+	    if (size(overview) == 0)
+	    {
+		return `add;
+	    }
+	}
+
+        term contents = Wizard_hw::ConfiguredContent(
+                /* Table header */
+                `header(_("Name"), _("Product"), _("Image"), _("GPG Key")),
+                overview, nil, nil, nil, nil );
+
+        term contents2 = `VBox(
+            contents,
+	    `HBox (
+		// push button label
+		`PushButton(`id(`create_button), _("&Create ISO Image")),
+		// menu button label
+		`MenuButton (`id (`kiwi), _("Cre&ate Image with Kiwi..."), [
+		    // push button label
+		    `item(`id(`iso_button), _("Live ISO Image")),
+		    // push button label
+		    `item(`id(`xen_button), _("XEN Image")),
+		    // push button label
+		    `item(`id(`usb_button), _("USB stick Image")),
+		    // push button label
+		    `item(`id(`vmx_button), _("Virtual disk Image")),
+		])
+	    )
+        );
+
+        contents = Wizard_hw::SpacingAround(contents2, 1.5, 1.5, 1.0, 1.0);
+
+        Wizard::SetContentsButtons(caption, contents, HELPS["overview"]:"",
+                Label::BackButton(), Label::FinishButton());
+
+        if (size(overview) == 0 )
+        {
+            UI::ChangeWidget(`id(`edit_button), `Enabled, false);
+            UI::ChangeWidget(`id(`delete_button), `Enabled, false);
+            UI::ChangeWidget(`id(`create_button), `Enabled, false);
+            UI::ChangeWidget(`id(`kiwi), `Enabled, false);
+        }
+
+        any ret = nil;
+        while(true) {
+
+            ret = UI::UserInput();
+
+            string current = (string) UI::QueryWidget(`id(`table), `CurrentItem );
+            /* abort? */
+            if(ret == `abort || ret == `cancel) {
+                if(ProductCreator::ReallyAbort()) break;
+                else continue;
+            }
+            /* add */
+            else if(ret == `add_button) {
+                ProductCreator::Config = $[];
+                ret = `add;
+                break;
+            }
+            /* edit */
+            else if(ret == `edit_button) {
+                ProductCreator::LoadConfig(current);
+                ret = `edit;
+                break;
+            }
+            /* delete */
+            else if(ret == `delete_button) {
+                y2debug("Deleting: %1", current);
+                ProductCreator::Configs = filter(string k, map<string,any> v, ProductCreator::Configs, ``(k!=current));
+                overview = ProductCreator::Overview();
+                UI::ChangeWidget(`id(`table), `Items, overview);
+                if (size(overview) == 0 )
+                {
+                    UI::ChangeWidget(`id(`edit_button), `Enabled, false);
+                    UI::ChangeWidget(`id(`delete_button), `Enabled, false);
+                    UI::ChangeWidget(`id(`create_button), `Enabled, false);
+                    UI::ChangeWidget(`id(`kiwi), `Enabled, false);
+                }
+                import "Progress";
+                Progress::set(false);
+                ProductCreator::Write();
+                Progress::set(true);
+         continue;
+            }
+            /* create */
+            else if(ret == `create_button) {
+                string current = (string) UI::QueryWidget(`id(`table), `CurrentItem );
+                ProductCreator::Config = ProductCreator::Configs[current]:$[];
+                // ProductCreator::EnableSource();
+                ret = `create;
+                break;
+            }
+            else if(ret == `iso_button &&
+		Package::InstallAll (["kiwi", "kiwi-desc-isoboot", "kiwi-desc-livesystem"])) {
+                string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
+                ProductCreator::Config = ProductCreator::Configs[current]:$[];
+		ProductCreator::kiwi_task	= "iso";
+                ret = `kiwi;
+                break;
+            }
+	    else if (ret == `xen_button &&
+		Package::InstallAll (["kiwi", "kiwi-desc-xenboot", "kiwi-desc-buildservice"])) {
+                string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
+                ProductCreator::Config = ProductCreator::Configs[current]:$[];
+		ProductCreator::kiwi_task	= "xen";
+                ret = `kiwi;
+		break;
+	    }
+	    else if (ret == `usb_button &&
+		Package::InstallAll (["kiwi", "kiwi-desc-usbboot", "kiwi-desc-livesystem"])) {
+                string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
+                ProductCreator::Config = ProductCreator::Configs[current]:$[];
+		ProductCreator::kiwi_task	= "usb";
+                ret = `kiwi;
+		break;
+	    }
+	    else if (ret == `vmx_button &&
+		Package::InstallAll (["kiwi", "kiwi-desc-vmxboot", "kiwi-desc-livesystem"])) {
+                string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
+                ProductCreator::Config = ProductCreator::Configs[current]:$[];
+		ProductCreator::kiwi_task	= "vmx";
+                ret = `kiwi;
+		break;
+	    }
+            else if (ret == `next || ret == `back) {
+                break;
+            }
+            else {
+                y2error("unexpected retcode: %1", ret);
+                continue;
+            }
+        }
+
+        return (symbol)ret;
+    }
+
+
+
+    /**
+     * TreeDialog
+     * Dialog for creating the skeleton and copying common data.
+     * @return symbol
+     */
+    define symbol TreeDialog () ``{
+
+        import "Progress";
+
+
+        string help = _("<P>
+                Please wait while the directory structure for the new ISO image is created.
+                </P>
+                
+");
+        help = help + _("<p>Press <b>Next</b> to start creating the ISO file.</p>");
+
+
+
+        list<string> progress_stages =
+            [
+            _("Create skeleton with common files"),
+        _("Copy additional and customized files"),
+        _("Copy selected packages")
+            ];
+
+        list<string> progress_descriptions =
+            [
+
+            _("Creating skeleton with essential files"),
+        _("Copying additional and customized files to directory tree..."),
+        _("Copying selected packages")
+            ];
+
+	string gpg_key = ProductCreator::Config["gpg_key"]:"";
+	if (gpg_key != "")
+	{
+	    // label
+	    progress_stages = add(progress_stages, _("Sign the Source With a GPG Key"));
+	    // progressbar label
+	    progress_descriptions = add(progress_descriptions, _("Signing the Source With a GPG Key..."));
+	}
+
+        Progress::New(
+                _("Creating ISO image directory..."),
+                "",     // progress_title
+                size( progress_stages ) + ProductCreator::PackageCount() + 1,
+                progress_stages,
+                progress_descriptions,
+                help );
+
+
+        if(ProductCreator::Abort()) return `abort;
+        Progress::NextStage();
+
+        if (!ProductCreator::CreateSkeleton())
+        {
+            Report::Error(_("Error while creating skeleton."));
+            return `overview;
+        }
+
+
+        if(ProductCreator::Abort()) return `abort;
+        Progress::NextStage();
+        if (ProductCreator::Config["pkgtype"]:"" == "autoyast")
+        {
+            ProductCreator::CopyMiscFiles();
+        }
+        else 
+        {
+           if (ProductCreator::Config["bootconfig"]:"" != "")
+            {
+                y2debug("bootconfig available");
+                SCR::Write(.target.string,
+                        sformat("%1/boot/loader/isolinux.cfg", ProductCreator::skel_root),
+                        ProductCreator::Config["bootconfig"]:"" );
+            }
+
+        }
+
+        Progress::NextStage();
+        if (!ProductCreator::CopyPackages())
+        {
+            return `overview;
+        }
+
+	if (gpg_key != "")
+	{
+	    Progress::NextStage();
+	    if (!ProductCreator::SignSourceStep())
+	    {
+		return `overview;
+	    }
+	}
+
+        integer i = 0;
+
+
+        Progress::Title(_("ISO image directory ready"));
+        Progress::Finish();
+
+	if (!Mode::commandline())
+	{
+	    Wizard::EnableNextButton();
+	    Wizard::RestoreNextButton();
+	}
+
+
+        any ret  = nil;
+        repeat
+        {
+            ret = (Mode::commandline()) ? `next : UI::UserInput();
+            if (ret == `next)
+            {
+                if ( ProductCreator::Config["result"]:"" == "iso")
+                {
+                    string isodir = ProductCreator::Config["iso-directory"]:"/tmp" + "/" +  ProductCreator::Config["name"]:"tmp";
+                    string isofile = ProductCreator::Config["iso-directory"]:"" + "/" +  ProductCreator::Config["isofile"]:"";
+                    string pub = ProductCreator::Config["publisher"]:"anon";
+                    string prep = ProductCreator::Config["preparer"]:"anon";
+
+		    map output = (map)SCR::Execute(.target.bash_output, sformat("du -s -b %1 | awk -F' ' ' { printf $1 }'", isodir ));
+                    string du = output["stdout"]:"";
+                    y2milestone("Expected size: %1", du);
+
+		    if (!Mode::commandline())
+		    {
+			Popup::ShowFeedback(_("Creating CD Image..."), _("This may take a while"));
+		    }
+
+		    string command = sformat("/usr/lib/YaST2/bin/y2mkiso %1 %2 %3", isodir, isofile, (ProductCreator::Config["code10"]:false) ? Arch::architecture() : "");
+		    y2milestone("command: %1", command);
+
+                    SCR::Execute (.target.bash, command, $["CD_PUBLISHER": pub, "CD_PREPARER": prep ]);
+
+		    if (!Mode::commandline())
+		    {
+			Popup::ClearFeedback();
+		    }
+                }
+            }
+
+        } until (ret == `next || ret == `back || ret == `abort);
+        return (symbol)ret;
+    }
+
+    /**
+     * ISO Summary
+     * @return symbol
+     */
+    define symbol isoSummary() ``{
+        import "HTML";
+
+        // caption
+        string caption = _("ISO Summary");
+        string html =  HTML::Heading(_("Package Source"));
+        html = html + HTML::Para(ProductCreator::Config["source"]:"");
+
+        html = html +  HTML::Heading(_("Packages"));
+        html = html + HTML::Para(sformat("%1", size(Pkg::GetPackages(`selected, true))));
+
+        html = html +  HTML::Heading(_("Missing Packages"));
+        if (size(ProductCreator::missing_packages) > 0 ) {
+            html = html + HTML::List(ProductCreator::missing_packages);
+        } else {
+            html = html + HTML::Para(_("None"));
+        }
+
+        term contents =
+            `RichText(html);
+
+        string help_text = _("<p>Verify if the data in the summary box is correct then
+press Finish to return to main dialog.</p>
+");
+
+        Wizard::SetContentsButtons ( caption,
+                contents,
+                help_text,
+                Label::BackButton (),
+                Label::NextButton ());
+        any ret = nil;
+        repeat
+        {
+            ret = UI::UserInput();
+        }  until (ret == `next || ret == `back || ret == `abort);
+        return (symbol)ret;
+    }
+
+    /**
+     * VerifyDialog()
+     * Verify Dialog
+     *
+     */
+    define symbol VerifyDialog()
+        ``{
+
+            import "Progress";
+
+
+            // caption
+            string caption = _("Custom CDs");
+
+            string help = _("<p>Please wait while the data and packages are verified...
+                    </p>
+                    ");
+            help = help +  _("<p>If there is something missing, the process will be aborted.
+Fix the problem and try again.</p>
+                    ");
+
+            list<string> progress_stages =
+                [
+                _("Set up Package Source"),
+            _("Create Package List"),
+            _("Verify Package Availability"),
+            _("Check Destination")
+                ];
+
+            list<string> progress_descriptions =
+                [
+                _("Configuring package source..."),
+            _("Creating package list..."),
+            _("Verifying package availability..."),
+            _("Checking destination...")
+                ];
+
+            Progress::New(
+                    _("Verification of Data for ISO Image"),
+                    "",     // progress_title
+                    size( progress_stages ),
+                    progress_stages,
+                    progress_descriptions,
+                    help );
+
+
+            boolean success = true;
+
+
+            Progress::NextStage();
+            Pkg::TargetFinish ();
+
+            string tmp = (string)SCR::Read( .target.tmpdir );
+//            SCR::Execute(.target.mkdir, tmp + "/tmproot");
+//            Pkg::TargetInit( tmp + "/tmproot" , true);
+
+	    CommandLine::PrintVerbose(_("Enabling sources..."));
+            success =  ProductCreator::EnableSource();
+
+            Progress::NextStage();
+	    CommandLine::PrintVerbose(_("Selecting packages..."));
+            success = ProductCreator::setPackages();
+
+	    if (!success)
+	    {
+		// set a fake root mount point - there is no use to display DU of the current system
+		Pkg::TargetInitDU([ $[ "name" : "/", "free" : 999*1024*1024 /* 999GB */, "used" : 0, "readonly" : false ] ]);
+
+		// the solver has failed, let the user resolve the dependencies
+		detailedSelection(nil);
+	    }
+
+
+            Progress::NextStage();
+	    CommandLine::PrintVerbose(_("Checking packages..."));
+            string error_msg = ProductCreator::checkPackageAvail();
+            if (error_msg != "")
+            {
+                Popup::Error(error_msg);
+                return `back;
+            }
+
+            Progress::NextStage();
+	    CommandLine::PrintVerbose(_("Verifying the destination directory..."));
+            if (!ProductCreator::verifyDestination())
+                return `overview;
+
+            Progress::Finish();
+
+	    if (Mode::commandline())
+	    {
+		return `next;
+	    }
+
+            Wizard::EnableNextButton();
+            Wizard::RestoreNextButton();
+            Wizard::EnableBackButton();
+
+            any ret = nil;
+            repeat
+            {
+                ret = UI::UserInput();
+            }  until (ret == `next || ret == `back || ret == `abort);
+
+            return (symbol)ret;
+        }
+
+
+    /* EOF */
+}

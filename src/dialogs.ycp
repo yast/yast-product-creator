@@ -1,0 +1,1374 @@
+/**
+ * File:	include/product-creator/dialogs.ycp
+ * Package:	Configuration of product-creator
+ * Summary:	Dialogs definitions
+ * Authors:	Anas Nashif <nashif@suse.de>
+ *
+ * $Id$
+ */
+
+{
+
+    textdomain "product-creator";
+
+    import "ProductCreator";
+    import "Wizard";
+    import "SourceManager";
+    import "Report";
+    import "URL";
+    import "StorageDevices";
+    import "Arch";
+    import "Label";
+    import "Popup";
+    import "URL";
+    import "GPG";
+    import "GPGWidgets";
+    import "CWM";
+    import "String";
+
+    include "product-creator/helps.ycp";
+
+    /**
+       Create a table item from a map as returned by the InstSrcManager agent.
+       @param source The map describing the source as returned form the agent.
+       @return An item suitable for addition to a Table.
+    */
+    term createTableItem( integer source ,
+            boolean selectable, 
+            string media_filter) {
+
+        // Source data
+	map sd = SourceManager::SourceData(source);
+	y2milestone("SourceManager:: sources: %1", sd);
+	term item = `item();
+
+	map url = URL::Parse(sd["url"]:"");
+	if (media_filter == "" || url["scheme"]:"" == media_filter )
+	{
+	    if (selectable)
+		item = `item(
+			     `id( source ),
+			     "",
+			     // corresponds to the "Enable/Disable" button
+			     sd["enabled"]:true ? _("On") : _("Off"),
+			     sd["alias"]:"",
+			     sd["url"]:""
+			     );
+	    else
+		item = `item(
+			     `id( source ),
+			     // corresponds to the "Enable/Disable" button
+			     sd["enabled"]:true ? _("On") : _("Off"),
+			     sd["alias"]:"",
+			     sd["url"]:""
+			     );
+	}
+	return item;
+    }
+
+    /**
+     * Fill sources table with entries from the InstSrcManager agent.
+     * @return list list of items
+     */
+    list<term> fillSourceTable(list<integer> sources, boolean selectable, string media_filter) {
+	if (size(sources) == 0 )
+	    sources = Pkg::SourceGetCurrent ( false );
+
+        list<term> items = [];
+
+	items = maplist(integer source, sources, ``{
+                y2debug("working on source: %1", source);
+	        return(createTableItem( source , selectable, media_filter));
+	});
+        items  = filter(term i, items, ``(i[3]:""!=""));
+
+	return items;
+
+    }
+
+    
+
+    /**
+     * General configuration dialog
+     * @return dialog result
+     */
+    define symbol Configure1Dialog () ``{
+
+        /* ProductCreator configure1 dialog caption */
+        string caption = _("CD Creator Configuration");
+
+
+        string source = ProductCreator::Config["source"]:"";
+        string name = ProductCreator::Config["name"]:"";
+        string pkgtype = ProductCreator::Config["pkgtype"]:"package-manager";
+
+        // Autoyast
+        string profile = ProductCreator::Config["profile"]:"";
+        boolean copy_profile = ProductCreator::Config["copy_profile"]:false;
+
+
+        // List
+        string plain_list = ProductCreator::Config["package-list"]:"";
+
+
+        term c2 =
+            `HBox(
+                    `HWeight(10, `Empty()),
+                    `HWeight(80, `VBox(
+                            `VSquash(
+                                `HBox(
+                                    `TextEntry(`id(`profile_loc), _("Profile Loca&tion:"), profile),
+                                    `VBox(
+                                        `VSpacing(),
+                                        `Bottom(`PushButton(`id(`open_profile), _("Select Fi&le")))
+                                        )
+                                    )
+                                ),
+                            `Left(`CheckBox(`id(`copyprofile), _("Copy Profile to CD I&mage"), copy_profile))
+                            )
+                        )
+                 );
+
+        term v =
+            `VBox (
+                    // radio button label
+                    `Left (`RadioButton (`id (`pkgmgr), `opt (`notify), _("Pac&kage Manager"), pkgtype == "package-manager")),
+                    // radio button label
+                    `Left (`RadioButton (`id (`autoyast), `opt (`notify), _("&AutoYaST Control File"), pkgtype == "autoyast")),
+                    c2
+                  );
+
+
+        list sources = []; // ProductCreator::GetDirSources(source);
+        /* ProductCreator configure1 dialog contents */
+        term contents =
+            `HVSquash
+            (
+             `VBox(
+                 `TextEntry(`id(`name), _("&Configuration Name:"), name),
+                 `Frame(_("Packages"),
+                     `VBox(
+                         `RadioButtonGroup (
+                             `id (`pkg),
+                             v
+                             )
+                         )
+                     )
+                 )
+            );
+
+        Wizard::SetContentsButtons(caption, contents, HELPS["initial"]:"",
+                Label::BackButton(), Label::NextButton());
+
+
+
+        any ret = nil;
+        symbol rb =`none;
+        while(true) {
+
+            rb = (symbol) UI::QueryWidget (`id (`pkg), `CurrentButton );
+
+            if (rb  == `autoyast)
+            {
+                UI::ChangeWidget (`id(`profile_loc), `Enabled, true);
+                UI::ChangeWidget (`id(`open_profile), `Enabled, true);
+                UI::ChangeWidget (`id(`copyprofile), `Enabled, true);
+            }
+            else if (rb == `plain )
+            {
+                UI::ChangeWidget (`id(`profile_loc), `Enabled, false);
+                UI::ChangeWidget (`id(`open_profile), `Enabled, false);
+                UI::ChangeWidget (`id(`copyprofile), `Enabled, false);
+            }
+            else  {
+                UI::ChangeWidget (`id(`profile_loc), `Enabled, false);
+                UI::ChangeWidget (`id(`open_profile), `Enabled, false);
+                UI::ChangeWidget (`id(`copyprofile), `Enabled, false);
+            }
+
+            ret = UI::UserInput();
+
+
+
+            /* abort? */
+            if(ret == `abort || ret == `cancel) {
+                if(ProductCreator::ReallyAbort()) break;
+                else continue;
+            }
+            else if(ret == `next ) {
+
+                string name = (string)UI::QueryWidget(`id(`name), `Value);
+
+                if (name == "")
+                {
+                    Report::Error(_("Enter the name of the configuration."));
+                    continue;
+                }
+                if (haskey(ProductCreator::Configs, name) &&
+                        ProductCreator::Config["name"]:"" != name)
+                {
+                    Report::Error(_("A configuration with this name already exists.
+                                Select a new name.
+"));
+                                continue;
+                }
+
+
+                ProductCreator::Config["old_name"] = ProductCreator::Config["name"]:"";
+                ProductCreator::Config["name"] = name;
+
+
+
+                if (rb  == `autoyast)
+                {
+                    ProductCreator::Config["pkgtype"] = "autoyast";
+                    ProductCreator::Config["profile"] = (string)UI::QueryWidget(`id(`profile_loc), `Value);
+                    ProductCreator::Config["copy_profile"] = (boolean)UI::QueryWidget(`id(`copyprofile), `Value);
+                }
+                else  {
+                    ProductCreator::Config["pkgtype"] = "package-manager";
+                }
+                ProductCreator::modified = true;
+                ProductCreator::profile_parsed = false;
+                break;
+            }
+            else if ( ret == `back)
+            {
+                break;
+            }
+            else if (ret ==`open_profile)
+            {
+                any new_file = UI::AskForExistingFile( ProductCreator::AYRepository , "*", _("Select File"));
+                if (new_file != nil)
+                {
+                    UI::ChangeWidget(`id(`profile_loc), `Value, (string)new_file);
+                }
+                continue;
+            }
+            else {
+                y2error("unexpected retcode: %1", ret);
+                continue;
+            }
+        }
+
+        return (symbol)ret;
+    }
+
+    /**
+     * Configure2 dialog
+     * @return dialog result
+     */
+    define symbol Configure2Dialog () ``{
+
+        /* ProductCreator configure2 dialog caption */
+        string caption = _("Product Creator Configuration");
+
+        string dirtree = ProductCreator::Config["iso-directory"]:"";
+        string publisher = ProductCreator::Config["publisher"]:"";
+        string preparer = ProductCreator::Config["preparer"]:"";
+        string result = ProductCreator::Config["result"]:"iso";
+        string db = ProductCreator::Config["database"]:"original";
+        string isofile_path = ProductCreator::Config["isofile"]:"";
+        boolean savespace = ProductCreator::Config["savespace"]:false;
+
+        if (isofile_path == "")
+        {
+            isofile_path = ProductCreator::Config["name"]:"" + ".iso";
+        }
+
+
+        /* ProductCreator configure2 dialog contents */
+        term contents =
+            `HVSquash
+            (
+             `VBox(
+                 /*
+                    `Frame(_("Package Database"),
+
+                    `RadioButtonGroup(`id(`pkgdb),
+                    `VBox(
+                    `Left(`RadioButton(`id(`origdb), `opt (`notify), _("Use original Package &Database"), db == "original")),
+                    `Left(`RadioButton(`id(`createdb),`opt (`notify),  _("Create ne&w Packa&ge Database"), db == "new" ))
+                    )
+                    )
+                    ),*/
+                 `Frame(_("Output:"),
+                     `VBox(
+                         `VSquash(
+                             `HBox(
+                                 `TextEntry(`id(`dirtree), _("&Path to Generated Directory Tree:"), dirtree),
+                                 `VBox(
+                                     `VSpacing(),
+                                     `Bottom(`PushButton(`id(`open_dir), _("&Select Directory")))
+                                     )
+                                 )
+                             ),
+                         `RadioButtonGroup(`id(`result),
+                             `VBox(
+                                 `Left(`RadioButton(`id(`isofile),`opt (`notify), _("&Generate ISO Image File"), result == "iso")),
+                                 `HBox(
+                                     `HWeight(10, `Empty()),
+                                     `HWeight(80,
+                                         `VBox(
+                                             `HBox(
+                                                 `HWeight(2,`TextEntry(`id(`isofile_path), _("&ISO Image File:"), isofile_path)),
+                                                 `HWeight(1, `Empty())
+                                                 )
+                                             )
+                                         )
+                                     ),
+                                 `Left(`RadioButton(`id(`directory), `opt (`notify),  _("Create Directory &Tree Only"), result == "tree"))
+                                 )
+                             )
+                             )
+
+                             ),
+                         `VSpacing(1),
+                         `Frame(_("Other Options"),
+                                 `VBox(
+                                     `Left(`CheckBox(`id(`savespace), _("Copy only needed files to save space."), savespace)),
+                                    `VSpacing(1),
+                                     `Left(`TextEntry(`id(`pub), _("CD Publisher:"), publisher)),
+                                     `Left(`TextEntry(`id(`prep), _("CD Preparer:"), preparer))
+                                     )
+                               )
+
+                             )
+
+                             );
+
+                         Wizard::SetContentsButtons(caption, contents,
+                                 HELPS["dest"]:"",
+                                 Label::BackButton(), Label::NextButton());
+
+                         any ret = nil;
+                         while(true) {
+
+                             symbol rb = (symbol)UI::QueryWidget(`id(`result), `CurrentButton);
+                             if (rb == `isofile)
+                             {
+                                 UI::ChangeWidget(`id(`isofile_path), `Enabled, true);
+
+                             }
+                             else
+                             {
+                                 UI::ChangeWidget(`id(`isofile_path), `Enabled, false);
+
+                             }
+
+
+                             ret = UI::UserInput();
+
+                             /* abort? */
+                             if(ret == `abort || ret == `cancel) {
+                                 if(ProductCreator::ReallyAbort()) break;
+                                 else continue;
+                             }
+                             else if (ret ==`open_dir)
+                             {
+                                 any new_dir = UI::AskForExistingDirectory( dirtree, _("Select Directory"));
+                                 if (new_dir != nil)
+                                 {
+                                     UI::ChangeWidget(`id(`dirtree), `Value, (string) new_dir);
+                                     /*
+                                        string iso = (string)UI::QueryWidget(`id(`isofile_path), `Value);
+                                        if (findfirstof( iso, "/") == nil && iso != "")
+                                        {
+                                        UI::ChangeWidget(`id(`isofile_path), `Value, new_dir + "/" + iso );
+                                        }
+                                      */
+                                 }
+                                 continue;
+                             }
+                             else if (ret == `back)
+                             {
+                                 break;
+                             }
+                             else if(ret == `next)
+                             {
+                                 /*
+                                    symbol dbrb = (symbol)UI::QueryWidget(`id(`pkgdb), `CurrentButton);
+                                    if (dbrb == `origdb)
+                                    {
+                                    ProductCreator::Config["database"] = "original";
+                                    }
+                                    else
+                                    {
+                                    ProductCreator::Config["database"] = "new" ;
+                                    }
+
+                                  */
+                                 string isodir = (string) UI::QueryWidget(`id(`dirtree), `Value);
+                                 if (isodir == "")
+                                 {
+                                     Report::Error(_("Path to generated directory tree missing."));
+                                     continue;
+                                 }
+                                 else
+                                 {
+                                     ProductCreator::Config["iso-directory"] = isodir;
+                                 }
+
+                                 if (rb  == `isofile)
+                                 {
+                                     ProductCreator::Config["result"] = "iso";
+                                     ProductCreator::Config["isofile"] = (string)UI::QueryWidget(`id(`isofile_path), `Value);
+
+                                 }
+                                 else
+                                 {
+                                     ProductCreator::Config["result"] = "tree";
+
+                                 }
+                                 ProductCreator::Config["savespace"] = (boolean)UI::QueryWidget(`id(`savespace), `Value);
+                                 ProductCreator::Config["publisher"] = (string)UI::QueryWidget(`id(`pub), `Value);
+                                 ProductCreator::Config["preparer"] = (string)UI::QueryWidget(`id(`prep), `Value);
+                                 break;
+                             }
+                             else if (ret != `directory && ret != `isofile)
+			     {
+                                 y2error("unexpected retcode: %1", ret);
+                                 continue;
+                             }
+                         }
+
+                         return (symbol)ret;
+    }
+
+    /**
+     * Dialog for selecting the sources
+     * @return symbol
+     */
+    define symbol sourceDialog() ``{
+
+        /* dialog caption */
+        string caption = _("Source Selection");
+
+        SourceManager::ReadSources();
+        list sources = fillSourceTable([], true , "");
+        y2debug("sources: %1", sources);
+
+        term table =
+            `Table( `id( `table ), `opt( `keepSorting ),
+                    `header(_("Selected"),  _("Status"), _("Name"), _("URL") ),
+                    sources
+                  );
+
+
+        term buttons =
+            `HBox(
+                    `PushButton(`id(`select), Label::SelectButton() ),
+                    `PushButton(`id(`remove), Label::RemoveButton() ),
+		    // push button label
+                    `PushButton(`id(`create), _("Cr&eate New..."))
+                 );
+
+
+        term contents =
+	    `VBox(
+		table,
+		`VSpacing(0.5),
+		buttons
+	    );
+
+        Wizard::SetContentsButtons(caption, contents, HELPS["sourceDialog"]:"",
+                Label::BackButton(), Label::NextButton());
+
+
+        list<integer> selected_items = ProductCreator::UrlToId(ProductCreator::Config["sources"]:[]);
+
+	foreach(integer i, selected_items, {
+            UI::ChangeWidget(`id(`table), `Item(i, 0) , _("X"));
+        });
+
+        any ret = nil;
+
+
+        while(true) {
+            ret = UI::UserInput();
+            /* abort? */
+            if(ret == `abort || ret == `cancel) {
+                if(ProductCreator::ReallyAbort()) break;
+                else continue;
+            }
+            else if (ret == `select)
+            {
+                integer SrcID = (integer)UI::QueryWidget(`id(`table), `CurrentItem);
+		map general_info = Pkg::SourceGeneralData(SrcID);
+		boolean found_architecture = false;
+
+		// architecture check is possible only for YaST sources
+		if (general_info["type"]:"" == "YaST")
+		{
+		    // Check architecture
+		    map<string,string> read_content = ProductCreator::ReadContentFile(SrcID);
+		    y2milestone("content file: %1", read_content);
+
+		    foreach(string key, string value, read_content,
+			{
+			    if (key == "ARCH." + Arch::architecture())
+			    {
+				found_architecture = true;
+				break;
+			    }
+			}
+		    );
+		}
+		else
+		{
+		    y2milestone("Not a YaST source, cannot verify the architecture");
+		    found_architecture = true;
+		}
+
+		y2milestone("Architecture %1 is supported: %2", Arch::architecture(), found_architecture);
+
+		if (true)
+		{
+		    if (!contains(selected_items, SrcID))
+		    {
+			selected_items = add (selected_items, SrcID );
+		    }
+
+		    UI::ChangeWidget(`id(`table), `Item(SrcID, 0) , _("X"));
+		}
+		else
+		{
+		    Report::Error(sformat(_("The source does not support architecture of this machine (%1).\nSelect another source."), Arch::architecture()));
+		}
+            }
+            else if (ret == `remove)
+            {
+                integer SrcID = (integer)UI::QueryWidget(`id(`table), `CurrentItem);
+                selected_items = filter(integer i, selected_items, ``(SrcID!=i ));
+                UI::ChangeWidget(`id(`table), `Item(SrcID, 0) , "");
+            }
+	    else if (ret == `create)
+	    {
+		if (Package::Install ("yast2-add-on-creator"))
+		{
+		    symbol createret = (symbol)WFM::CallFunction ("add-on-creator", []);
+		    if (createret == `next)
+		    {
+			map ex = (map)WFM::CallFunction ("add-on-creator_auto", [ "Export" ]);
+			string product_path	= ex["product_path"]:"";
+			if (product_path != "")
+			{
+			    string url = ex["iso"]:false ?  "file://" : "dir://";
+			    if (Pkg::SourceCreate (url + product_path, "") != -1)
+			    {
+				SourceManager::ReadSources();
+				list<term> sources = fillSourceTable([], true , "");
+				UI::ChangeWidget (`id (`table), `Items, sources);
+				foreach (term source, sources, {
+				    integer SrcID = source[0,0]:-1;
+				    if (SrcID != -1 && contains (selected_items, SrcID))
+				    {
+					UI::ChangeWidget (`id(`table), `Item(SrcID, 0) , _("X"));
+				    }
+				});
+				Pkg::SourceSaveAll ();
+			    }
+			}
+		    }
+		}
+	    }
+            else if(ret == `next)
+            {
+                y2milestone("selected items: %1", selected_items);
+                ProductCreator::Config["sources"] = ProductCreator::getSourceURLs(selected_items);
+                y2milestone("sources: %1", ProductCreator::Config["sources"]:[] );
+                if (size(ProductCreator::Config["sources"]:[])  == 0 )
+                {
+                    Report::Error(_("Select at least one source."));
+                    continue;
+                }
+                ProductCreator::checkProductDependency();
+                break;
+            }
+            else if( ret == `back) {
+                break;
+            }
+            else {
+                y2error("unexpected retcode: %1", ret);
+                continue;
+            }
+        }
+
+        return (symbol)ret;
+    }
+
+    /**
+     * Configure3 dialog
+     * @return dialog result
+     */
+    define symbol isolinuxDialog () ``{
+
+        /* dialog caption */
+        string caption = _("CD Creator Configuration");
+
+
+        string isolinux = ProductCreator::Readisolinux();
+
+        // FIXME: Manage files for other archs
+        string bootconfig = "isolinux.cfg";
+
+        term contents =
+                    `VBox(
+                        `MultiLineEdit(`id(`isolinux),
+                            sformat(_("File Contents: %1"), bootconfig),
+                            isolinux
+                            ),
+                        `PushButton(`id(`loadfile), _("Load File"))
+                        );
+
+
+        Wizard::SetContentsButtons(caption, contents, HELPS["bootconfig"]:"",
+                Label::BackButton(), Label::NextButton());
+
+        any ret = nil;
+        while(true) {
+            ret = UI::UserInput();
+            /* abort? */
+            if(ret == `abort || ret == `cancel) {
+                if(ProductCreator::ReallyAbort()) break;
+                else continue;
+            }
+
+            else if (ret ==`loadfile)
+            {
+                any new_file = UI::AskForExistingFile( "" , "*", _("Select File"));
+                if (new_file != nil)
+                {
+                    if (SCR::Read(.target.size, new_file)> 0)
+                    {
+                        string file = (string)SCR::Read(.target.string, new_file );
+                        UI::ChangeWidget(`id(`isolinux), `Value, (string)file);
+                    }
+                }
+                continue;
+            }
+            else if(ret == `next) {
+                string isolinux_new = (string)UI::QueryWidget(`id(`isolinux), `Value);
+                ProductCreator::Config["bootconfig"] = isolinux_new;
+		y2milestone("Isolinux config: %1", isolinux_new);
+
+                break;
+            }
+            else if( ret == `back) {
+                break;
+            }
+            else {
+                y2error("unexpected retcode: %1", ret);
+                continue;
+            }
+        }
+
+        if (ProductCreator::Config["profile"]:""!="" && ret == `next)
+            return `autoyast;
+        return (symbol)ret;
+    }
+
+    symbol autoyastPackages ()
+    {
+        string base_selection = "";
+        //Pkg::TargetFinish ();
+        Popup::ShowFeedback(_("Reading data from Package Database..."), _("Please wait..."));
+
+        Pkg::TargetFinish ();
+        string tmp = (string)SCR::Read( .target.tmpdir );
+        SCR::Execute(.target.mkdir, tmp + "/tmproot");
+        Pkg::TargetInit( tmp + "/tmproot" , true);
+
+	// add code10 flag if the new source type is detected
+	ProductCreator::CheckCode10Source();
+
+        boolean  success =  ProductCreator::EnableSource();
+
+        // Pkg::SourceStartManager(true);
+
+        if (ProductCreator::Config["profile"]:""!= "" && ! ProductCreator::profile_parsed)
+        {
+            if(!ProductCreator::readControlFile(ProductCreator::Config["profile"]:""))
+                return `overview;
+            // set the new selection
+            y2debug("Config: %1", ProductCreator::Config );
+
+	    if (ProductCreator::Config["type"]:`unknown == `patterns)
+	    {
+		string base_pat = ProductCreator::Config["base"]:"";
+
+		if (size(base_pat) > 0)
+		{
+		    Pkg::ResolvableInstall(base_pat, `pattern);
+		    y2milestone("Selecting pattern: %1", base_pat);
+		}
+
+		if (size(ProductCreator::Config["addons"]:[]) > 0)
+		{
+		    foreach(string addon, ProductCreator::Config["addons"]:[], ``{
+			    Pkg::ResolvableInstall(addon, `pattern);
+			    y2milestone("Selecting pattern: %1", addon);
+		    });
+		}
+	    }
+	    else
+	    {
+		boolean pkgret = Pkg::SetSelection( ProductCreator::Config["base"]:"" );
+
+		foreach(string addon, ProductCreator::Config["addons"]:[], ``{
+			Pkg::SetSelection( addon );
+			});
+	    }
+
+            if (size(ProductCreator::Config["packages"]:[] ) > 0)
+            {
+                foreach(string p, ProductCreator::Config["packages"]:[], ``{
+                        y2milestone("selecting package for installation: %1 -> %2", p, Pkg::PkgInstall(p));
+                        });
+            }
+
+	    // mark taboo packages
+	    ProductCreator::MarkTaboo(ProductCreator::Config["taboo"]:[]);
+
+            Pkg::PkgSolve(true);
+
+            list allpacs = Pkg::GetPackages(`selected, true);
+            y2milestone("All packages: %1 ( %2 )", allpacs, size(allpacs));
+        }
+        Popup::ClearFeedback();
+        return `next;
+    }
+
+    /**
+     * Start the detailed package selection. If 'mode' is non-nil, it will be
+     * passed as an option to the PackageSelector widget.
+     *
+     * Returns `accept or `cancel .
+     **/
+    symbol detailedSelection( symbol mode )
+    {
+	Pkg::SaveState();
+
+	// Open empty dialog for instant feedback
+
+	UI::OpenDialog(`opt(`defaultsize),
+		       `ReplacePoint(`id( `rep),
+				     `Label( _("Reading package database...") )
+				     )
+		       );
+
+	// This will take a while: Detailed package data are retrieved
+	// while the package manager is initialized
+	UI::ReplaceWidget(`rep,
+			  mode == nil ?
+			  `PackageSelector(`id(`packages ), StorageDevices::FloppyDevice ) :
+			  `PackageSelector(`id(`packages ), `opt(mode), StorageDevices::FloppyDevice )
+			  );
+
+	symbol result = (symbol) UI::RunPkgSelection(`id(`packages ) );
+	UI::CloseDialog();
+	y2milestone( "Package selector returned  %1", result );
+
+	if (result == `accept)
+	    Pkg::ClearSaveState();
+	else
+	    Pkg::RestoreState(false);
+
+	return result;
+    }
+
+    /**
+     * Start the pattern selection dialog. If the UI does not support the
+     * PatternSelector, start the detailed selection with "selections" as the
+     * initial view.
+     **/
+    symbol patternSelection()
+    {
+	if ( ! UI::HasSpecialWidget(`PatternSelector ) ||
+	     UI::WizardCommand(`Ping() ) != true	 )
+	{
+	    return detailedSelection( nil );	// Fallback: detailed selection
+	}
+
+	// switch to packager textdomain, reuse the translations
+
+	// Help text for software patterns / selections dialog
+        string helptext = _("<p>
+Select one of the following <b>base</b> selections and click <i>Detailed<i> to add
+more <b>add-on</b> selections and packages.
+</p>");
+
+	Wizard::SetContents(
+			    /* dialog caption */
+			    _("Software Selection"),
+			    `PatternSelector(`id(`patterns ) ),
+			    helptext,
+			    true,	// has_back
+			    true );	// has_next
+
+	Wizard::SetDesktopIcon( "sw_single" );
+
+	symbol result = nil;
+
+	repeat
+	{
+	    result = (symbol) UI::RunPkgSelection(`id(`patterns ) );
+	    y2milestone( "Pattern selector returned %1", result );
+
+	    if ( result == `details )
+	    {
+		result = detailedSelection( nil );
+
+		if ( result == `cancel )
+		    // don't get all the way out - the user might just have
+		    // been scared of the gory details.
+		    result = nil;
+
+	    }
+
+	} until ( result == `cancel || result == `accept );
+
+	if (result == `accept)
+	{
+	    result = `next;
+	}
+
+	return result;
+    }
+
+    /**
+     * Display package selection dialog with preselected packages.
+     * @param base_pattern base pattern to install, can be empty ("") if there is no base pattern
+     * @param patterns list of patterns to install
+     * @param packages list of packages to install
+     * @param taboo list of packages marked as taboo
+     * @param mode UI mode selection, use `packages for detailed package selection or `patterns for pattern selection.
+     * @return map<string,any>
+     */
+    map<string,any> runPackageSelector(string base_pattern, list<string> patterns, list<string> packages, list<string> taboo, symbol mode)
+    {
+	y2milestone("running package selector: base_pattern: %1, patterns: %2, packages: %3, taboo: %4, mode: %5", base_pattern, patterns, packages, taboo, mode);
+
+        any ret = nil;
+
+	// set a mount point - there is no use to display DU of the current system
+	Pkg::TargetInitDU([ $[ "name" : "/", "free" : 999*1024*1024 /* 999GB */, "used" : 0, "readonly" : false ] ]);
+
+        /* dialog caption */
+        string caption = _("Software Selection");
+
+        string helptext = _("<p>
+Select one of the following <b>base</b> selections and click <i>Detailed<i> to add
+more <b>add-on</b> selections and packages.
+</p>");
+        Pkg::TargetFinish ();
+
+
+        Popup::ShowFeedback(_("Reading data from Package Database..."), _("Please wait..."));
+        ProductCreator::enableSources();
+
+        Popup::ClearFeedback();
+
+
+        Wizard::CreateDialog();
+        Wizard::SetDesktopIcon("product-creator");
+
+        string base_selection = "";
+
+        Wizard::SetContents(caption,
+                `HVCenter(`Label(_("Reading package database..."))),
+                helptext, false, true);
+
+        list<string> available_base_selections = Pkg::GetSelections( `available, "base" );
+        y2milestone ("available_base_selections %1", available_base_selections);
+
+        list<string> current_base_selections = Pkg::GetSelections( `selected, "base" );
+        y2milestone ("current_base_selections %1", current_base_selections);
+
+	boolean using_patterns = false;
+
+	// use patterns instead of selections
+	if (size(available_base_selections) == 0)
+	{
+	    y2milestone("No selections, using patterns");
+	    using_patterns = true;
+
+	    list<string> addons = patterns;
+
+	    if (size(addons) > 0 || ProductCreator::Config["base"]:"" != "")
+	    {
+		y2milestone("base pattern: %1, addons: %2", base_pattern, addons);
+
+		// select the base pattern
+		if (base_pattern != "")
+		{
+		    Pkg::ResolvableInstall(base_pattern, `pattern);
+		}
+
+		// select the addons
+		foreach(string addon, addons,
+		{
+		    Pkg::ResolvableInstall(addon, `pattern);
+		});
+
+		// mark taboo packages
+		ProductCreator::MarkTaboo(taboo);
+
+		Pkg::PkgSolve(true);
+
+	    }
+
+	    // add extra packages
+	    if (size(packages) > 0)
+	    {
+		foreach(string p, packages,
+		{
+		    y2milestone("selecting package for installation: %1 -> %2", p, Pkg::PkgInstall(p));
+		});
+	    }
+
+	    y2milestone("package selection mode: %1", mode);
+
+	    if (mode == `packages)
+	    {
+		ret = detailedSelection(nil);
+	    }
+	    else if (mode == `patterns)
+	    {
+		ret = patternSelection();
+	    }
+	    else
+	    {
+		y2error("Unknown mode parameter: %1", mode);
+	    }
+	}
+	else
+	{
+	    // save the current base selection
+	    string save_selection = current_base_selections[0]:"default";
+
+	    // Construct a box with radiobuttons for each software base configuration
+	    term baseconfs_box = `VBox();
+
+	    // sort available_base_selections by order
+	    // $[ "order" : [ "name", "summary" ], .... ]
+
+	    map<string, list> sorted_base_selections = $[];
+	    foreach( string selection, available_base_selections,
+		    ``{
+		    map selection_data = Pkg::SelectionData (selection);
+		    if (selection_data != nil)
+		    {
+		    string order = selection_data["order"]:"";
+		    // use selection name as sort criteria if not given
+		    if (order == "")
+		    {
+		    order = selection;
+		    }
+		    sorted_base_selections[order] = [selection, selection_data["summary"]:("'"+selection+"'")];
+		    }
+		    });
+	    // construct display box in order
+	    boolean selected = false;
+	    foreach(string  order, list data, sorted_base_selections,
+		    ``{
+		    {
+		    if (base_pattern == "" && !selected)
+		    {
+		    base_pattern = data[0]:"";
+		    selected = true;
+		    }
+		    baseconfs_box = add( baseconfs_box, `Left(`RadioButton(`id(data[0]:""),     // id
+				`opt(`notify, `autoShortcut),
+				data[1]:"",              // descrption
+				(data[0]:"" == base_pattern)   )));
+		    }
+		    });
+
+	    term contents = `HVSquash(
+		    `VBox(
+			`HSquash(
+			    `VBox(
+				`Frame(
+				    // Frame caption for software selection
+				    _("Software"),
+				    `VBox(
+					`VSpacing(0.3),
+					`RadioButtonGroup(`id(`baseconf),`opt(`notify), baseconfs_box),
+					`VSpacing(0.3)
+					)
+				    ),
+				`VSpacing(),
+
+				// Push button that will pop up the detailed
+				// software selection (e.g. Multimedia, Games,
+				// KDE, Gnome, ... - not the individual packages!)
+				`PushButton( `id(`details),  _("&Detailed selection...") )
+				)
+			    )
+			)
+		    );
+
+	    Wizard::SetContentsButtons(caption, contents, helptext,
+		    Label::BackButton(), Label::NextButton());
+
+
+
+	    boolean selret = false;
+	    repeat
+	    {
+		ret = Wizard::UserInput();
+
+		// get the newly selected base configuration
+		base_selection = (string) UI::QueryWidget( `id(`baseconf),`CurrentButton );
+
+		// Inform the package manager on `next about the new (only about a NEW) selection
+		// or if the selection has changed
+
+		if (ret == `next)
+		{
+		    // set the new selection
+		    boolean pkgret = Pkg::SetSelection( base_selection );
+		    y2milestone("base selection: %1", pkgret);
+		    if (size(packages) > 0)
+		    {
+			foreach(string p, packages, ``{
+				y2debug("selecting package for installation: %1 -> %2", p, Pkg::PkgInstall(p));
+				});
+		    }
+
+		    // mark taboo packages
+		    ProductCreator::MarkTaboo(taboo);
+		}
+		else if ( ret == `abort)
+		{
+		    if(ProductCreator::ReallyAbort()) break;
+		    else continue;
+		}
+		else if ( ret == `details )
+		{
+		    ret = `again;
+
+		    Pkg::SetSelection( base_selection );
+
+		    foreach(string addon, patterns, ``{
+			    Pkg::SetSelection( addon );
+			    });
+
+		    // mark taboo packages
+		    ProductCreator::MarkTaboo(taboo);
+
+		    Pkg::PkgSolve(true);
+		    if (size(packages) > 0)
+		    {
+			foreach(string p, packages, ``{
+				y2milestone("selecting package for installation: %1 -> %2", p, Pkg::PkgInstall(p));
+				});
+		    }
+
+		    while ( ret == `again )
+		    {
+			ret = (symbol)WFM::CallFunction( "inst_packages", [ true, true ] );
+
+			if ( ret == `accept )
+			    ret = `next;
+		    }
+		}
+	    }  until ( ret == `next  || ret == `back);
+	}
+
+        y2milestone("Selected packages: %1 ", size(Pkg::GetPackages(`selected, true)));
+
+	// activate the selections
+        boolean solved = Pkg::PkgSolve(true);
+
+	if (!solved)
+	{
+	    string details = (string)SCR::Read(.target.string, "/var/log/YaST2/badlist");
+	    // error message, %1 = details
+	    Report::LongError(sformat(_("The dependecies cannot be resolved.\n\n%1"), details));
+	    return $["ui" : `failed];
+	}
+
+        list allpacs = Pkg::GetPackages(`selected, true);
+        y2milestone("All packages: %1 ( %2 )", allpacs, size(allpacs));
+
+        list seladd = [];
+        list selbase = [];
+        if ( ret != `back )
+        {
+	    if (!using_patterns)
+	    {
+		seladd =  Pkg::GetSelections(`selected, "");
+		selbase =  Pkg::GetSelections(`selected, "base");
+	    }
+	    else
+	    {
+		seladd =  Pkg::GetPatterns(`selected, "");
+		selbase =  Pkg::GetPatterns(`selected, "base");
+	    }
+        }
+        else
+        {
+            seladd = patterns;
+            selbase = [base_pattern];
+        }
+
+	map<string,any> ret_map = $[];
+
+        ret_map["packages"] = Pkg::FilterPackages(false, true, true, true);
+	y2milestone("User selected packages: %1", ret_map["packages"]:[]);
+
+        ret_map["base"] = selbase[0]:"";
+	y2milestone("selected base: %1", selbase[0]:"");
+
+	if (size(selbase) > 1)
+	{
+	    // add the other base patterns to addons
+	    list other_base = remove(selbase, 0);
+
+	    seladd = merge(other_base, seladd);
+	}
+
+        ret_map["addons"] = seladd;
+	y2milestone("selected addons: %1", seladd);
+
+	// remember taboo packages
+	ret_map["taboo"] = Pkg::GetPackages(`taboo, true);
+	y2milestone("taboo packages: %1", ret_map["taboo"]:[]);
+
+	// selections or patterns are used in the product
+        ret_map["type"] = using_patterns ? `patterns : `selections;
+
+	// add code10 flag if the new source type is detected
+	ret_map["code10"] = ProductCreator::isCode10Source();
+
+	ret_map["ui"] = ret;
+
+        Wizard::CloseDialog();
+        return ret_map;
+    }
+
+    /**
+     * Select packages
+     * @return symbol
+     */
+    define symbol packageSelector()
+    {
+	string base_pattern = ProductCreator::Config["base"]:"";
+	list<string> patterns = ProductCreator::Config["addons"]:[];
+	list<string> packages = ProductCreator::Config["packages"]:[];
+	list<string> taboo = ProductCreator::Config["taboo"]:[];
+
+	map<string,any> result = runPackageSelector(base_pattern, patterns, packages, taboo, `patterns);
+
+	ProductCreator::Config["base"] = result["base"]:"";
+	ProductCreator::Config["addons"] = result["addons"]:[];
+	ProductCreator::Config["packages"] = result["packages"]:[];
+	ProductCreator::Config["taboo"] = result["taboo"]:[];
+	ProductCreator::Config["code10"] = result["code10"]:true;
+        ProductCreator::Config["type"] = result["type"]:`patterns;
+
+	return result["ui"]:`next;
+    }
+
+
+    term GpgDialogContent()
+    {
+	return `MarginBox(2, 1,
+	    `VBox (
+		`Left("sign_checkbox"),
+		`VSpacing(0.5),
+		"select_private_key",
+		`VSpacing(1),
+		"create_new_key"
+	    )
+	);
+    };
+
+    void refreshSigningDialog(boolean sign)
+    {
+	UI::ChangeWidget(`id("create_new_key"), `Enabled, sign);
+	UI::ChangeWidget(`id(`gpg_priv_table), `Enabled, sign);
+	UI::ChangeWidget(`id(`gpg_priv_label), `Enabled, sign);
+    }
+
+    symbol SignContent(string key, map event)
+    {
+	y2debug("SignContent: %1, %2", key, event);
+
+	if (key == "sign_checkbox")
+	{
+	    // refresh table and pushbutton state
+	    boolean sign = (boolean)UI::QueryWidget(`id("sign_checkbox"), `Value);
+	    refreshSigningDialog(sign);
+	}
+
+	return nil;
+    }
+
+    void signCheckboxInit(string key)
+    {
+	if (key == "sign_checkbox")
+	{
+	    boolean sign = false;
+
+	    if (ProductCreator::Config["gpg_key"]:"" != "")
+	    {
+		sign = true;
+	    }
+
+	    UI::ChangeWidget(`id("sign_checkbox"), `Value, sign);
+	    refreshSigningDialog(sign);
+	}
+    }
+
+    map sign_checkbox_widget()
+    {
+	return $[
+	"sign_checkbox" :
+	    $[
+		"widget" : `checkbox,
+		"opt"	 : [ `notify ],
+		"init"	 : signCheckboxInit,
+		"label"  : _("&Digitally Sign the Product on the Medium"),
+		"handle_events" : ["sign_checkbox"],
+		"handle" : SignContent,
+		// TODO: validate the dialog (is a key selected if the checkbox is selected?
+		// "validate_help" : _("Select a gpg key in the table. Create...")
+		"help" : _("<p><big><b>Sign</b></big><br>
+adsfsdfsddsfsdfdsf</p>")
+	    ]
+	];
+    }
+
+
+    symbol gpgKeyDialog()
+    {
+	string caption = _("Signing the Product on the Medium");
+
+	if (ProductCreator::Config["gpg_key"]:"" != "")
+	{
+	    // preselect the key
+	    GPGWidgets::SetSelectedPrivateKey(ProductCreator::Config["gpg_key"]:"");
+	}
+
+	symbol ret = CWM::ShowAndRun ($[
+	    "widget_names" : ["sign_checkbox", "select_private_key", "create_new_key"],
+	    "widget_descr" : union(GPGWidgets::Widgets(), sign_checkbox_widget()),
+	    "contents" :  GpgDialogContent(),
+	    "caption" : caption,
+	    "back_button" : Label::BackButton (),
+	    "next_button" : Label::NextButton (),
+	    "fallback_functions" : $[]
+	]);
+
+	boolean sign = (boolean)UI::QueryWidget(`id("sign_checkbox"), `Value);
+	y2milestone("Sign the medium: %1", sign);
+
+	string gpg_key = (sign) ? GPGWidgets::SelectedPrivateKey() : "";
+	y2milestone("GPG signing key: %1", gpg_key);
+
+	// remember the key
+	ProductCreator::Config["gpg_key"] = gpg_key;
+
+	return ret;
+    }
+
+    /**
+     * Configuration Summary
+     * @return void
+     */
+    define symbol ConfigSummary() ``{
+        import "Summary";
+
+        Wizard::CreateDialog();
+        Wizard::SetDesktopIcon("cd-creator");
+        string caption = _("Configuration Summary");
+        Wizard::SetContents( caption,
+                `Empty(),
+                "",
+                false,
+                false);
+
+	ProductCreator::CommitConfig();
+
+
+        // caption
+        string summary = "";
+        summary = Summary::AddHeader(summary, _("Package Source") );
+        summary = Summary::OpenList(summary);
+        foreach(string s, ProductCreator::Config["sources"]:[], ``{
+                summary = Summary::AddListItem(summary, s);
+                });
+        summary = Summary::CloseList(summary);
+        summary = Summary::AddHeader(summary, _("Packages") );
+
+        summary = Summary::AddLine(summary, sformat(_("Selected %1 packages"),
+                    size(Pkg::GetPackages(`selected, true))));
+
+        summary = Summary::AddHeader(summary,_("Output Directory"));
+
+        summary = Summary::AddLine(summary,sformat(_("Creating directory tree in <b> %1/%2 </b>"),
+                    ProductCreator::Config["iso-directory"]:"",
+                    ProductCreator::Config["name"]:"") );
+
+
+	// header in the summary dialog
+	summary = Summary::AddHeader(summary, _("Signing"));
+	string gpgkey = ProductCreator::Config["gpg_key"]:"";
+
+	if (gpgkey != "")
+	{
+	    list<map> privatekeys = GPG::PrivateKeys();
+	    string uid = "";
+
+	    foreach(map key, privatekeys,
+		{
+		    if (key["id"]:"" == gpgkey)
+		    {
+			uid = mergestring(key["uid"]:[], ", ");
+		    }
+		}
+	    );
+
+	    if (uid != "")
+	    {
+		uid = sformat(" (%1)", uid);
+	    }
+
+	    // summary text - %1 is GPG key ID (e.g. ABCDEF01), %2 is GPG key user ID (or empty if not defined)
+	    summary = Summary::AddLine(summary, sformat(_("Digitally sign the medium with GPG key <b>%1</b>%2"), gpgkey, String::EscapeTags(uid)));
+	}
+	else
+	{
+	    // summary text
+	    summary = Summary::AddLine(summary, _("The medium will not be digitally signed"));
+	}
+
+        term contents =
+            `RichText(summary);
+
+        string help_text = _("<p>Verify if the data in the summary is correct then
+press Next to continue.
+</p>");
+
+        Wizard::SetContentsButtons ( caption,
+                contents,
+                help_text,
+                Label::BackButton (),
+                Label::FinishButton ());
+        any ret = nil;
+        repeat
+        {
+            ret = UI::UserInput();
+        }  until (ret == `next || ret == `back || ret == `abort);
+        Wizard::CloseDialog();
+
+        return (symbol)ret;
+    }
+
+
+
+    /* EOF */
+}

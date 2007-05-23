@@ -1,0 +1,82 @@
+/**
+ * File:	clients/product-creator.ycp
+ * Package:	Configuration of product-creator
+ * Summary:	Main file
+ * Authors:	Anas Nashif <nashif@suse.de>
+ *
+ * $Id$
+ *
+ * Main file for product-creator configuration. Uses all other files.
+ */
+
+{
+
+/***
+ * <h3>Configuration of the product-creator</h3>
+ */
+
+textdomain "product-creator";
+
+include "product-creator/wizards.ycp";
+include "product-creator/commandline.ycp";
+
+import "CommandLine";
+import "ProductCreator";
+
+import "PackageCallbacksInit";
+PackageCallbacksInit::InitPackageCallbacks();
+
+map cmdline_description = $[
+    "id"	: "product-creator",
+    // transltors: command line help text for the Xproduct-creator module
+    "help"	: _("Configuration of CD creator"),
+    "guihandler"        : ProductCreatorSequence,
+    "initialize"        : ProductCreator::Read,
+    "finish"            : ProductCreator::Write,
+    "actions"           : $[
+	"list" :$[
+	    "handler"	: ListHandler,
+	    // translators: command line help text for summary action
+	    "help"	: _("Print existing configurations")
+	],
+	"create-iso" :$[
+	    "handler"	: CreateIsoHandler,
+	    // translators: command line help text for summary action
+	    "help"	: _("Create installation ISO image")
+	]
+    ],
+    "options"	: $[
+	"name" : $[
+	    // translators: command line help text for the 'name' option
+	    "help"	: _("Name of the configuration"),
+	    "type"	: "string"
+	],
+	"passphrase" : $[
+	    // translators: command line help text for the 'passhrase' option
+	    "help" : _("File with GPG passhrase required for signing the source."),
+	    "type"	: "string"
+	]
+    ],
+    "mappings"	: $[
+	"list"		: [],
+	"create-iso"	: ["name", "passphrase"],
+    ]
+];
+
+/* The main () */
+y2milestone ("----------------------------------------");
+y2milestone ("ProductCreator module started");
+
+
+/* start the module */
+any ret = CommandLine::Run(cmdline_description);
+y2debug("ret=%1", ret);
+
+/* Finish */
+y2milestone("ProductCreator module finished");
+y2milestone("----------------------------------------");
+
+return ret;
+
+/* EOF */
+}

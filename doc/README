@@ -1,0 +1,16 @@
+CD Creator
+++++++++++
+
+Enables the user to create an CD image suitable for installation from a 
+list of packages and files.
+
+	- plain list of packages and product data
+ 	- an AutoYaST control file
+	- Clone on CD using AutoYaST and the Backup modules
+
+
+Options:
+
+	- Create a bootable CD without packages suitable for installation
+	  from a network source
+	- Create a source directory that can be used to create an ISO image

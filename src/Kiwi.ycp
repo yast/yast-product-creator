@@ -1,0 +1,526 @@
+/**
+ * File:	modules/Kiwi.ycp
+ * Package:	Configuration of product-creator
+ * Summary:	Data for kiwi configuration, input and output functions.
+ * Authors:	Jiri Suchomel <jsuchome@suse.cz>
+ *
+ * $Id$
+ */
+{
+  module "Kiwi";
+
+  textdomain "product-creator";
+
+  import "Directory";
+  import "FileUtils";
+  import "Label";
+  import "Message";
+  import "Package";
+  import "Popup";
+  import "Progress";
+  import "Report";
+  import "Security";
+  import "String";
+
+  string encryption_method	= nil;
+  global string tmp_dir	= "";
+
+  global string images_dir	= "/usr/share/kiwi/image";
+
+  // where the kiwi configuration files are stored
+  string config_dir	= "";
+
+  /**
+   * crypt given user password with current encryption algorithm
+   */
+  string crypt_password	(string pw)
+  {
+    if (encryption_method == nil)
+    {
+	boolean progress = Progress::set (false);
+	Security::Read ();
+	Progress::set (progress);
+	map security	= Security::Export ();
+	encryption_method  = tolower (security["PASSWD_ENCRYPTION"]:"des");
+    }
+    if (encryption_method == "md5")
+	return cryptmd5 (pw);
+    if (encryption_method == "blowfish")
+	return cryptblowfish (pw);
+    return crypt (pw);
+  }
+
+  /**
+   * change the yast source path format to kiwi (smart?) one
+   */
+  string adapt_source_path (string source) {
+
+    if (substring (source, 0, 6) == "dir://")
+	return substring (source, 6);
+    //FIXME plaindir -> rpm-dir
+    return source;
+  }
+
+  /**
+   * generate the name of directory with kiwi configuration
+   */
+  string get_config_dir (string name, string task) {
+    return "/kw" + task + "-YaST-" + deletechars (name, " \t");
+  }
+
+  /**
+   * generate the value for image type
+   */
+  map get_type_value (map config, string task) {
+
+    map ret	= $[
+	"__key"		: "type",
+	"__value"	: task,
+	"primary"	: "true",
+	"boot"		: sformat ("%1boot/%2", task, config[task + "boot"]:"suse-10.2"),
+//FIXME				(KiwiConfig["compressed"]:false ? ",compressed" : ""),
+    ];
+    if (task != "iso")
+	ret["filesystem"]	= "ext3";
+    return ret;
+  }
+
+  /**
+   * which keys in config.xml are not unique
+   */
+  map non_unique_key	= $[
+    "package"		: true,
+    "opensusePattern"	: true,
+    "ignore"		: true,
+    "user"		: true,
+    "source"		: true,
+    "file"		: true, // for drivers section
+  ];
+
+  /**
+   * convert YCP map (of internal type) to XML
+   */
+  string Map2XML (map descr, integer level) {
+
+    string children	= "";
+    string value	= "";
+    string tab		= "";
+    integer i		= 0;
+    while (i < level) {
+	i = i + 1;
+	tab	= tab + "\t";
+    }
+    string key	= descr["__key"]:"";
+    if (key == "") return "";
+    string ret	= tab + "<" + key;
+    foreach (string subkey, any val, (map<string,any>) descr, {
+	if (subkey == "__key" || non_unique_key[subkey]:false) return;
+	if (subkey == "__children" && is (val, list))
+	    foreach (map chmap, (list<map>) val, {
+		children	= children + "\n" + Map2XML (chmap, level + 1);
+	    });
+	else if (subkey == "__value")
+	    value = sformat ("%1", val);
+	else if (is (val, string))
+	    ret	= sformat ("%1 %2=\"%3\"", ret, subkey, val);
+    });
+    if (non_unique_key[key]:false)
+	return sformat ("%1/>", ret);
+    if (value != "")
+	ret = sformat ("%1>%2", ret, value);
+    else
+	ret	= ret + ">";
+    if (children != "")
+	ret =	 ret + children + "\n";
+    ret	= sformat ("%1%2</%3>", ret, haskey (descr, "__value") ? "" : tab, key);
+    return ret;
+  }
+
+  /**
+   * import the data from given config.xml
+   * @param directory where to look for config.xml
+   * @ret map of imported data
+   */
+  global map<string,any> ReadConfigXML (string base_path) {
+
+    map<string,any> ret	= $[];
+    if (!FileUtils::Exists (base_path + "/config.xml"))
+	return ret;
+
+    map config	= (map) SCR::Read (.kiwi, base_path + "/config.xml");
+    map<string,map> packages	= config["packages"]:$[];
+    // rest parts of "packages" are saved in product-creator map
+    ret["ignore"] = maplist (map p, (list<map>)packages["image","ignore"]:[], ``(p["name"]:""));
+    // value of "arch" is currently ignored...
+    foreach (string section, [ "boot", "xen" ], {
+	ret[section + "_packages"]	=
+	    maplist (map p, (list<map>)packages[section, "package"]:[], ``(p["name"]:""));
+	ret[section + "_patterns"]	=
+	    maplist (map p, (list<map>)packages[section, "opensusePattern"]:[], ``(p["name"]:""));
+	ret[section + "_ignore"]	=
+	    maplist (map p, (list<map>)packages[section, "ignore"]:[], ``(p["name"]:""));
+    });
+
+    if (packages["xen","disk"]:"" != "")
+	ret["xen_disk"]	= packages["xen","disk"]:"";
+    if (packages["xen","memory"]:"" != "")
+	ret["xen_memory"]	= tointeger (packages["xen","memory"]:"512");
+// FIXME read list of packages and patterns???? -> only for non-default!
+    foreach (string key, [ "author", "contact", "specification", "packagemanager", "version",
+	"rpm-check-signatures", "rpm-force", "sizeunit", "type" ], {
+	if (config[key]:nil != nil)
+	    ret[key]	= config[key]:nil;
+    });
+    if (haskey (config, "size"))
+	ret["size"]	= tointeger (config["size"]:"2700");
+
+    return ret;
+  }
+
+  /**
+   * Write currect configuration to new config.xml
+   */
+  global boolean WriteConfigXML (map KiwiConfig, string kiwi_task) {
+
+    tmp_dir		= Directory::tmpdir;
+
+    list packages_list	= [];
+    list patterns_list	= [];
+    list ignored_list	= [];
+    list packages_boot_list	= [];
+    list patterns_boot_list	= [];
+    list ignored_boot_list	= [];
+
+    list packages_xen_list	= [];
+    list patterns_xen_list	= [];
+    list ignored_xen_list	= [];
+
+    foreach (string package, (list<string>) KiwiConfig["packages"]:[], {
+	packages_list	= add (packages_list, $[
+	    "__key"	: "package",
+	    "name"	: package,
+	]);
+    });
+    foreach (string pattern, (list<string>) KiwiConfig["addons"]:[], {
+	patterns_list	= add (patterns_list, $[
+	    "__key"	: "opensusePattern",
+	    "name"	: pattern,
+	]);
+    });
+    foreach (string package, (list<string>) KiwiConfig["ignore"]:[], {
+	ignored_list	= add (ignored_list, $[
+	    "__key"	: "ignore",
+	    "name"	: package,
+	]);
+    });
+    list<string> boot_packages	=
+	KiwiConfig["boot_packages"]:["filesystem", "glibc-locale", "kernel-default", "devs" ];
+    foreach (string package, boot_packages, {
+	packages_boot_list	= add (packages_boot_list, $[
+	    "__key"		: "package",
+	    "name"		: package,
+	]);
+    });
+    foreach (string ignore, KiwiConfig["boot_ignore"]:[], {
+	ignored_boot_list	= add (ignored_boot_list, $[
+	    "__key"		: "ignore",
+	    "name"		: ignore,
+	]);
+    });
+
+
+    foreach (string package, KiwiConfig["xen_packages"]:[], {
+	packages_xen_list	= add (packages_xen_list, $[
+	    "__key"		: "package",
+	    "name"		: package,
+	]);
+    });
+    foreach (string pattern, KiwiConfig["xen_patterns"]:[], {
+	patterns_xen_list	= add (patterns_xen_list, $[
+	    "__key"		: "pattern",
+	    "name"		: pattern,
+	]);
+    });
+    foreach (string ignore, KiwiConfig["xen_ignore"]:[], {
+	ignored_xen_list	= add (ignored_xen_list, $[
+	    "__key"		: "ignore",
+	    "name"		: ignore,
+	]);
+    });
+
+    list write_list	= [ $[
+      "__key"	: "image",
+      "name"	: KiwiConfig["name"]:"",
+      "__children"	: [
+	$[
+	    "__key"	: "description",
+	    "type"	: "system",
+	    "__children"	: [
+		$[
+		    "__key"	: "author",
+		    "__value"	: KiwiConfig["author"]:"",
+		],
+		$[
+		    "__key"	: "contact",
+		    "__value"	: KiwiConfig["contact"]:"",
+		],
+		$[
+		    "__key"	: "specification",
+		    "__value"	: KiwiConfig["specification"]:"",
+		],
+	    ],
+	],
+	$[
+	    "__key"	: "preferences",
+	    "__children"	: [
+		get_type_value (KiwiConfig, kiwi_task),
+		$[
+		    "__key"	: "version",
+		    "__value"	: KiwiConfig["version"]:"1",
+		],
+		$[
+		    "__key"	: "size",
+		    "unit"	: KiwiConfig["sizeunit"]:"M",
+		    "__value"	: sformat ("%1", KiwiConfig["size"]:2700),
+		],
+		$[
+		    "__key"	: "packagemanager",
+//		    "__value"   : "zypper", FIXME still not working for SLES10SP1...
+		    "__value"   : "smart",
+		],
+		$[
+		    "__key"	: "rpm-check-signatures",
+		    "__value"	: KiwiConfig["rpm-check-signatures"]:"False",
+		],
+		$[
+		    "__key"	: "rpm-force",
+		    "__value"	: KiwiConfig["rpm-force"]:"True",
+		],
+	    ],
+	],
+      ],
+    ]];
+    if (haskey (KiwiConfig, "users"))
+    {
+	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
+	    "__key"	: "users",
+	    "group"	: KiwiConfig["group"]:"users",
+	    "__children" :
+		maplist (string user, map usermap, (map<string,map>) KiwiConfig["users"]:$[], ``(
+		    $[
+			"__key"	: "user",
+			"name"	: user,
+			"pwd"	: crypt_password (usermap["pwd"]:""),
+			"home"	: usermap["home"]:"",
+		    ]
+		))
+	]);
+    }
+    write_list[0,"__children"] = union (write_list[0,"__children"]:[],
+	maplist (string source, (list<string>) KiwiConfig["sources"]:[], {
+	    return $[
+		"__key"	: "repository",
+		"type"	: "yast2", //FIXME rpm-dir?
+		"__children": [
+		    $[
+			"__key"	: "source",
+			"path"	: adapt_source_path (source),
+		    ]
+		]
+	    ];
+	})
+    );
+    write_list[0,"__children"] = union (write_list[0,"__children"]:[], [
+	$[
+	    "__key"	: "packages",
+	    "type"	: "image",
+//	    "patternType"	: "onlyRequired". // FIXME what does this mean?
+//	    "patternType"	: "plusRecommended",
+	    "__children": union (union (packages_list, patterns_list), ignored_list)
+	],
+	$[
+	    "__key"	: "packages",
+	    "type"	: "boot",
+	    "__children": union (union (packages_boot_list, patterns_boot_list), ignored_boot_list)
+	],
+    ]);
+    if (kiwi_task == "xen")
+    {
+	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
+	    "__key"	: "packages",
+	    "type"	: "xen",
+	    // FIXME disk and memory not configurable
+	    "disk"	: KiwiConfig["xen_disk"]:"/dev/sda",
+	    "memory"	: sformat ("%1", KiwiConfig["xen_memory"]:512),
+	    "__children": union (union (packages_xen_list, patterns_xen_list), ignored_xen_list)
+	]);
+    }
+
+    string write_string	= Map2XML (write_list[0]:$[], 0);
+    config_dir	= tmp_dir + get_config_dir (KiwiConfig["name"]:"", kiwi_task);
+    SCR::Execute (.target.mkdir, config_dir);
+    SCR::Write (.target.string, config_dir + "/config.xml", write_string);
+    foreach (string dir, ["root_dir", "config_dir"], {
+	foreach (string val, KiwiConfig[dir]:[], {
+	    string realdir	= config_dir + "/" + substring (dir, 0, find (dir, "_"));
+	    boolean created	= false;
+	    if (val != "" && FileUtils::Exists (val))
+	    {
+		if (!created && !FileUtils::Exists (realdir))
+		{
+		    SCR::Execute (.target.mkdir, realdir);
+		    created	= true;
+		}
+		SCR::Execute (.target.bash, sformat ("cp -ar %1 %2/", val, realdir));
+	    }
+	});
+    });
+    foreach (string file, ["images.sh", "config.sh" ], {
+	if (KiwiConfig[file]:"" != "")
+	{
+	    SCR::Write (.target.string, config_dir + "/" + file, KiwiConfig[file]:"");
+	    SCR::Execute (.target.bash, "chmod +x " + config_dir + "/" + file);
+	}
+    });
+    return true;
+  }
+
+  // run kiwi to finally create the live iso image
+  global boolean PrepareAndCreate () {
+
+    if (config_dir == "" || !FileUtils::Exists (config_dir))
+	return false;
+    if (!Package::Install ("kiwi"))
+    {
+	Report::Error (Message::CannotContinueWithoutPackagesInstalled ());
+	return false;
+    }
+
+    /* rather do not remove, filesystem can be mounted
+    if (FileUtils::Exists (tmp_dir + "/myphysical"))
+    {
+	SCR::Execute (.target.bash, sformat ("rm -rf %1/myphysical", tmp_dir));
+    }
+    */
+
+    string cmd	= sformat ("kiwi --root %1/myphysical --prepare %2 --logfile terminal", tmp_dir, config_dir);
+
+    y2milestone ("calling '%1'", cmd);
+
+    SCR::Execute (.background.run_output_err, cmd);
+
+    // construct the dialog
+    UI::OpenDialog(`opt(`decorated), `HBox(`HSpacing(1.5),
+    `VSpacing(25),
+    `VBox(
+        `HSpacing(85),
+        `VSpacing(0.5),
+	// label
+        `ReplacePoint (`id (`rpl), `Left (`Label(_("Preparing physical extend...")))),
+        `VSpacing(0.5),
+        `LogView (`id (`log), "", 8, 0),
+        `VSpacing(0.5),
+	`ReplacePoint (`id (`rp), `PushButton (`id(`cancel),`opt(`key_F9), Label::CancelButton ())),
+        `VSpacing(0.5)),
+    `HSpacing(1.5)
+    ));
+
+    symbol ret		= nil;
+    boolean creating	= false;
+    do
+    {
+	ret = (symbol) UI::PollInput();
+        if ((boolean) SCR::Read(.background.output_open) &&
+	    (integer) SCR::Read(.background.newlines)>0)
+        {
+            // read the output line from irw:
+	    list<string> out	= (list<string>)SCR::Read(.background.newout);
+	    foreach (string line, out, {
+		line	= String::Replace (line, "\r", "\n");
+		UI::ChangeWidget (`id(`log), `LastLine, line + "\n");
+	    });
+
+	    list script_err  = (list) SCR::Read(.background.newerr);
+        }
+	else if (!(boolean)SCR::Read(.background.isrunning))
+	{
+	    integer status	= (integer) SCR::Read (.background.status);
+	    if (status != 0)
+	    {
+		UI::ReplaceWidget (`id (`rp), `HBox (
+		    // label (command result)
+		    `Label (`opt (`boldFont), _("KIWI failed.")),
+		    `PushButton (`id(`close), Label::CloseButton ())
+		));
+		ret	= (symbol) UI::UserInput ();
+		break;
+	    }
+	    else if (!creating)
+	    {
+		creating	= true;
+		SCR::Execute(.background.kill); // just to be sure...
+
+		// now continue with creating
+		UI::ChangeWidget (`id(`log), `LastLine, "\n");
+		cmd	= sformat ("kiwi --create %1/myphysical -d %1/output --logfile terminal",
+		    tmp_dir);
+		SCR::Execute (.target.mkdir, tmp_dir + "/output");
+		y2milestone ("calling '%1'", cmd);
+		// label
+		UI::ReplaceWidget (`id (`rpl), `Left (`Label (_("Creating Image..."))));
+		SCR::Execute (.background.run_output_err, cmd);
+		ret	= nil;
+		continue;
+	    }
+	    else
+	    {
+		UI::ReplaceWidget (`id (`rp), `HBox (
+		    // label (command result)
+		    `Label (`opt (`boldFont), _("KIWI succeeded.")),
+		    `PushButton (`id(`ok), Label::OKButton ())
+		));
+		ret	= (symbol) UI::UserInput ();
+		break;
+	    }
+	}
+	if (ret == `cancel)
+	{
+	    SCR::Execute(.background.kill);
+	}
+	sleep (100);
+    } while (ret == nil);
+
+    SCR::Execute(.background.kill);
+    UI::CloseDialog ();
+    return ret == `ok;
+  }
+
+  /**
+   * save the image configuration to the kiwi images directory
+   */
+  global string SaveConfiguration (map KiwiConfig, string kiwi_task) {
+    if (config_dir == "" || !FileUtils::Exists (config_dir))
+	return nil;
+    SCR::Execute (.target.bash, sformat ("cp -ar %1 %2/", config_dir, images_dir));
+    return (images_dir + get_config_dir (KiwiConfig["name"]:"", kiwi_task));
+  }
+
+  /**
+   * move the final image(s) created by kiwi to user defined directory
+   */
+  global string MoveOutput (string out_dir) {
+    string ret	= tmp_dir + "/output"; // the actual output directory
+    if (out_dir == "") return ret;
+    if (FileUtils::CheckAndCreatePath (out_dir))
+    {
+	y2milestone ("moving %1/* to %2/", ret, out_dir);
+	SCR::Execute (.target.bash, sformat ("mv %1/* %2/", ret, out_dir));
+	ret	= out_dir;
+    }
+    return ret;
+  }
+
+}
+
+
+
