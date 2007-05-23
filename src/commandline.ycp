@@ -11,6 +11,8 @@
     import "CommandLine";
     import "Progress";
 
+    textdomain "product-creator";
+
     boolean ListHandler(map params)
     {
 	foreach(string name, map<string, any> conf, ProductCreator::Configs,
