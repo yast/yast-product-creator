@@ -16,6 +16,7 @@
     import "Wizard_hw";
     import "Report";
     import "Arch";
+    import "String";
 
     import "ProductCreator";
 
@@ -107,7 +108,7 @@
         contents = Wizard_hw::SpacingAround(contents2, 1.5, 1.5, 1.0, 1.0);
 
         Wizard::SetContentsButtons(caption, contents, HELPS["overview"]:"",
-                Label::BackButton(), Label::FinishButton());
+                Label::BackButton(), Label::CloseButton());
 
         if (size(overview) == 0 )
         {
@@ -334,7 +335,7 @@
                     string pub = ProductCreator::Config["publisher"]:"anon";
                     string prep = ProductCreator::Config["preparer"]:"anon";
 
-		    map output = (map)SCR::Execute(.target.bash_output, sformat("du -s -b %1 | awk -F' ' ' { printf $1 }'", isodir ));
+		    map output = (map)SCR::Execute(.target.bash_output, sformat("du -s -b '%1' | awk -F' ' ' { printf $1 }'", String::Quote(isodir) ));
                     string du = output["stdout"]:"";
                     y2milestone("Expected size: %1", du);
 
@@ -343,7 +344,7 @@
 			Popup::ShowFeedback(_("Creating CD Image..."), _("This may take a while"));
 		    }
 
-		    string command = sformat("/usr/lib/YaST2/bin/y2mkiso %1 %2 %3", isodir, isofile, (ProductCreator::Config["code10"]:false) ? Arch::architecture() : "");
+		    string command = sformat("/usr/lib/YaST2/bin/y2mkiso '%1' '%2' '%3'", String::Quote(isodir), String::Quote(isofile), String::Quote((ProductCreator::Config["code10"]:false) ? Arch::architecture() : ""));
 		    y2milestone("command: %1", command);
 
                     SCR::Execute (.target.bash, command, $["CD_PUBLISHER": pub, "CD_PREPARER": prep ]);

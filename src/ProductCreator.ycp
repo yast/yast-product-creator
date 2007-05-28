@@ -390,8 +390,6 @@ global define list PrepareConfigs() ``{
 		}
 	    );
 
-	    y2internal("Escaped sources: %1", sources);
-
 	    v["sources"] = sources;
 	}
 
@@ -623,6 +621,7 @@ global define void configSetup()
 
 boolean ExportPublicKey(string keyid, string dir)
 {
+    y2debug("ExportPublicKey: %1 to %2", keyid, dir);
     // export the public key
     boolean ret = GPG::ExportAsciiPublicKey(keyid, dir + "/content.key");
 
@@ -687,7 +686,7 @@ global boolean UpdateContentFile(string dir, string prod_dir)
     string meta_sha1 = SHA1Meta(dir, prod_dir);
     string key_sha1 = SHA1Key(dir);
 
-    string command = sformat("/usr/bin/grep -v -e '^KEY ' -e '^META ' %1/content", dir);
+    string command = sformat("/usr/bin/grep -v -e '^KEY ' -e '^META ' '%1/content'", String::Quote(dir));
     map out = (map)SCR::Execute(.target.bash_output, command);
     if (out["exit"]:-1 != 0)
     {
@@ -1029,7 +1028,7 @@ global define boolean  CreateSkeleton () ``{
     skel_root = sformat("%1/%2", Config["iso-directory"]:"", Config["name"]:"");
     SCR::Execute(.target.mkdir, skel_root);
 
-    Exec(sformat("/bin/mkdir -p %1/boot/%2", skel_root, arch));
+    Exec(sformat("/bin/mkdir -p '%1/boot/%2'", String::Quote(skel_root), String::Quote(arch)));
 
     list<integer> enabled = Pkg::SourceGetCurrent(true);
     if (size(enabled) == 0 )
@@ -1043,18 +1042,18 @@ global define boolean  CreateSkeleton () ``{
     {
 	if (Config["code10"]:false)
 	{
-	    Exec(sformat("/bin/mkdir -p %1/boot/%2/loader", skel_root, arch));
+	    Exec(sformat("/bin/mkdir -p '%1/boot/%2/loader'", String::Quote(skel_root), String::Quote(arch)));
 	}
 	else
 	{
-	    Exec(sformat("/bin/mkdir -p %1/boot/loader", skel_root));
+	    Exec(sformat("/bin/mkdir -p '%1/boot/loader'", String::Quote(skel_root)));
 	}
     }
     else if (Arch::ppc() || Arch::ppc64())
     {
-	Exec(sformat("/bin/mkdir -p %1/etc", skel_root));
-	Exec(sformat("/bin/mkdir -p %1/ppc", skel_root));
-	Exec(sformat("/bin/mkdir -p %1/suseboot", skel_root));
+	Exec(sformat("/bin/mkdir -p '%1/etc'", String::Quote(skel_root)));
+	Exec(sformat("/bin/mkdir -p '%1/ppc'", String::Quote(skel_root)));
+	Exec(sformat("/bin/mkdir -p '%1/suseboot'", String::Quote(skel_root)));
     }
 
     // detect the base source
@@ -1065,7 +1064,7 @@ global define boolean  CreateSkeleton () ``{
     foreach(integer srcid, string dir, product_map, {
 	    if (dir != "/")
 	    {
-		Exec(sformat("/bin/mkdir -p %1/%2", skel_root, dir));
+		Exec(sformat("/bin/mkdir -p '%1/%2'", String::Quote(skel_root), String::Quote(dir)));
 	    }
 	}
     );
@@ -1159,7 +1158,7 @@ global define boolean  CreateSkeleton () ``{
 
 
 	    // copy the descr directory
-	    Exec(sformat("/bin/mkdir -p %1/%2", skel_root, descrDir));
+	    Exec(sformat("/bin/mkdir -p '%1/%2'", String::Quote(skel_root), String::Quote(descrDir)));
 	    CopyDirectoryRec(id, 1, descrDir, sformat("%1/%2", skel_root, UpDir(descrDir)));
 
 	    sp = true;
@@ -1175,14 +1174,14 @@ global define boolean  CreateSkeleton () ``{
 	    descrDir = this_source["productData","descrdir"]:"suse/setup/descr";
 	    dataDir  = this_source["productData", "datadir"]:"suse";
 	    y2debug("source data: %1", this_source["sourceData", "url"]:"" );
-	    success = (boolean)SCR::Execute(.target.mkdir, sformat("%1/%2", skel_root, dataDir));
+	    success = (boolean)SCR::Execute(.target.mkdir, sformat("'%1/%2'", String::Quote(skel_root), String::Quote(dataDir)));
 	    if (!success)
 	    {
-		y2error("Cannot create directory: %1", sformat("%1/%2", skel_root, dataDir));
+		y2error("Cannot create directory: %1", sformat("'%1/%2'", String::Quote(skel_root), String::Quote(dataDir)));
 		return false;
 	    }
 	 
-	    Exec(sformat("/bin/mkdir -p %1/%2",  skel_root, descrDir));	    
+	    Exec(sformat("/bin/mkdir -p '%1/%2'", String::Quote(skel_root), String::Quote(descrDir)));	    
 
 	    if (savespace)
 	    {
@@ -1226,7 +1225,7 @@ global define boolean  CreateSkeleton () ``{
 
 	    // Prepare media files
 	    CopyDirectoryRec(id, 1, "media.1", skel_root);
-	    Exec(sformat("/usr/bin/head -n 2 %1/media.1/media  >   %2/media.1/media.tmp && mv %2/media.1/media.tmp %2/media.1/media",  skel_root, skel_root));
+	    Exec(sformat("/usr/bin/head -n 2 %1/media.1/media  >   %1/media.1/media.tmp && mv %1/media.1/media.tmp %1/media.1/media",  String::Quote(skel_root)));
 	}
 	else
 	{
@@ -1326,7 +1325,7 @@ foreach(integer source_id, enabled, ``{
 
     // copy descriptions
     string descrdir = meta[source_id, "productData","descrdir"]:"suse/setup/descr";
-    Exec(sformat("/bin/mkdir -p %1/%2", skel_root, descrdir));
+    Exec(sformat("/bin/mkdir -p '%1/%2'", String::Quote(skel_root), String::Quote(descrdir)));
     CopyDirectoryRec(source_id, 1, descrdir, sformat("%1/%2", skel_root, UpDir(descrdir)));
 
     string datadir  = meta[source_id, "productData", "datadir"]:"suse";
@@ -1345,22 +1344,22 @@ foreach(integer source_id, enabled, ``{
 	    if (l_slidedir != nil && l_slidedir != "")
 	    {
 		// copy slide show
-		Exec(sformat("/bin/mkdir -p %1/%2", skel_root, slidedir));
-		Exec(sformat("/bin/cp -a %1/* %2/%3", l_slidedir, skel_root, slidedir));
+		Exec(sformat("/bin/mkdir -p '%1/%2'", String::Quote(skel_root), String::Quote(slidedir)));
+		Exec(sformat("/bin/cp -a -- '%1/*' '%2/%3'", String::Quote(l_slidedir), String::Quote(skel_root), String::Quote(slidedir)));
 	    }
 	}
 	else
 	{
 	    y2milestone("Slideshow is missing");
-	    Exec(sformat("/bin/mkdir -p %1/%2", skel_root, slidedir));
-	    Exec(sformat("> %1/%2/directory.yast", skel_root, slidedir));
+	    Exec(sformat("/bin/mkdir -p '%1/%2'", String::Quote(skel_root), String::Quote(slidedir)));
+	    Exec(sformat("> '%1/%2/directory.yast'", String::Quote(skel_root), String::Quote(slidedir)));
 	}
     }
     else
     {
 	y2milestone("Save space - do not copy the slideshow");
-	Exec(sformat("/bin/mkdir -p %1/%2", skel_root, slidedir));
-	Exec(sformat("> %1/%2/directory.yast", skel_root, slidedir));
+	Exec(sformat("/bin/mkdir -p '%1/%2'", String::Quote(skel_root), String::Quote(slidedir)));
+	Exec(sformat("> '%1/%2/directory.yast'", String::Quote(skel_root), String::Quote(slidedir)));
     }
 
     y2milestone("source: %1, descrDir: %2, skel_root: %3", source, descrDir, skel_root);
@@ -1368,7 +1367,7 @@ foreach(integer source_id, enabled, ``{
 
     // copy media.1 directory
     CopyDirectoryRec(source_id, 1, "media.1", skel_root);
-    Exec(sformat("/usr/bin/head -n 2 %1/media.1/media  >   %2/media.1/media.tmp && mv %2/media.1/media.tmp %2/media.1/media",  skel_root, skel_root));
+    Exec(sformat("/usr/bin/head -n 2 '%1/media.1/media'  >   '%1/media.1/media.tmp' && mv '%1/media.1/media.tmp' '%1/media.1/media'", String::Quote(skel_root)));
 
     // create a copy of the autoyast profile (the new profile accepts even unsigned source)
     string autoyast_copy = "";
@@ -1429,32 +1428,34 @@ foreach(integer source_id, enabled, ``{
 	if (autoyast_copy != "")
 	{
 	    // save the original file and the copy
-	    Exec(sformat("/bin/cp %1 %2/autoinst.xml", autoyast_copy, skel_root));
-	    Exec(sformat("/bin/cp %1 %2/autoinst.orig.xml", Config["profile"]:"", skel_root));
+	    Exec(sformat("/bin/cp -- '%1' '%2/autoinst.xml'", String::Quote(autoyast_copy), String::Quote(skel_root)));
+	    Exec(sformat("/bin/cp -- '%1' '%2/autoinst.orig.xml'", String::Quote(Config["profile"]:""), String::Quote(skel_root)));
 	}
 	else
 	{
 	    // save the original file (a copy is not available)
-	    Exec(sformat("/bin/cp %1 %2/autoinst.xml", Config["profile"]:"", skel_root));
+	    Exec(sformat("/bin/cp '%1' '%2/autoinst.xml'", String::Quote(Config["profile"]:""), String::Quote(skel_root)));
 	}
     }
 
     // Media nr.
     integer count = 1;
 
-    Exec(sformat("/bin/echo %1 >> %2/media.1/media ", count,  skel_root));
+    Exec(sformat("/bin/echo %1 >> '%2/media.1/media'", count, String::Quote(skel_root)));
 
     // make the source digitally unsigned (because signed descr/packages file has been modified)
     if (Config["code10"]:false)
     {
 	// remove the key and the checksum
-	Exec(sformat("/bin/rm %1/content.asc %1/content.key", skel_root));
+	Exec(sformat("/bin/rm '%1/content.asc' '%1/content.key'", String::Quote(skel_root)));
 	// remove the meta information from content file
-	Exec(sformat("/usr/bin/grep -v -e '^KEY ' -e '^META ' %1/content > %1/content.new", skel_root));
-	Exec(sformat("/bin/mv %1/content.new %1/content", skel_root));
+	Exec(sformat("/usr/bin/grep -v -e '^KEY ' -e '^META ' '%1/content' > '%1/content.new'", String::Quote(skel_root)));
+	Exec(sformat("/bin/mv '%1/content.new' '%1/content'", String::Quote(skel_root)));
 
 	// recreate the index file
-	Exec(sformat("/bin/rm -f %1/directory.yast && /usr/bin/create_directory.yast %1", skel_root));
+// FIXME: use create_directory when it supports parameter with spaces
+//	Exec(sformat("/bin/rm -f '%1/directory.yast' && /usr/bin/create_directory.yast '%1'", String::Quote(skel_root)));
+	Exec(sformat("/bin/rm -f '%1/directory.yast'; cd '%1'; ls | grep -v -e '^\\.$' -e '^\\.\\.$' > '%1/directory.yast'", String::Quote(skel_root)));
     }
 
 
@@ -1498,7 +1499,7 @@ foreach(integer source_id, enabled, ``{
 		if (!match)
 		{
 		    // remove the pattern
-		    string cmd = sformat("/bin/rm %1/%2/%3", skel_root, descrDir, f);
+		    string cmd = sformat("/bin/rm -- '%1/%2/%3'", String::Quote(skel_root), String::Quote(descrDir), String::Quote(f));
 		    y2milestone("removing pattern %1", f);
 		    success = success && Exec(cmd);
 		    y2debug("success: %1", success);
@@ -1510,11 +1511,12 @@ foreach(integer source_id, enabled, ``{
 	if (refresh_diryast)
 	{
 	    // regenerate directory.yast and patterns file
-	    string cmd = sformat("/bin/rm -f '%1/%2/directory.yast' && /usr/bin/create_directory.yast '%1/%2'", String::Quote(skel_root), String::Quote(descrDir));
+	    // FIXME: string cmd = sformat("/bin/rm -f -- '%1/%2/directory.yast' && /usr/bin/create_directory.yast '%1/%2'", String::Quote(skel_root), String::Quote(descrDir));
+	    string cmd = sformat("/bin/rm -f '%1/%2/directory.yast'; cd '%1/%2'; ls | grep -v -e '^\\.$' -e '^\\.\\.$' > '%1/%2/directory.yast'", String::Quote(skel_root), String::Quote(descrDir));
 	    success = success && Exec(cmd);
 	    y2debug("success: %1", success);
 
-	    cmd =  sformat("cd %1/%2; ls *.pat > %1/%2/patterns", skel_root, descrDir);
+	    cmd =  sformat("cd '%1/%2'; ls *.pat > '%1/%2/patterns'", String::Quote(skel_root), String::Quote(descrDir));
 	    success = success && Exec(cmd);
 	    y2debug("success: %1", success);
 	}
@@ -1524,6 +1526,8 @@ foreach(integer source_id, enabled, ``{
     success = success && UpdateMD5File(sformat("%1/%2", skel_root, descrDir));
     y2debug("success: %1", success);
 });
+
+    skel_root = main_skel_root;
 
     string addon_file = CreateAddonFile(product_map);
     if (size(addon_file) > 0)
@@ -1636,7 +1640,8 @@ global boolean SignSUSEtagsSource(string gpg_key, string dir, string passphrase)
     if (success)
     {
 	// update directory.yast file
-	string command = sformat("/bin/rm -f '%1/directory.yast' && /usr/bin/create_directory.yast '%1'", String::Quote(dir));
+	// FIXME string command = sformat("/bin/rm -f '%1/directory.yast' && /usr/bin/create_directory.yast '%1'", String::Quote(dir));
+	string command = sformat("/bin/rm -f '%1/directory.yast'; cd '%1'; ls | grep -v -e '^\\.$' -e '^\\.\\.$' > '%1/directory.yast'", String::Quote(dir));
 	y2milestone("Updating %1/directory.yast ...", dir);
 	integer updated = (integer)SCR::Execute(.target.bash, command);
 	y2milestone("Updated: %1", updated == 0);
@@ -1739,13 +1744,13 @@ global define boolean CopyMiscFiles() ``{
         SCR::Write(.target.string, fname, Config["bootconfig"]:"" );
     }
     cpCmd = (Config["code10"]:false)
-	? sformat("cp %1/product-creator/message %2/boot/%3/loader", Directory::datadir, skel_root, arch)
-	: sformat("cp %1/product-creator/message %2/boot/loader", Directory::datadir, skel_root);
+	? sformat("cp -- '%1/product-creator/message' '%2/boot/%3/loader'", String::Quote(Directory::datadir), String::Quote(skel_root), arch)
+	: sformat("cp -- '%1/product-creator/message' '%2/boot/loader'", String::Quote(Directory::datadir), String::Quote(skel_root));
     SCR::Execute (.target.bash, cpCmd);
 
     cpCmd = (Config["code10"]:false)
-	? sformat("cp %1/product-creator/options.msg %2/boot/%3/loader", Directory::datadir, skel_root, arch)
-	: sformat("cp %1/product-creator/options.msg %2/boot/loader", Directory::datadir, skel_root);
+	? sformat("cp -- '%1/product-creator/options.msg' '%2/boot/%3/loader'", String::Quote(Directory::datadir), String::Quote(skel_root), arch)
+	: sformat("cp -- '%1/product-creator/options.msg' '%2/boot/loader'", String::Quote(Directory::datadir), String::Quote(skel_root));
     SCR::Execute (.target.bash, cpCmd);
 
 
@@ -1917,7 +1922,7 @@ global define boolean setPackages() ``{
 global boolean removeDestination()
 {
     string isodir = Config["iso-directory"]:"" + "/"  + Config["name"]:"";
-    return (integer)SCR::Execute(.target.bash, "rm -rf " + isodir ) == 0;
+    return (integer)SCR::Execute(.target.bash, sformat("rm -rf -- '%1'", String::Quote(isodir)) ) == 0;
 }
 
 global boolean confirmDestinationRemoving()
@@ -2100,7 +2105,7 @@ global boolean CopyPackages()
 				break;
 			    }
 
-			    string cpCmd = sformat("cp -a %1 %2", l_packge, dir );
+			    string cpCmd = sformat("cp -a '%1' '%2'", String::Quote(l_packge), String::Quote(dir) );
 
 			    y2debug("%1", cpCmd);
 
@@ -2126,13 +2131,13 @@ global boolean CopyPackages()
 	    // regenerate the metadata
 	    if (general_info["type"]:"" == "YUM")
 	    {
-		ret = ret && Exec(sformat("/usr/bin/createrepo %1/%2", basedir, subdir));
+		ret = ret && Exec(sformat("/usr/bin/createrepo '%1/%2'", String::Quote(basedir), String::Quote(subdir)));
 	    }
 	    else
 	    {
 		// TODO FIXME get datadir from the source
-		ret = ret && Exec(sformat("cd %1/%2/%3 && /usr/bin/create_package_descr -x setup/descr/EXTRA_PROV",
-		    basedir, subdir, datadir));
+		ret = ret && Exec(sformat("cd '%1/%2/%3' && /usr/bin/create_package_descr -x setup/descr/EXTRA_PROV",
+		    String::Quote(basedir), String::Quote(subdir), String::Quote(datadir)));
 	    }
 	}
     );

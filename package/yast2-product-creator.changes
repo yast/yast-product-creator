@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon May 28 09:01:06 CEST 2007 - lslezak@suse.cz
+
+- install "yast2-instserver" package (.content_file agent)
+- fixed signing of addon products
+- allow spaces in the file names (#275918)
+
+-------------------------------------------------------------------
 Wed May 23 15:59:07 CEST 2007 - lslezak@suse.cz
 
 - 2.13.1
