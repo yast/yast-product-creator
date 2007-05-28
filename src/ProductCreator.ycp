@@ -93,6 +93,9 @@ global boolean proposal_valid = false;
 // What we want to create with kiwi
 global string kiwi_task	= "iso";
 
+// original source configuration, needed to reset the package manager
+list<map<string,any> > original_config = nil;
+
 /**
  * Data was modified?
  * @return true if modified
@@ -286,6 +289,11 @@ global define list<integer> UrlToId(list<string> urls)
 		break;
 	    }
 	});
+
+	if (id == -1)
+	{
+	    y2error("Source %1 not found!", url);
+	}
 
 	return id;
     });
@@ -1814,6 +1822,19 @@ global define list<term> GetDirSources(string source) ``{
 
 
 global define void enableSources()``{
+
+    // TODO FIXME: use better way to reset the source config in the package manager
+    if (original_config != nil)
+    {
+	y2milestone("Restoring original config: %1", original_config);
+	Pkg::SourceEditSet(original_config);
+	Pkg::SourceFinishAll();
+    }
+    else
+    {
+	original_config = Pkg::SourceEditGet();
+	y2milestone("Current source configuration: %1", original_config);
+    }
 
     Pkg::SourceStartManager(false);
 
