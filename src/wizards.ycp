@@ -239,7 +239,8 @@ define boolean ProductCreatorSequence() ``{
 
     Wizard::CreateDialog();
     Wizard::SetDesktopIcon("cd-creator");
-    if (!Package::InstallAll(["inst-source-utils", "mkisofs"]))
+    // .content_file agent is in yast2-instserver package - TODO: move it to yast2.rpm
+    if (!Package::InstallAll(["inst-source-utils", "mkisofs", "yast2-instserver"]))
     {
         Popup::Error(_("Installation of required packages
 failed."));
