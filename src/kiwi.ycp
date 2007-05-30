@@ -157,7 +157,6 @@
     string sw_selection	= KiwiConfig["sw_selection"]:"image";
     list items	= [
 	`item (`id ("image"), _("Image"), sw_selection == "image"),
-//	`item (`id ("boot"), _("Boot"), sw_selection == "boot"),
     ];
     if (kiwi_task == "xen")
 	items	= add (items, `item (`id ("xen"), _("XEN specific" ), sw_selection == "xen"));
@@ -500,8 +499,6 @@ Try again."));
     return dir;
   }
 
-
-
   /**
    * handler for 'root' directory browse
    */
@@ -667,7 +664,19 @@ directory."),
 	    if (Kiwi::PrepareAndCreate ())
 	    {
 		string dir	= Kiwi::MoveOutput (KiwiConfig["iso-directory"]:"");
-		Popup::Message (sformat (success[kiwi_task]:"", dir));
+		if (kiwi_task == "usb" && false)
+		{
+		    // additional question (yes/no)
+		    if (Popup::YesNo (sformat (success[kiwi_task]:"", dir) + _("
+Save the image to the stick now?")))
+		    {
+			NotImplementedHandler ("", $[ "ID" : ""]);
+		    }
+		}
+		else
+		{
+		    Popup::Message (sformat (success[kiwi_task]:"", dir));
+		}
 		ret	= true;
 	    }
 	}
@@ -720,7 +729,6 @@ directory."),
 
     if (FileUtils::Exists (kiwi_configuration + "/root"))
     {
-//	KiwiConfig["root_dir"]	= kiwi_configuration + "/root";
 	// read all entries from root_dir and save to list
 	map out = (map) SCR::Execute (.target.bash_output,
 	    sformat ("ls -A1 -d %1/root/* 2>/dev/null", kiwi_configuration));
@@ -728,15 +736,10 @@ directory."),
     }
     if (FileUtils::Exists (kiwi_configuration + "/config"))
     {
-//	KiwiConfig["config_dir"]	= kiwi_configuration + "/config";
 	map out = (map) SCR::Execute (.target.bash_output,
 	    sformat ("ls -A1 -d %1/config/* 2>/dev/null", kiwi_configuration));
 	KiwiConfig["config_dir"] = filter (string f, splitstring(out["stdout"]:"", "\n"),``(f!=""));
     }
-    /*
-    if (FileUtils::Exists (kiwi_configuration + "/images.sh"))
-	KiwiConfig["images_path"]	= kiwi_configuration + "/images.sh";
-    */
 
     foreach (string file, [ "images.sh", "config.sh" ], {
 	string file_path	= kiwi_configuration + "/" + file;
@@ -753,63 +756,43 @@ directory."),
 	    "openSUSE 10.2"	: "suse-10.2",
 	    "openSUSE 10.3"	: "suse-10.3",
 	    "SUSE Linux 10.1"	: "suse-10.1",
-	    "SUSE Linux Enterprise Server 10"	: "sles10"
+	    "SUSE Linux Enterprise Server 10"	: "suse-SLES10",
+	    "SUSE Linux Enterprise Desktop 10"	: "suse-SLED10"
     ];
-    string type	= KiwiConfig["type",kiwi_task,"boot"]:"";
-    list l	= splitstring (type, ",");
-    if (issubstring (type, "isoboot/") && kiwi_task == "iso")
-    {
-	KiwiConfig["isoboot"]	= substring (l[0]:"", search (l[0]:"","isoboot/") + 8);
-    }
-    else if (issubstring (type, "xenboot/"))
-    {
-	KiwiConfig["xenboot"]	= substring (l[0]:"", search (l[0]:"","xenboot/") + 8);
-    }
-    else if (issubstring (type, "usbboot/"))
-    {
-	KiwiConfig["usbboot"]	= substring (l[0]:"", search (l[0]:"","usbboot/") + 8);
-    }
-    else if (issubstring (type, "vmxboot/"))
-    {
-	KiwiConfig["vmxboot"]	= substring (l[0]:"", search (l[0]:"","vmxboot/") + 8);
-    }
+    map distproduct2boot	= $[
+	"openSUSE-10.2-CD-download"		: "suse-10.2",
+	"openSUSE-10.2-dvd5-download"		: "suse-10.2",
+	"openSUSE-10.3-dvd5-download"		: "suse-10.3",
+	"openSUSE-10.3-CD-download"		: "suse-10.3",
+	"SUSE-Linux-10.1-CD-download-x86"	: "suse-10.1",
+	"SUSE-Linux-Enterprise-Server-i386"	: "suse-SLES10",
+	"SUSE-Linux-Enterprise-Desktop-i386"	: "suse-SLED10",
+	"SUSE-Linux-Enterprise-Server-SP1"	: "suse-SLES10-SP1",
+	"SUSE-Linux-Enterprise-Desktop-SP1"	: "suse-SLED10-SP1"
+    ];
+    string boot_image	= label2boot[content["LABEL"]:""]:"";
+    if (boot_image == "")
+	boot_image	= distproduct2boot[content["DISTPRODUCT"]:""]:"";
 
     // guess some default boot image value
-    if (kiwi_task == "iso" && !haskey (KiwiConfig, "isoboot") && content["LABEL"]:"" != "")
+    if (kiwi_task == "iso" && !haskey (KiwiConfig, "isoboot") && boot_image != "")
     {
-// FIXME label2boot mapping is not used because we are reading default configuration
-// but could we ALWAYS replace the default string???
-	KiwiConfig["isoboot"]	= label2boot[content["LABEL"]:""]:"";
+	KiwiConfig["isoboot"]	= boot_image;
     }
     else if (kiwi_task == "usb")
     {
-	if (!haskey (KiwiConfig, "usbboot") && content["LABEL"]:"" != "")
-	    KiwiConfig["usbboot"]	= label2boot[content["LABEL"]:""]:"";
-	if (kiwi_configuration == default_dir)
-	{
-	    KiwiConfig	= remove (KiwiConfig, "type");
-	}
+	if (!haskey (KiwiConfig, "usbboot") && boot_image != "")
+	    KiwiConfig["usbboot"]	= boot_image;
     }
     else if (kiwi_task == "vmx")
     {
-	if (!haskey (KiwiConfig, "vmxboot") && content["LABEL"]:"" != "")
-	    KiwiConfig["vmxboot"]	= label2boot[content["LABEL"]:""]:"";
-	if (kiwi_configuration == default_dir)
-	{
-	    KiwiConfig	= remove (KiwiConfig, "type");
-	}
+	if (!haskey (KiwiConfig, "vmxboot") && boot_image != "")
+	    KiwiConfig["vmxboot"]	= boot_image;
     }
     else if (kiwi_task == "xen")
     {
-	/* FIXME still no other image/xenboot image than suse-10.2...
 	if (!haskey (KiwiConfig, "xenboot"))
-	    KiwiConfig["xenboot"]	= label2boot[content["LABEL"]:""]:"";
-	*/
-	// adapt the default buildhost-suse-10.1 for xen usage
-	if (kiwi_configuration == default_dir)
-	{
-	    KiwiConfig	= remove (KiwiConfig, "type");
-	}
+	    KiwiConfig["xenboot"]	= boot_image;
     }
     string name		= KiwiConfig["name"]:"";
     if (!haskey (KiwiConfig, "specification"))
@@ -833,6 +816,7 @@ directory."),
 	"contents"	: `HBox (`HSpacing(1),
 	    `VBox (
 		`VSpacing (0.2),
+		/*
 		`HBox (
 		    `HWeight (1, `HBox (
 			boot_image_widget ()
@@ -840,6 +824,7 @@ directory."),
 		    )),
 		    `HWeight (1, `VBox (`Label (""), `Left ("compressed")))
 		),
+		*/
 		`VSpacing (0.2),
 		`HBox (
 		    `HWeight (1, "version"),
@@ -848,46 +833,18 @@ directory."),
 		"sw_selection",
 		`HBox (
 		    `HWeight (1, `VBox (
-//			`Left (`Label (_("Software for image"))), "rt_sw", `Right ("configure_sw")
 			`Left (`Label (_("Installed software"))), "rt_sw", `Right ("configure_sw")
 		    )),
 		    `HWeight (1, "ignore")
-		    /*
-		    `VBox (
-			`Left (`Label (_("Packages to ignore"))),
-			"rt_sw_ignore",
-			`Right ("configure_sw_ignore")
-		    )
-		    */
-		    /*
-		    `VBox (
-			`Left (`Label (_("Software for build"))),
-			"rt_sw_boot",
-			`Right ("configure_sw_boot")
-		    )
-		    */
 		),
-		/*
-		`HBox (
-		    "output_dir",
-		    `VBox (`Label (""), "browse_output_dir")
-		),
-		*/
 		`VSpacing (0.2)
 	    ), `HSpacing(1)),
 	"widget_names" : [
-//	    "isoboot",
-	    boot_image_widget (),
-//	    "configure_boot",
-	    "compressed",
 	    "version",
 	    "size", "sizeunit",
 	    "sw_selection",
 	    "rt_sw", "configure_sw",
 	    "ignore",
-//	    "rt_sw_ignore", "configure_sw_ignore",
-//	    "rt_sw_boot", "configure_sw_boot",
-//	    "output_dir", "browse_output_dir",
 	],
     ],
     "description" : $[
@@ -930,27 +887,12 @@ directory."),
 	    `VBox (
 		"general_scripts",
 		`VSpacing (0.2),
-		/*
-		`HBox (
-		    "autoyast_path",
-		    `VBox (`Label (""), "browse_autoyast")
-		),
-		*/
-		/*
-		`HBox (
-		    "images_path",
-		    `VBox (`Label (""), "browse_images_path")
-		),
-		*/
 		`HBox ("config.sh", `Bottom ("import_config.sh")),
 		`HBox ("images.sh", `Bottom ("import_images.sh")),
 		`VSpacing (0.2)
 	    ), `HSpacing (1)),
 	"widget_names" : [
 	    "general_scripts",
-//	    "root_dir", "browse_root_dir", "config_dir", "browse_config_dir",
-//	    "autoyast_path", "browse_autoyast",
-//	    "images_path", "browse_images_path",
 	    "config.sh", "import_config.sh",
 	    "images.sh", "import_images.sh",
 	],
@@ -962,12 +904,6 @@ directory."),
 	    `VBox (
 		"general_directories",
 		`VSpacing (0.2),
-		/*
-		`HBox (
-		    "root_dir",
-		    `VBox (`Label (""), "browse_root_dir")
-		),
-		*/
 		"root_dir_table",
 		`VSpacing (0.2),
 		`HBox ("root_dir_add", `Left ("root_dir_delete")),
@@ -976,26 +912,12 @@ directory."),
 		`VSpacing (0.2),
 		`HBox ("config_dir_add", `Left ("config_dir_delete")),
 		`VSpacing (0.2),
-		/*
-		`HBox (
-		    "config_dir",
-		    `VBox (`Label (""), "browse_config_dir")
-		),
-		*/
-		/*
-		`HBox (
-		    "autoyast_path",
-		    `VBox (`Label (""), "browse_autoyast")
-		),
-		*/
 		`VSpacing (0.2)
 	    ), `HSpacing (1)),
 	"widget_names" : [
 	    "general_directories",
-//	    "root_dir", "browse_root_dir",
 	    "root_dir_table", "root_dir_add", "root_dir_delete",
 	    "config_dir_table", "config_dir_add", "config_dir_delete",
-//	    "config_dir", "browse_config_dir",
 	],
     ],
     ];
@@ -1247,7 +1169,6 @@ directory.</p>"),
 	"no_help"	: true,
 	"handle"	: HandleDeleteFromConfigDir,
     ],
-
     "config.sh" : $[
 	"widget"	: `multi_line_edit,
 	// textentry label
@@ -1293,24 +1214,6 @@ directory.</p>"),
 	"help"		: "",
 	"handle"	: HandleBrowseAutoYaSTFile
     ],
-    /*
-    "images_path" : $[
-	"widget"	: `textentry,
-	// textentry label
-	"label"		: _("Pat&h to cleanup script"),
-	"help"		: _("<p>Choose the path to optional <b>cleanup script</b> (<tt>images.sh</tt>). This script is called at the beginning of the image creation process.</p>"),
-	"init"		: InitDescription,
-	"store"		: StoreDescription,
-	"handle"	: HandleDescription,
-    ],
-    "browse_images_path": $[
-	"widget"	: `push_button,
-	// push button label
-	"label"		: _("Brows&e..."),
-	"help"		: "",
-	"handle"	: HandleBrowseImagesFile
-    ],
-    */
     "images.sh" : $[
 	"widget"	: `multi_line_edit,
 	// textentry label
@@ -1436,7 +1339,7 @@ directory.</p>"),
 	// dialog caption
 	"usb"	: _("USB stick Image Configuration"),
 	// button label
-	"vmx"	: _("Virtual Disk Image Image"),
+	"vmx"	: _("Virtual Disk Image"),
     ];
     map next_button	= $[
 	// button label

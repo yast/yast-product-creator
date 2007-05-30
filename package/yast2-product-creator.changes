@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed May 30 13:28:51 CEST 2007 - jsuchome@suse.cz
+
+- select the boot image automaticaly, according to the base product
+  (#270881)
+- 2.13.3
+
+-------------------------------------------------------------------
 Tue May 29 14:18:19 CEST 2007 - lslezak@suse.cz
 
 - 2.13.2
