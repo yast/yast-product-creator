@@ -461,6 +461,12 @@ Fix the problem and try again.</p>
 	    CommandLine::PrintVerbose(_("Enabling sources..."));
             success =  ProductCreator::EnableSource();
 
+	    if (!success)
+	    {
+		ProductCreator::CheckUnavailableSources();
+		return `overview;
+	    }
+
             Progress::NextStage();
 	    CommandLine::PrintVerbose(_("Selecting packages..."));
             success = ProductCreator::setPackages();
@@ -508,6 +514,23 @@ Fix the problem and try again.</p>
 
             return (symbol)ret;
         }
+
+    symbol CheckBootableSrc()
+    {
+	integer base_src = ProductCreator::checkProductDependency();
+	if (!ProductCreator::isBootSource(base_src))
+	{
+	    y2milestone("Base source %1 is not bootable, skipping isolinux.cfg configuration", base_src);
+	    return `skip_isolinux;
+	}
+
+        if (ProductCreator::Config["profile"]:""!="")
+	{
+            return `autoyast;
+	}
+
+	return `next;
+    }
 
 
     /* EOF */

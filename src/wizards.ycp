@@ -32,6 +32,7 @@ define symbol AddSequence() ``{
 	"source"	: ``( sourceDialog() ),
 	"config1"	: ``( Configure1Dialog() ),
 	"config2"	: ``( Configure2Dialog() ),
+	"isolinuxcheck" : ``( CheckBootableSrc() ),
 	"isolinux"	: ``( isolinuxDialog() ),
 	"packagemanager": ``( packageSelector() ),
 	"gpgkey"	: ``( gpgKeyDialog() ),
@@ -52,7 +53,12 @@ define symbol AddSequence() ``{
 	],
 	"config2" : $[
 	    `abort	: `abort,
-	    `next	: "isolinux"
+	    `next	: "isolinuxcheck"
+	],
+	"isolinuxcheck" : $[
+	    `next	: "isolinux",
+	    `skip_isolinux : "packagemanager",
+	    `autoyast	: "gpgkey"
 	],
 	"isolinux": $[
 	   `abort	: `abort,
