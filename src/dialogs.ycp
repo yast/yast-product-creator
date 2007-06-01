@@ -477,9 +477,15 @@
 
         list<integer> selected_items = ProductCreator::UrlToId(ProductCreator::Config["sources"]:[]);
 
+	// remove not found sources (with id = -1)
+	selected_items = filter(integer source_id, selected_items, {return source_id > 0;});
+
 	foreach(integer i, selected_items, {
             UI::ChangeWidget(`id(`table), `Item(i, 0) , _("X"));
         });
+
+	// report unavailbale sources if any
+	ProductCreator::CheckUnavailableSources();
 
         any ret = nil;
 
@@ -582,7 +588,17 @@
                     Report::Error(_("Select at least one source."));
                     continue;
                 }
-                ProductCreator::checkProductDependency();
+                integer base_source = ProductCreator::checkProductDependency();
+
+		// is the base source bootable?
+		if (!ProductCreator::isBootSource(base_source))
+		{
+		    if (Popup::ContinueCancel("The selected installation source doesn't contain /boot directory.
+The created medium will not be bootable.\n"))
+		    {
+			break;
+		    }
+		}
                 break;
             }
             else if( ret == `back) {

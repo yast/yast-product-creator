@@ -1015,6 +1015,18 @@ global string CreateAddonFile(map<integer,string> products)
 }
 
 
+global boolean isBootSource(integer srcid)
+{
+    boolean bootable = false;
+    y2milestone("Downloading boot/directory.yast from src %1...", srcid);
+    string local_directory_yast = Pkg::SourceProvideOptionalFile(srcid, 1, "/boot/directory.yast");
+
+    bootable = local_directory_yast != nil;
+    y2milestone("Source %1 bootable: %2, directory.yast: %3", srcid, bootable, local_directory_yast);
+
+    return bootable;
+}
+
 /**
  * Create Skeleton
  * @return boolean true on success
@@ -1036,7 +1048,14 @@ global define boolean  CreateSkeleton () ``{
     skel_root = sformat("%1/%2", Config["iso-directory"]:"", Config["name"]:"");
     SCR::Execute(.target.mkdir, skel_root);
 
-    Exec(sformat("/bin/mkdir -p '%1/boot/%2'", String::Quote(skel_root), String::Quote(arch)));
+    // detect the base source
+    integer base_source = checkProductDependency();
+    boolean bootable_product = isBootSource(base_source);
+
+    if (bootable_product)
+    {
+	Exec(sformat("/bin/mkdir -p '%1/boot/%2'", String::Quote(skel_root), String::Quote(arch)));
+    }
 
     list<integer> enabled = Pkg::SourceGetCurrent(true);
     if (size(enabled) == 0 )
@@ -1046,26 +1065,27 @@ global define boolean  CreateSkeleton () ``{
     string descrDir = "";
     string dataDir = "";
 
-    if (Arch::i386() || Arch::x86_64())
+    if (bootable_product)
     {
-	if (Config["code10"]:false)
+	if (Arch::i386() || Arch::x86_64())
 	{
-	    Exec(sformat("/bin/mkdir -p '%1/boot/%2/loader'", String::Quote(skel_root), String::Quote(arch)));
+	    if (Config["code10"]:false)
+	    {
+		Exec(sformat("/bin/mkdir -p '%1/boot/%2/loader'", String::Quote(skel_root), String::Quote(arch)));
+	    }
+	    else
+	    {
+		Exec(sformat("/bin/mkdir -p '%1/boot/loader'", String::Quote(skel_root)));
+	    }
 	}
-	else
+	else if (Arch::ppc() || Arch::ppc64())
 	{
-	    Exec(sformat("/bin/mkdir -p '%1/boot/loader'", String::Quote(skel_root)));
+	    Exec(sformat("/bin/mkdir -p '%1/etc'", String::Quote(skel_root)));
+	    Exec(sformat("/bin/mkdir -p '%1/ppc'", String::Quote(skel_root)));
+	    Exec(sformat("/bin/mkdir -p '%1/suseboot'", String::Quote(skel_root)));
 	}
-    }
-    else if (Arch::ppc() || Arch::ppc64())
-    {
-	Exec(sformat("/bin/mkdir -p '%1/etc'", String::Quote(skel_root)));
-	Exec(sformat("/bin/mkdir -p '%1/ppc'", String::Quote(skel_root)));
-	Exec(sformat("/bin/mkdir -p '%1/suseboot'", String::Quote(skel_root)));
     }
 
-    // detect the base source
-    integer base_source = checkProductDependency();
     product_map = CreateProductDirectoryMap(base_source);
 
     // create directories for the addons
@@ -1111,59 +1131,61 @@ global define boolean  CreateSkeleton () ``{
 	    dataDir  = this_source["productData", "datadir"]:"suse";
 	    y2debug("source data: %1", this_source["sourceData", "url"]:"" );
 	     // Service Pack
-	    if (savespace)
+	    if (bootable_product)
 	    {
-		// Installation, rescue images
-		if (Config["code10"]:false)
+		if (savespace)
 		{
-		    CopyFile(id, 1, sformat("boot/%1/rescue", arch),
-			sformat("%1/boot/%2", skel_root, arch));
-		}
-		else
-		{
-		    // use the old directory
-		    CopyFile(id, 1, "boot/rescue", sformat("%1/boot", skel_root));
-		}
-		// Loader, x86 specific
-		if (Arch::i386() || Arch::x86_64())
-		{
+		    // Installation, rescue images
 		    if (Config["code10"]:false)
 		    {
-			// recursive copy of /boot/$arch/loader/*
-			CopyDirectoryRec(id, 1, sformat("boot/%1/loader", arch), sformat("%1/boot/%2", skel_root, arch));
-
-			// nonrecursive copy of /boot/$arch/*
-			CopyDirectoryNonRec(id, 1, sformat("boot/%1", arch), sformat("%1/boot", skel_root));
+			CopyFile(id, 1, sformat("boot/%1/rescue", arch),
+			    sformat("%1/boot/%2", skel_root, arch));
 		    }
 		    else
 		    {
-			// recursive copy of /boot/loader/*
-			CopyDirectoryRec(id, 1, "boot/loader", sformat("%1/boot", skel_root));
+			// use the old directory
+			CopyFile(id, 1, "boot/rescue", sformat("%1/boot", skel_root));
+		    }
+		    // Loader, x86 specific
+		    if (Arch::i386() || Arch::x86_64())
+		    {
+			if (Config["code10"]:false)
+			{
+			    // recursive copy of /boot/$arch/loader/*
+			    CopyDirectoryRec(id, 1, sformat("boot/%1/loader", arch), sformat("%1/boot/%2", skel_root, arch));
+
+			    // nonrecursive copy of /boot/$arch/*
+			    CopyDirectoryNonRec(id, 1, sformat("boot/%1", arch), sformat("%1/boot", skel_root));
+			}
+			else
+			{
+			    // recursive copy of /boot/loader/*
+			    CopyDirectoryRec(id, 1, "boot/loader", sformat("%1/boot", skel_root));
+			}
+		    }
+		    else if (Arch::ppc() || Arch::ppc64())
+		    {
+			// recursive copy of /boot
+			CopyDirectoryRec(id, 1, "boot", skel_root);
+			CopyPPCBoot(id, skel_root);
+		    } else
+		    {
+			CopyDirectoryRec(id, 1, "boot", skel_root);
 		    }
 		}
-		else if (Arch::ppc() || Arch::ppc64())
-		{
-		    // recursive copy of /boot
-		    CopyDirectoryRec(id, 1, "boot", skel_root);
-		    CopyPPCBoot(id, skel_root);
-		} else
+		else
 		{
 		    CopyDirectoryRec(id, 1, "boot", skel_root);
+
+		    if (Arch::ppc() || Arch::ppc64())
+		    {
+			CopyPPCBoot(id, skel_root);
+		    }
 		}
+
+		// copy the driver update
+		CopyOptionalFile(id, 1, "driverupdate", skel_root);
 	    }
-	    else
-	    {
-		CopyDirectoryRec(id, 1, "boot", skel_root);
-
-		if (Arch::ppc() || Arch::ppc64())
-		{
-		    CopyPPCBoot(id, skel_root);
-		}
-	    }
-
-	    // copy the driver update
-	    CopyOptionalFile(id, 1, "driverupdate", skel_root);
-
 
 	    // copy the descr directory
 	    Exec(sformat("/bin/mkdir -p '%1/%2'", String::Quote(skel_root), String::Quote(descrDir)));
@@ -1193,17 +1215,20 @@ global define boolean  CreateSkeleton () ``{
 
 	    if (savespace)
 	    {
-		// Installation, rescue images
-		if (Config["code10"]:false)
+		if (bootable_product)
 		{
-		    CopyFile(id, 1, sformat("boot/%1/rescue", arch), sformat("%1/boot/%2", skel_root, arch));
-		    CopyFile(id, 1, sformat("boot/%1/root", arch), sformat("%1/boot/%2", skel_root, arch));
-		    CopyOptionalFile(id, 1, sformat("boot/%1/root.fonts", arch), sformat("%1/boot/%2", skel_root, arch));
-		}
-		else
-		{
-		    CopyFile(id, 1, "boot/rescue", sformat("%1/boot", skel_root));
-		    CopyFile(id, 1, "boot/root", sformat("%1/boot", skel_root));
+		    // Installation, rescue images
+		    if (Config["code10"]:false)
+		    {
+			CopyFile(id, 1, sformat("boot/%1/rescue", arch), sformat("%1/boot/%2", skel_root, arch));
+			CopyFile(id, 1, sformat("boot/%1/root", arch), sformat("%1/boot/%2", skel_root, arch));
+			CopyOptionalFile(id, 1, sformat("boot/%1/root.fonts", arch), sformat("%1/boot/%2", skel_root, arch));
+		    }
+		    else
+		    {
+			CopyFile(id, 1, "boot/rescue", sformat("%1/boot", skel_root));
+			CopyFile(id, 1, "boot/root", sformat("%1/boot", skel_root));
+		    }
 		}
 
 		// copy content* files
@@ -1213,14 +1238,17 @@ global define boolean  CreateSkeleton () ``{
 	    }
 	    else
 	    {
-		if (Config["code10"]:false)
+		if (bootable_product)
 		{
-		    CopyFile(id, 1, sformat("boot/%1/root", arch), sformat("%1/boot/%2", skel_root, arch));
-		    CopyOptionalFile(id, 1, sformat("boot/%1/root.fonts", arch), sformat("%1/boot/%2", skel_root, arch));
-		}
-		else
-		{
-		    CopyFile(id, 1, "boot/root", sformat("%1/boot", skel_root));
+		    if (Config["code10"]:false)
+		    {
+			CopyFile(id, 1, sformat("boot/%1/root", arch), sformat("%1/boot/%2", skel_root, arch));
+			CopyOptionalFile(id, 1, sformat("boot/%1/root.fonts", arch), sformat("%1/boot/%2", skel_root, arch));
+		    }
+		    else
+		    {
+			CopyFile(id, 1, "boot/root", sformat("%1/boot", skel_root));
+		    }
 		}
 
 		// copy base files, skip all directories
@@ -1271,47 +1299,50 @@ global define boolean  CreateSkeleton () ``{
 	    }
 	}
 
-	if (savespace)
+	if (bootable_product)
 	{
-	    // Installation, rescue images
-	    if (Config["code10"]:false)
+	    if (savespace)
 	    {
-		CopyFile(base_source, 1, sformat("boot/%1/rescue", arch), sformat("%1/boot/%2", skel_root, arch));
-		CopyFile(base_source, 1, sformat("boot/%1/root", arch), sformat("%1/boot/%2", skel_root, arch));
-		CopyFile(base_source, 1, sformat("boot/%1/root.fonts", arch), sformat("%1/boot/%2", skel_root, arch));
-	    }
-	    else
-	    {
-		CopyFile(base_source, 1, "boot/rescue", sformat("%1/boot", skel_root));
-		CopyFile(base_source, 1, "boot/root", sformat("%1/boot", skel_root));
-	    }
-
-	    // Loader, x86 specific
-	    if (Arch::i386() || Arch::x86_64())
-	    {
+		// Installation, rescue images
 		if (Config["code10"]:false)
 		{
-		    // recursive copy of /boot/$arch/loader/*
-		    CopyDirectoryRec(base_source, 1, sformat("boot/%1/loader", arch), sformat("%1/boot/%2", skel_root, arch));
+		    CopyFile(base_source, 1, sformat("boot/%1/rescue", arch), sformat("%1/boot/%2", skel_root, arch));
+		    CopyFile(base_source, 1, sformat("boot/%1/root", arch), sformat("%1/boot/%2", skel_root, arch));
+		    CopyFile(base_source, 1, sformat("boot/%1/root.fonts", arch), sformat("%1/boot/%2", skel_root, arch));
+		}
+		else
+		{
+		    CopyFile(base_source, 1, "boot/rescue", sformat("%1/boot", skel_root));
+		    CopyFile(base_source, 1, "boot/root", sformat("%1/boot", skel_root));
+		}
 
-		    // nonrecursive copy of /boot/$arch/*
-		    CopyDirectoryNonRec(base_source, 1, sformat("boot/%1", arch), sformat("%1/boot", skel_root));
+		// Loader, x86 specific
+		if (Arch::i386() || Arch::x86_64())
+		{
+		    if (Config["code10"]:false)
+		    {
+			// recursive copy of /boot/$arch/loader/*
+			CopyDirectoryRec(base_source, 1, sformat("boot/%1/loader", arch), sformat("%1/boot/%2", skel_root, arch));
+
+			// nonrecursive copy of /boot/$arch/*
+			CopyDirectoryNonRec(base_source, 1, sformat("boot/%1", arch), sformat("%1/boot", skel_root));
+		    }
+		    else
+		    {
+			// recursive copy of /boot/loader/*
+			CopyDirectoryRec(base_source, 1, "boot/loader", sformat("%1/boot", skel_root));
+		    }
 		}
 		else
 		{
 		    // recursive copy of /boot/loader/*
-		    CopyDirectoryRec(base_source, 1, "boot/loader", sformat("%1/boot", skel_root));
+		    CopyDirectoryRec(base_source, 1, "boot", skel_root);
 		}
 	    }
 	    else
 	    {
-		// recursive copy of /boot/loader/*
-		CopyDirectoryRec(base_source, 1, "boot", skel_root);
+		CopyDirectoryRec(base_source, 1, "/boot", skel_root);
 	    }
-	}
-	else
-	{
-	    CopyDirectoryRec(base_source, 1, "/boot", skel_root);
 	}
     }
 
@@ -1359,8 +1390,11 @@ foreach(integer source_id, enabled, ``{
 	else
 	{
 	    y2milestone("Slideshow is missing");
-	    Exec(sformat("/bin/mkdir -p '%1/%2'", String::Quote(skel_root), String::Quote(slidedir)));
-	    Exec(sformat("> '%1/%2/directory.yast'", String::Quote(skel_root), String::Quote(slidedir)));
+	    if (bootable_product)
+	    {
+		Exec(sformat("/bin/mkdir -p '%1/%2'", String::Quote(skel_root), String::Quote(slidedir)));
+		Exec(sformat("> '%1/%2/directory.yast'", String::Quote(skel_root), String::Quote(slidedir)));
+	    }
 	}
     }
     else
@@ -1649,11 +1683,9 @@ global boolean SignSUSEtagsSource(string gpg_key, string dir, string passphrase)
     {
 	// update directory.yast file
 	// FIXME string command = sformat("/bin/rm -f '%1/directory.yast' && /usr/bin/create_directory.yast '%1'", String::Quote(dir));
-	string command = sformat("/bin/rm -f '%1/directory.yast'; cd '%1'; ls | grep -v -e '^\\.$' -e '^\\.\\.$' > '%1/directory.yast'", String::Quote(dir));
-	y2milestone("Updating %1/directory.yast ...", dir);
-	integer updated = (integer)SCR::Execute(.target.bash, command);
-	y2milestone("Updated: %1", updated == 0);
-	success = success && updated == 0;
+	y2milestone("Updating directory.yast ...");
+	success = success && Exec(sformat("/bin/rm -f '%1/directory.yast'; cd '%1'; ls | grep -v -e '^\\.$' -e '^\\.\\.$' > '%1/directory.yast'", String::Quote(dir)));
+	success = success && Exec(sformat("/bin/rm -f '%1/directory.yast'; cd '%1'; ls | grep -v -e '^\\.$' -e '^\\.\\.$' > '%1/directory.yast'", String::Quote(dir + "/media.1")));
     }
 
     return success;
@@ -1765,7 +1797,37 @@ global define boolean CopyMiscFiles() ``{
     return true;
 }
 
+global boolean CheckUnavailableSources()
+{
+    list<integer> selected_items = UrlToId(Config["sources"]:[]);
 
+    // remove not found sources (with id = -1)
+    selected_items = filter(integer source_id, selected_items, {return source_id > 0;});
+
+    // were all sources found?
+    if (size(Config["sources"]:[]) != size(selected_items))
+    {
+	list<string> not_found_sources = [];
+
+	// get list of missing sources
+	foreach(string selected_url, ProductCreator::Config["sources"]:[],
+	    {
+		list<integer> url_id = ProductCreator::UrlToId([selected_url]);
+
+		if (url_id[0]:nil == -1)
+		{
+		    not_found_sources = add(not_found_sources, selected_url);
+		}
+	    }
+	);
+
+	// error message, %1 is list of URLs (one URL per line)
+	Report::LongError(sformat(_("These sources were not found:\n%1"), mergestring(not_found_sources, "\n")));
+	return false;
+    }
+
+    return true;
+}
 
 /**
  * Enable source and get source meta data
