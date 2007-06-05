@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Jun  5 15:35:29 CEST 2007 - jsuchome@suse.cz
+
+- kiwi UI: create output directly in output directory to prevent
+  problems with kernel symlink (#279981)
+- 2.13.5 
+
+-------------------------------------------------------------------
 Thu May 31 14:33:51 CEST 2007 - lslezak@suse.cz
 
 - if the product is not bootable do not create /boot directory,

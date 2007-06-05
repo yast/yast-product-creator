@@ -661,13 +661,13 @@ directory."),
     {
 	if (Kiwi::WriteConfigXML (KiwiConfig, kiwi_task))
 	{
-	    if (Kiwi::PrepareAndCreate ())
+	    string out_dir	= KiwiConfig["iso-directory"]:"";
+	    if (FileUtils::CheckAndCreatePath (out_dir) && Kiwi::PrepareAndCreate (out_dir))
 	    {
-		string dir	= Kiwi::MoveOutput (KiwiConfig["iso-directory"]:"");
 		if (kiwi_task == "usb" && false)
 		{
 		    // additional question (yes/no)
-		    if (Popup::YesNo (sformat (success[kiwi_task]:"", dir) + _("
+		    if (Popup::YesNo (sformat (success[kiwi_task]:"", out_dir) + _("
 Save the image to the stick now?")))
 		    {
 			NotImplementedHandler ("", $[ "ID" : ""]);
@@ -675,7 +675,7 @@ Save the image to the stick now?")))
 		}
 		else
 		{
-		    Popup::Message (sformat (success[kiwi_task]:"", dir));
+		    Popup::Message (sformat (success[kiwi_task]:"", out_dir));
 		}
 		ret	= true;
 	    }
