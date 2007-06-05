@@ -386,7 +386,7 @@
   }
 
   // run kiwi to finally create the live iso image
-  global boolean PrepareAndCreate () {
+  global boolean PrepareAndCreate (string out_dir) {
 
     if (config_dir == "" || !FileUtils::Exists (config_dir))
 	return false;
@@ -462,9 +462,8 @@
 
 		// now continue with creating
 		UI::ChangeWidget (`id(`log), `LastLine, "\n");
-		cmd	= sformat ("kiwi --create %1/myphysical -d %1/output --logfile terminal",
-		    tmp_dir);
-		SCR::Execute (.target.mkdir, tmp_dir + "/output");
+		cmd	= sformat ("kiwi --create %1/myphysical -d %2 --logfile terminal",
+		    tmp_dir, out_dir);
 		y2milestone ("calling '%1'", cmd);
 		// label
 		UI::ReplaceWidget (`id (`rpl), `Left (`Label (_("Creating Image..."))));
@@ -505,22 +504,5 @@
     return (images_dir + get_config_dir (KiwiConfig["name"]:"", kiwi_task));
   }
 
-  /**
-   * move the final image(s) created by kiwi to user defined directory
-   */
-  global string MoveOutput (string out_dir) {
-    string ret	= tmp_dir + "/output"; // the actual output directory
-    if (out_dir == "") return ret;
-    if (FileUtils::CheckAndCreatePath (out_dir))
-    {
-	y2milestone ("moving %1/* to %2/", ret, out_dir);
-	SCR::Execute (.target.bash, sformat ("mv %1/* %2/", ret, out_dir));
-	ret	= out_dir;
-    }
-    return ret;
-  }
-
 }
-
-
 
