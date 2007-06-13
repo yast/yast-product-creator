@@ -1655,7 +1655,9 @@ global boolean InsertKeyToInitrds(string gpg_key, string base_dir)
 
 	    if (!inserted)
 	    {
-		Report::Error(sformat(_("Could not add GPG key %1 to initrd\n%2"), gpg_key, initrd));
+		Report::Error(sformat(_("Could not add GPG key %1 to initrd
+%2.
+"), gpg_key, initrd));
 		ret = false;
 	    }
 	}
@@ -1734,7 +1736,9 @@ global boolean SignSourceStep()
 			// yes/no popup: error message
 			if (!signed)
 			{
-			    if (Popup::YesNo(_("Error: Could not digitally sign the source.\nTry it again?")))
+			    if (Popup::YesNo(_("Error: Could not digitally sign the source.
+Try again?
+")))
 			    {
 				passphrase = (Mode::commandline()) ? gpg_passphrase : GPGWidgets::AskPassphrasePopup(gpg_key);
 			    }
@@ -2183,7 +2187,9 @@ global boolean CopyPackages()
 
 			    if (l_packge == nil || l_packge == "")
 			    {
-				Report::Error(sformat(_("Cannot download package %1\n from source %2"), package["path"]:"", source));
+				Report::Error(sformat(_("Cannot download package %1
+ from source %2.
+"), package["path"]:"", source));
 				ret = false;
 				break;
 			    }

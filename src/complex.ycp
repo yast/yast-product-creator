@@ -92,15 +92,15 @@
 		// push button label
 		`PushButton(`id(`create_button), _("&Create ISO Image")),
 		// menu button label
-		`MenuButton (`id (`kiwi), _("Cre&ate Image with Kiwi..."), [
+		`MenuButton (`id (`kiwi), _("Cre&ate Image with KIWI..."), [
 		    // push button label
 		    `item(`id(`iso_button), _("Live ISO Image")),
 		    // push button label
-		    `item(`id(`xen_button), _("XEN Image")),
+		    `item(`id(`xen_button), _("Xen Image")),
 		    // push button label
-		    `item(`id(`usb_button), _("USB stick Image")),
+		    `item(`id(`usb_button), _("USB Stick Image")),
 		    // push button label
-		    `item(`id(`vmx_button), _("Virtual disk Image")),
+		    `item(`id(`vmx_button), _("Virtual Disk Image")),
 		])
 	    )
         );
@@ -252,9 +252,9 @@
 	if (gpg_key != "")
 	{
 	    // label
-	    progress_stages = add(progress_stages, _("Sign the Source With a GPG Key"));
+	    progress_stages = add(progress_stages, _("Sign the source with a GPG key"));
 	    // progressbar label
-	    progress_descriptions = add(progress_descriptions, _("Signing the Source With a GPG Key..."));
+	    progress_descriptions = add(progress_descriptions, _("Signing the source with a GPG key..."));
 	}
 
         Progress::New(

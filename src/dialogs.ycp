@@ -539,7 +539,9 @@
 		}
 		else
 		{
-		    Report::Error(sformat(_("The source does not support architecture of this machine (%1).\nSelect another source."), Arch::architecture()));
+		    Report::Error(sformat(_("The source does not support the architecture of this machine (%1).
+Select another source.
+"), Arch::architecture()));
 		}
             }
             else if (ret == `remove)
@@ -1102,7 +1104,10 @@ more <b>add-on</b> selections and packages.
 	{
 	    string details = (string)SCR::Read(.target.string, "/var/log/YaST2/badlist");
 	    // error message, %1 = details
-	    Report::LongError(sformat(_("The dependecies cannot be resolved.\n\n%1"), details));
+	    Report::LongError(sformat(_("The dependencies cannot be resolved.
+
+%1
+"), details));
 	    return $["ui" : `failed];
 	}
 
@@ -1253,7 +1258,8 @@ more <b>add-on</b> selections and packages.
 		// TODO: validate the dialog (is a key selected if the checkbox is selected?
 		// "validate_help" : _("Select a gpg key in the table. Create...")
 		"help" : _("<p><big><b>Sign</b></big><br>
-adsfsdfsddsfsdfdsf</p>")
+To make it possible for users to verify your product, sign it with a GPG key. 
+This key is checked when the product is added as an installation source.</p>")
 	    ]
 	];
     }
@@ -1310,21 +1316,25 @@ adsfsdfsddsfsdfdsf</p>")
 	ProductCreator::CommitConfig();
 
 
-        // caption
         string summary = "";
+        // summary caption
         summary = Summary::AddHeader(summary, _("Package Source") );
         summary = Summary::OpenList(summary);
         foreach(string s, ProductCreator::Config["sources"]:[], ``{
                 summary = Summary::AddListItem(summary, s);
                 });
         summary = Summary::CloseList(summary);
+        // summary caption
         summary = Summary::AddHeader(summary, _("Packages") );
 
+        // summary line
         summary = Summary::AddLine(summary, sformat(_("Selected %1 packages"),
                     size(Pkg::GetPackages(`selected, true))));
 
+        // summary caption
         summary = Summary::AddHeader(summary,_("Output Directory"));
 
+        // summary line
         summary = Summary::AddLine(summary,sformat(_("Creating directory tree in <b> %1/%2 </b>"),
                     ProductCreator::Config["iso-directory"]:"",
                     ProductCreator::Config["name"]:"") );

@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Jun 13 14:44:47 CEST 2007 - jsuchome@suse.cz
+
+- merged texts from proofreading 
+- fixed the help text for signing (#283235)
+- 2.13.6
+
+-------------------------------------------------------------------
 Tue Jun  5 15:35:29 CEST 2007 - jsuchome@suse.cz
 
 - kiwi UI: create output directly in output directory to prevent

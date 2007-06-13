@@ -32,12 +32,12 @@
 
 	if (name != "")
 	{
-	    CommandLine::PrintVerbose(sformat(_("Loading Configuration '%1'..."), name));
+	    CommandLine::PrintVerbose(sformat(_("Loading configuration %1..."), name));
 	    // load the requested configuration
 
 	    if (!ProductCreator::LoadConfig(name))
 	    {
-		CommandLine::Print(sformat(_("Cannot load configuration '%1'"), name));
+		CommandLine::Print(sformat(_("Cannot load configuration %1."), name));
 		return false;
 	    }
 
@@ -68,7 +68,7 @@
 	    integer image_size = (integer)SCR::Read(.target.size, iso_name);
 	    if (SCR::Read(.target.size, iso_name) < 0)
 	    {
-		CommandLine::Print(sformat(_("Cannot create ISO image %1"), iso_name));
+		CommandLine::Print(sformat(_("Cannot create ISO image %1."), iso_name));
 		return false;
 	    }
 	    else
