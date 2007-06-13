@@ -159,7 +159,7 @@
 	`item (`id ("image"), _("Image"), sw_selection == "image"),
     ];
     if (kiwi_task == "xen")
-	items	= add (items, `item (`id ("xen"), _("XEN specific" ), sw_selection == "xen"));
+	items	= add (items, `item (`id ("xen"), _("Xen Specific"), sw_selection == "xen"));
     UI::ChangeWidget (`id (id), `Items, items);
   }
 
@@ -351,7 +351,7 @@
 	UI::ChangeWidget (`id (`pw1), `Value, "*****");
 	UI::ChangeWidget (`id (`pw2), `Value, "*****");
 	// popup label
-	UI::ChangeWidget (`id (`label), `Value, _("Edit user"));
+	UI::ChangeWidget (`id (`label), `Value, _("Edit User"));
     }
     any ret	= nil;
     repeat
@@ -429,7 +429,7 @@ Try again."));
 
     if (event["ID"]:nil != key)	return nil;
     // popup for file selection dialog
-    string dir	= UI::AskForExistingDirectory ("", _("Choose the directory to import"));
+    string dir	= UI::AskForExistingDirectory ("", _("Directory to Import"));
     if (dir!= nil)
     {
 	KiwiConfig["root_dir"]	= union (KiwiConfig["root_dir"]:[], [dir]);
@@ -465,7 +465,7 @@ Try again."));
 
     if (event["ID"]:nil != key)	return nil;
     // popup for file selection dialog
-    string dir	= UI::AskForExistingFile ("", "", _("Choose the script to import"));
+    string dir	= UI::AskForExistingFile ("", "", _("Script to Import"));
     if (dir!= nil)
     {
 	KiwiConfig["config_dir"]	= union (KiwiConfig["config_dir"]:[], [dir]);
@@ -504,8 +504,8 @@ Try again."));
    */
   symbol HandleBrowseRootDirectory (string key, map event) {
     if (event["ID"]:nil != key) return nil;
-    // popup for file selection dialog
-    BrowseDirectoryHandler ("root_dir", _("Choose the path to 'root' directory"));
+    // popup for file selection dialog ('root' is a name, do not translate)
+    BrowseDirectoryHandler ("root_dir", _("Path to root Directory"));
     return nil;
   }
 
@@ -514,8 +514,8 @@ Try again."));
    */
   symbol HandleBrowseConfigDirectory (string key, map event) {
     if (event["ID"]:nil != key) return nil;
-    // popup for file selection dialog
-    BrowseDirectoryHandler ("config_dir", _("Choose the path to 'config' directory"));
+    // popup for file selection dialog ('config' is a name, do not translate)
+    BrowseDirectoryHandler ("config_dir", _("Path to config Directory"));
     return nil;
   }
 
@@ -525,7 +525,7 @@ Try again."));
   symbol HandleBrowseOutputDirectory (string key, map event) {
     if (event["ID"]:nil != key) return nil;
     // popup for file selection dialog
-    BrowseDirectoryHandler ("output_dir", _("Choose the path to the output directory"));
+    BrowseDirectoryHandler ("output_dir", _("Path to the Output Directory"));
     return nil;
   }
 
@@ -551,7 +551,7 @@ Try again."));
   symbol HandleBrowseImagesFile (string key, map event) {
     if (event["ID"]:nil != key) return nil;
     // popup for file selection dialog
-    BrowseFileHandler ("images_path", _("Choose the path to 'images.sh' file"));
+    BrowseFileHandler ("images_path", _("Path to images.sh File"));
     return nil;
   }
 
@@ -561,7 +561,7 @@ Try again."));
   symbol HandleBrowseAutoYaSTFile (string key, map event) {
     if (event["ID"]:nil != key) return nil;
     // popup for file selection dialog
-    BrowseFileHandler ("autoyast_path", _("Choose the path to autoYaST profile"));
+    BrowseFileHandler ("autoyast_path", _("Path to AutoYaST Profile"));
     return nil;
   }
 
@@ -571,7 +571,7 @@ Try again."));
   symbol HandleImportConfigFile (string key, map event) {
     if (event["ID"]:nil != key) return nil;
     // popup for file selection dialog
-    string file	= BrowseFileHandler ("config.sh", _("Choose the path to 'config.sh' file"));
+    string file	= BrowseFileHandler ("config.sh", _("Path to config.sh File"));
     if (file != nil)
     {
 	if (FileUtils::Exists (file))
@@ -594,7 +594,7 @@ Try again."));
   symbol HandleImportImagesFile (string key, map event) {
     if (event["ID"]:nil != key) return nil;
     // popup for file selection dialog
-    string file	= BrowseFileHandler ("images.sh", _("Choose the path to 'images.sh' file"));
+    string file	= BrowseFileHandler ("images.sh", _("Path to images.sh File"));
     if (file != nil)
     {
 	if (FileUtils::Exists (file))
@@ -631,7 +631,7 @@ Try again."));
 	// popup question
 	"iso"	: _("Create ISO image now?"),
 	// popup question
-	"xen"	: _("Create XEN image now?"),
+	"xen"	: _("Create Xen image now?"),
 	// popup question
 	"usb"	: _("Create USB stick image now?"),
 	// popup question
@@ -644,9 +644,10 @@ Try again."));
 %1
 directory."),
 	// popup message, %1 is a dir
-	"xen"	: _("XEN image files successfully created in
+	"xen"	: _("Xen image files successfully created in
 %1
-directory."),
+directory.
+"),
 	// popup message, %1 is a dir
 	"usb"	: _("USB stick image successfully created in
 %1
@@ -708,7 +709,7 @@ Save the image to the stick now?")))
     KiwiConfig	= ProductCreator::Config;
 
     // busy popup
-    Popup::ShowFeedback (_("Reading current Live image configuration..."), _("Please wait..."));
+    Popup::ShowFeedback (_("Reading current live image configuration..."), _("Please wait..."));
 
     map default_dirmap	= $[
 	"iso"	: sformat ("%1/kwliveDVD-suse-10.3", images_dir),
@@ -812,7 +813,7 @@ Save the image to the stick now?")))
     return $[
     "config.xml" : $[
 	// tab header
-	"header"	: _("Image configuration"),
+	"header"	: _("Image Configuration"),
 	"contents"	: `HBox (`HSpacing(1),
 	    `VBox (
 		`VSpacing (0.2),
@@ -833,7 +834,7 @@ Save the image to the stick now?")))
 		"sw_selection",
 		`HBox (
 		    `HWeight (1, `VBox (
-			`Left (`Label (_("Installed software"))), "rt_sw", `Right ("configure_sw")
+			`Left (`Label (_("Installed Software"))), "rt_sw", `Right ("configure_sw")
 		    )),
 		    `HWeight (1, "ignore")
 		),
@@ -939,9 +940,10 @@ Save the image to the stick now?")))
 	// combo box label
 	"label"		: _("C&D Boot Image"),
 	// help text for "C&D Boot Image", %1/%2 is path (on extra line)
-	"help"		: sformat (_("<p>Choose one <b>CD Boot Image</b> from <br>
+	"help"		: sformat (_("<p>Choose one <b>CD Boot Image</b> from the<br>
 <tt>%1/%2</tt><br>
-directory.</p>"),
+directory.</p>
+"),
 	    Kiwi::images_dir, boot_image_widget ()),
 	"items"		: [],
 	"init"		: InitBootCombo,
@@ -952,11 +954,12 @@ directory.</p>"),
 	"widget"	: `combobox,
 	"opt"		: [ `hstretch, `notify ],
 	// combo box label
-	"label"		: _("&XEN Boot Image"),
+	"label"		: _("&Xen Boot Image"),
 	// help text for "XEN Boot Image"
-	"help"		: sformat (_("<p>Choose one <b>XEN Boot Image</b> from <br>
+	"help"		: sformat (_("<p>Choose one <b>Xen Boot Image</b> from the<br>
 <tt>%1/%2</tt><br>
-directory.</p>"),
+directory.</p>
+"),
 	    Kiwi::images_dir, boot_image_widget ()),
 	"items"		: [],
 	"init"		: InitBootCombo,
@@ -967,11 +970,12 @@ directory.</p>"),
 	"widget"	: `combobox,
 	"opt"		: [ `hstretch, `notify ],
 	// combo box label
-	"label"		: _("&USB stick Boot Image"),
+	"label"		: _("&USB Stick Boot Image"),
 	// help text for "XEN Boot Image"
-	"help"		: sformat (_("<p>Choose one <b>USB stick Boot Image</b> from<br>
+	"help"		: sformat (_("<p>Choose one <b>USB stick Boot Image</b> from the<br>
 <tt>%1/%2</tt><br>
-directory.</p>"),
+directory.</p>
+"),
 	    Kiwi::images_dir, boot_image_widget ()),
 	"items"		: [],
 	"init"		: InitBootCombo,
@@ -984,9 +988,10 @@ directory.</p>"),
 	// combo box label
 	"label"		: _("&Virtual Disk Boot Image"),
 	// help text for "XEN Boot Image"
-	"help"		: sformat (_("<p>Choose one <b>Virtual Disk Boot Image</b> from<br>
+	"help"		: sformat (_("<p>Choose one <b>Virtual Disk Boot Image</b> from the<br>
 <tt>%1/%2</tt><br>
-directory.</p>"),
+directory.</p>
+"),
 	    Kiwi::images_dir, boot_image_widget ()),
 	"items"		: [],
 	"init"		: InitBootCombo,
@@ -997,14 +1002,14 @@ directory.</p>"),
 	"widget"	: `push_button,
 	// pusbutton label
 	"label"		: _("C&onfigure..."),
-	"help"		: _("<p>Create new boot image with <b>Configure</b>.</p>"),
+	"help"		: _("<p>Create a new boot image with <b>Configure</b>.</p>"),
 	"handle"        : NotImplementedHandler
      ],
     "compressed" : $[
 	"widget"	: `checkbox,
 	// textentry label
 	"label"		: _("Co&mpress"),
-	"help"		: _("<p>compressed: FIXME - still not supported?</p>"),
+	"help"		: _("<p>Check <b>Compress</b> if the final image should be based \non the squashfs compressed file system."),
 	"init"		: InitCompressCheckBox,
 	"store"		: StoreCompressCheckBox,
 	"handle"	: HandleCompressCheckBox,
@@ -1013,7 +1018,7 @@ directory.</p>"),
 	"widget"	: `combobox,
 	"opt"		: [ `hstretch, `notify ],
 	// combo box label
-	"label"		: _("So&ftware selection"),
+	"label"		: _("So&ftware Selection"),
 	// help text for "So&ftware selection"
 	"help"		: "",
 	"items"		: [],
@@ -1034,13 +1039,13 @@ directory.</p>"),
 	"widget"        : `push_button,
 	// pusbutton label
 	"label"         : _("Ch&ange..."),
-	"help"		: _("<p>Adapt software selection with <b>Change</b>.</p>"),
+	"help"		: _("<p>Adapt the software selection with <b>Change</b>.</p>"),
 	"handle"	: HandleSWSelection
     ],
     "ignore"	: $[
 	"widget"	: `multi_line_edit,
 	// label
-	"label"		: _("&Ignored software"),
+	"label"		: _("&Ignored Software"),
 	"init"		: InitSWIgnore,
 	"store"		: StoreSWIgnore,
 	"handle"	: HandleSWIgnore,
@@ -1050,7 +1055,7 @@ directory.</p>"),
     "output_dir" : $[
 	"widget"	: `textentry,
 	// textentry label
-	"label"		: _("O&utput directory"),
+	"label"		: _("O&utput Directory"),
 	"help"		: _("help for output dir"),
 	"init"		: InitOutputDir,
     ],
@@ -1064,7 +1069,7 @@ directory.</p>"),
 	"widget"	: `textentry,
 	// textentry label
 	"label"		: _("&Version"),
-	"help"		: _("<p>Enter the <b>version</b> of your image configuration.</p>"),
+	"help"		: _("<p>Enter the <b>Version</b> of your image configuration.</p>"),
 	"valid_chars"	: String::CDigit () + ".",
 	"init"		: InitVersion,
 	"store"		: StoreVersion,
@@ -1075,7 +1080,7 @@ directory.</p>"),
 	"opt"		: [ `hstretch ],
 	// textentry label
 	"label"		: _("&Size"),
-	"help"		: _("<p>Set the image <b>size</b> in specified <b>unit</b>.</p>"),
+	"help"		: _("<p>Set the image <b>Size</b> in the specified <b>Unit</b>.</p>"),
 	"init"		: InitSize,
 	"store"		: StoreDescription,
 	"handle"	: HandleDescription,
@@ -1094,7 +1099,7 @@ directory.</p>"),
     "general_scripts"	: $[
 	"widget"	: `empty,
 	// general help for directory structure tab
-	"help"		: _("<p>Here, edit configuration scripts that are used to build your image.</p>"),
+	"help"		: _("<p>Here, edit the configuration scripts used to build your image.</p>"),
     ],
     "general_directories"	: $[
 	"widget"	: `empty,
@@ -1104,9 +1109,9 @@ directory.</p>"),
     "root_dir"		: $[
 	"widget"	: `textentry,
 	// textentry label
-	"label"		: _("P&ath to directory with system configuration"),
+	"label"		: _("Directory with System Configur&ation"),
 	// help text
-	"help"		: _("<p>Define the path to the <b>directory with system configuration</b> (the <tt>root</tt> directory). The entire directory is copied into the root of the image tree using <tt>cp -a</tt>.</p>"),
+	"help"		: _("<p>Define the path to the <b>Directory with System Configuration</b> (the <tt>root</tt> directory). The entire directory is copied into the root of the image tree using <tt>cp -a</tt>.</p>"),
 	"init"		: InitDescription,
 	"store"		: StoreDescription,
 	"handle"	: HandleDescription,
@@ -1121,14 +1126,14 @@ directory.</p>"),
 	"widget"	: `custom,
 	"custom_widget" : `VBox (
 	    // label (above table)
-	    `Left (`Label (_("Directory with system configuration"))),
+	    `Left (`Label (_("Directory with System Configuration"))),
 	    `Table (`id("roottable"), `header (
 		// table header
 		_("Path to Directory"))
 	    )
 	),
 	// help for table with users
-	"help"		: _("<p>Configure the <b>directory with system configuration</b> (the <tt>root</tt> directory). The entire directory is copied into the root of the image tree using <tt>cp -a</tt>.</p>"),
+	"help"		: _("<p>Configure the <b>Directory with System Configuration</b> (the <tt>root</tt> directory). The entire directory is copied into the root of the image tree using <tt>cp -a</tt>.</p>"),
 	"init"		: InitRootDirTable,
     ],
     "root_dir_add"	: $[
@@ -1147,14 +1152,14 @@ directory.</p>"),
 	"widget"	: `custom,
 	"custom_widget" : `VBox (
 	    // label (above table)
-	    `Left (`Label (_("Directory with scripts"))),
+	    `Left (`Label (_("Directory with Scripts"))),
 	    `Table (`id("configtable"), `header (
 		// table header
 		_("Path to File"))
 	    )
 	),
 	// help for table with users
-	"help"		: _("<p>Configure the <b>directory with scripts</b> (the <tt>config</tt> directory). It contains scripts that are called after the installation of all the image packages.</p>"),
+	"help"		: _("<p>Configure the <b>Directory with Scripts</b> (the <tt>config</tt> directory). It contains scripts that are run after the installation of all the image packages.</p>"),
 	"init"		: InitConfigDirTable,
     ],
     "config_dir_add"	: $[
@@ -1172,8 +1177,8 @@ directory.</p>"),
     "config.sh" : $[
 	"widget"	: `multi_line_edit,
 	// textentry label
-	"label"		: _("I&mage configuration script"),
-	"help"		: _("<p>Edit your <b>Image configuration script</b>, called <tt>config.sh</tt>. This script is called at the end of the installation but before the package scripts have run.</p>"),
+	"label"		: _("I&mage Configuration Script"),
+	"help"		: _("<p>Edit your <b>Image Configuration Script</b>, called <tt>config.sh</tt>. This script is run at the end of the installation but before the package scripts have run.</p>"),
 	"init"		: InitDescription,
 	"store"		: StoreDescription,
 	"handle"	: HandleDescription,
@@ -1188,8 +1193,8 @@ directory.</p>"),
     "config_dir" : $[
 	"widget"	: `textentry,
 	// textentry label
-	"label"		: _("Pa&th to directory with scripts"),
-	"help"		: _("<p>Optional <b>directory with scripts</b> (<tt>config</tt> directory) contains scripts that are called after the installation of all the image packages.</p>"),
+	"label"		: _("Pa&th to Directory with Scripts"),
+	"help"		: _("<p>The optional <b>Directory with Scripts</b> (<tt>config</tt> directory) contains scripts that are run after the installation of all the image packages.</p>"),
 	"init"		: InitDescription,
 	"store"		: StoreDescription,
 	"handle"	: HandleDescription,
@@ -1204,8 +1209,8 @@ directory.</p>"),
     "autoyast_path" : $[
 	"widget"	: `textentry,
 	// textentry label
-	"label"		: _("Path to Auto&YaST profile"),
-	"help"		: _("<p>this is 'config-yast.xml'</p>"),
+	"label"		: _("Path to Auto&YaST Profile"),
+	"help"		: _("Choose the path to the AutoYaST profile (config.xml)."),
     ],
     "browse_autoyast"	: $[
 	"widget"	: `push_button,
@@ -1217,8 +1222,8 @@ directory.</p>"),
     "images.sh" : $[
 	"widget"	: `multi_line_edit,
 	// textentry label
-	"label"		: _("C&leanup script"),
-	"help"		: _("<p>Edit your <b>cleanup script</b> (<tt>images.sh</tt>). This script is called at the beginning of the image creation process.</p>"),
+	"label"		: _("C&leanup Script"),
+	"help"		: _("<p>Edit your <b>Cleanup Script</b> (<tt>images.sh</tt>). This script is run at the beginning of the image creation process.</p>"),
 	"init"		: InitDescription,
 	"store"		: StoreDescription,
 	"handle"	: HandleDescription,
@@ -1236,7 +1241,7 @@ directory.</p>"),
 	// textentry label
 	"label"		: _("&Author"),
 	// help text for Author, Contact and Specification widgets
-	"help"		: _("<p>Set the values for <b>author</b> of the image, <b>contact information</b> and the image <b>specification</b>.</p>"),
+	"help"		: _("<p>Set the values for <b>Author</b> of the image, <b>Contact Information</b>, and the image <b>Specification</b>.</p>"),
 	"init"		: InitDescription,
 	"store"		: StoreDescription,
 	"handle"	: HandleDescription,
@@ -1269,7 +1274,7 @@ directory.</p>"),
 	"widget"	: `textentry,
 	// textentry label
 	"label"		: _("&Group name"),
-	"help"		: _("<p>Select the <b>group name</b> the users belong to.</p>"),
+	"help"		: _("<p>Select the <b>Group Name</b> to which the users belong.</p>"),
 	"init"		: InitDescription,
 	"store"		: StoreDescription,
 	"handle"	: HandleDescription,
@@ -1282,7 +1287,7 @@ directory.</p>"),
 			    // table header
 			    _("Home Directory"))),
 	// help for table with users
-	"help"		: _("<p>For each user, specify its <b>name</b>, <b>password</b> and <b>home directory</b>.</p>"),
+	"help"		: _("<p>For each user, specify <b>Name</b>, <b>Password</b>, and <b>Home Directory</b>.</p>"),
 	"init"		: InitUsersTable,
 	"handle"	: HandleAddEditUser,
     ],
@@ -1335,9 +1340,9 @@ directory.</p>"),
 	// dialog caption
 	"iso"	: _("Live CD Configuration"),
 	// dialog caption
-	"xen"	: _("XEN Image Configuration"),
+	"xen"	: _("Xen Image Configuration"),
 	// dialog caption
-	"usb"	: _("USB stick Image Configuration"),
+	"usb"	: _("USB Stick Image Configuration"),
 	// button label
 	"vmx"	: _("Virtual Disk Image"),
     ];
@@ -1345,9 +1350,9 @@ directory.</p>"),
 	// button label
 	"iso"	: _("&Create ISO"),
 	// button label
-	"xen"	: _("&Create XEN Image"),
+	"xen"	: _("&Create Xen Image"),
 	// button label
-	"usb"	: _("&Create USB stick Image"),
+	"usb"	: _("&Create USB Stick Image"),
 	// button label
 	"vmx"	: _("&Create Virtual Disk Image"),
     ];

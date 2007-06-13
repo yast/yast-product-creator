@@ -53,7 +53,7 @@ map cmdline_description = $[
 	],
 	"passphrase" : $[
 	    // translators: command line help text for the 'passhrase' option
-	    "help" : _("File with GPG passhrase required for signing the source."),
+	    "help" : _("File with GPG passhrase required for signing the source"),
 	    "type"	: "string"
 	]
     ],

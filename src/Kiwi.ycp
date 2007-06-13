@@ -416,7 +416,7 @@
         `HSpacing(85),
         `VSpacing(0.5),
 	// label
-        `ReplacePoint (`id (`rpl), `Left (`Label(_("Preparing physical extend...")))),
+        `ReplacePoint (`id (`rpl), `Left (`Label(_("Preparing for Image Creation")))),
         `VSpacing(0.5),
         `LogView (`id (`log), "", 8, 0),
         `VSpacing(0.5),
@@ -449,7 +449,7 @@
 	    {
 		UI::ReplaceWidget (`id (`rp), `HBox (
 		    // label (command result)
-		    `Label (`opt (`boldFont), _("KIWI failed.")),
+		    `Label (`opt (`boldFont), _("Image creation failed.")),
 		    `PushButton (`id(`close), Label::CloseButton ())
 		));
 		ret	= (symbol) UI::UserInput ();
@@ -466,7 +466,7 @@
 		    tmp_dir, out_dir);
 		y2milestone ("calling '%1'", cmd);
 		// label
-		UI::ReplaceWidget (`id (`rpl), `Left (`Label (_("Creating Image..."))));
+		UI::ReplaceWidget (`id (`rpl), `Left (`Label (_("Creating Image"))));
 		SCR::Execute (.background.run_output_err, cmd);
 		ret	= nil;
 		continue;
@@ -475,7 +475,7 @@
 	    {
 		UI::ReplaceWidget (`id (`rp), `HBox (
 		    // label (command result)
-		    `Label (`opt (`boldFont), _("KIWI succeeded.")),
+		    `Label (`opt (`boldFont), _("Image creation succeeded.")),
 		    `PushButton (`id(`ok), Label::OKButton ())
 		));
 		ret	= (symbol) UI::UserInput ();
