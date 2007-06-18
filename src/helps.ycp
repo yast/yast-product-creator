@@ -62,7 +62,15 @@ Press <b>Add</b> to create a new configuration.</p>") +
 _("<p><b><big>Editing or Deleting:</big></b><br>
 Choose a configuration to change or remove.
 Then press <b>Edit</b> or <b>Delete</b> as desired.</p>
-"),
+")	+
+
+    // overview dialog help part 4
+_("<p>Use <b>Create Image</b> to create the ISO image or directory with your
+configured product.</p>") +
+
+    // overview dialog help part 5
+_("<p>Press <b>Create Image with KIWI</b> for additional configuration of various
+types of images, such as Live media or Xen images, with the KIWI image system.</p>"),
 
     /* Configure1 dialog help 1/4 */
     "initial" : _("<p><b><big>Configuration Name and Packages</big></b><br>

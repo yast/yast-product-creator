@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon Jun 18 11:17:42 CEST 2007 - jsuchome@suse.cz
+
+- changed "Create ISO image" button label, added missing help text
+  (#284276) 
+- 2.13.7
+
+-------------------------------------------------------------------
 Wed Jun 13 14:44:47 CEST 2007 - jsuchome@suse.cz
 
 - merged texts from proofreading 
