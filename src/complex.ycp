@@ -90,7 +90,7 @@
             contents,
 	    `HBox (
 		// push button label
-		`PushButton(`id(`create_button), _("&Create ISO Image")),
+		`PushButton(`id(`create_button), _("&Create Image")),
 		// menu button label
 		`MenuButton (`id (`kiwi), _("Cre&ate Image with KIWI..."), [
 		    // push button label
