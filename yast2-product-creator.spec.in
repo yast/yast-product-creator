@@ -5,8 +5,8 @@ BuildRequires:	perl-XML-Writer update-desktop-files yast2-devtools yast2-testsui
 Requires:	yast2-packager autoyast2-installation yast2-security
 
 # GPG.ycp and GPGWidgets.ycp
-Requires:	yast2 >= 2.13.90
-BuildRequires: 	yast2 >= 2.13.90
+Requires:	yast2 >= 2.15.2
+BuildRequires: 	yast2 >= 2.15.2
 
 BuildArchitectures:	noarch
 
