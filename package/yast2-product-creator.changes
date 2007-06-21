@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Jun 21 14:02:56 CEST 2007 - jsuchome@suse.cz
+
+- new version for openSUSE
+- 2.15.0
+
+-------------------------------------------------------------------
 Mon Jun 18 11:17:42 CEST 2007 - jsuchome@suse.cz
 
 - changed "Create ISO image" button label, added missing help text
