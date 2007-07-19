@@ -19,6 +19,7 @@
     import "StorageDevices";
     import "Arch";
     import "Label";
+    import "Package";
     import "Popup";
     import "URL";
     import "GPG";
@@ -595,7 +596,7 @@ Select another source.
 		// is the base source bootable?
 		if (!ProductCreator::isBootSource(base_source))
 		{
-		    if (Popup::ContinueCancel("The selected installation source doesn't contain /boot directory.
+		    if (Popup::ContinueCancel("The selected repository doesn't contain /boot directory.
 The created medium will not be bootable.\n"))
 		    {
 			break;
@@ -883,7 +884,7 @@ more <b>add-on</b> selections and packages.
 
 
         Popup::ShowFeedback(_("Reading data from Package Database..."), _("Please wait..."));
-        ProductCreator::enableSources();
+//        ProductCreator::enableSources();
 
         Popup::ClearFeedback();
 
@@ -1259,7 +1260,7 @@ more <b>add-on</b> selections and packages.
 		// "validate_help" : _("Select a gpg key in the table. Create...")
 		"help" : _("<p><big><b>Sign</b></big><br>
 To make it possible for users to verify your product, sign it with a GPG key. 
-This key is checked when the product is added as an installation source.</p>")
+This key is checked when the product is added as a repository.</p>")
 	    ]
 	];
     }

@@ -19,5 +19,5 @@ Icon=yast-cd-creator
 Exec=/sbin/yast2 product-creator 
 
 Name=Product Creator
-GenericName=Create new products from existing installation sources
+GenericName=Create new products from existing repositories
 X-KDE-SubstituteUID=true
