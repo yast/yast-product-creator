@@ -27,6 +27,8 @@
 
   global string images_dir	= "/usr/share/kiwi/image";
 
+  list<map> all_sources		= [];
+
   // where the kiwi configuration files are stored
   string config_dir	= "";
 
@@ -57,8 +59,41 @@
 
     if (substring (source, 0, 6) == "dir://")
 	return substring (source, 6);
-    //FIXME plaindir -> rpm-dir
     return source;
+  }
+
+  /**
+   * generate the 'repository' tag
+   */
+  map get_source_value (string source) {
+
+    string type		= "yast2";
+    string source_path	= source;
+    if (substring (source, 0, 1) == "/")
+	source_path	= "dir://" + source;
+
+    foreach (map sourcemap, all_sources, {
+	integer srcid	= sourcemap["SrcId"]:-1;
+        map data	= Pkg::SourceGeneralData (srcid);
+	string url	= data["url"]:"";
+	if (url == source || url == source_path)
+	{
+	    if (data["type"]:"" == "Plaindir")
+		type	= "rpm-dir";
+	    if (data["type"]:"" == "YUM")
+		type	= "rpm-md";
+	}
+    });
+    return $[
+	"__key"	: "repository",
+	"type"	: type,
+	"__children": [
+	    $[
+		"__key"	: "source",
+		"path"	: source
+	    ]
+	]
+    ];
   }
 
   /**
@@ -82,6 +117,21 @@
     ];
     if (task != "iso")
 	ret["filesystem"]	= "ext3";
+    return ret;
+  }
+
+  /**
+   * generate the list of packages/patterns for image
+   */
+  map get_image_packages (map config, list packages, list patterns,list ignored)
+  {
+    map ret	= $[
+	    "__key"	: "packages",
+	    "type"	: "image",
+	    "__children": union (union (packages, patterns), ignored)
+    ];
+    if (config["image_patternType"]:"" != "")
+	ret["patternType"]	= config["image_patternType"]:"";
     return ret;
   }
 
@@ -150,30 +200,48 @@
     map config	= (map) SCR::Read (.kiwi, base_path + "/config.xml");
     map<string,map> packages	= config["packages"]:$[];
     // rest parts of "packages" are saved in product-creator map
-    ret["ignore"] = maplist (map p, (list<map>)packages["image","ignore"]:[], ``(p["name"]:""));
+    ret["ignore"] = maplist (map p,
+	(list<map>)packages["image","ignore"]:[], ``(p["name"]:""));
     // value of "arch" is currently ignored...
     foreach (string section, [ "boot", "xen" ], {
-	ret[section + "_packages"]	=
-	    maplist (map p, (list<map>)packages[section, "package"]:[], ``(p["name"]:""));
-	ret[section + "_patterns"]	=
-	    maplist (map p, (list<map>)packages[section, "opensusePattern"]:[], ``(p["name"]:""));
-	ret[section + "_ignore"]	=
-	    maplist (map p, (list<map>)packages[section, "ignore"]:[], ``(p["name"]:""));
+	ret[section + "_packages"]	= maplist (map p,
+	    (list<map>)packages[section, "package"]:[], ``(p["name"]:""));
+	ret[section + "_patterns"]	= maplist (map p,
+	    (list<map>)packages[section,"opensusePattern"]:[],``(p["name"]:""));
+	ret[section + "_ignore"]	= maplist (map p,
+	    (list<map>)packages[section, "ignore"]:[], ``(p["name"]:""));
     });
+    // list of packages and patterns is needed for import, not for new image
+    ret["addons"] = maplist (map p,
+	(list<map>)packages["image","opensusePattern"]:[], ``(p["name"]:""));
+    ret["packages"] = maplist (map p,
+	(list<map>)packages["image","package"]:[], ``(p["name"]:""));
 
+    if (packages["image","patternType"]:"" != "")
+	ret["image_patternType"]	= packages["image","patternType"]:"";
     if (packages["xen","disk"]:"" != "")
 	ret["xen_disk"]	= packages["xen","disk"]:"";
     if (packages["xen","memory"]:"" != "")
 	ret["xen_memory"]	= tointeger (packages["xen","memory"]:"512");
-// FIXME read list of packages and patterns???? -> only for non-default!
-    foreach (string key, [ "author", "contact", "specification", "packagemanager", "version",
-	"rpm-check-signatures", "rpm-force", "sizeunit", "type" ], {
+    foreach (string key, [ "author", "contact", "specification",
+	"packagemanager", "version", "rpm-check-signatures", "rpm-force",
+	"sizeunit", "type", "name", "repository" ],
+    {
 	if (config[key]:nil != nil)
 	    ret[key]	= config[key]:nil;
     });
     if (haskey (config, "size"))
 	ret["size"]	= tointeger (config["size"]:"2700");
-
+    foreach (string user, map usermap, (map<string,map>) config["users"]:$[], {
+	if (!haskey (ret, "users"))
+	    ret["users"]     = $[];
+	if (haskey (usermap, "group"))
+	    ret["group"]	= usermap["group"]:"";
+	ret["users",user]     = $[
+	    "home"	: usermap["home"]:sformat ("/home/%1", user),
+	    "pwd"	: user
+	];
+    });
     return ret;
   }
 
@@ -181,6 +249,8 @@
    * Write currect configuration to new config.xml
    */
   global boolean WriteConfigXML (map KiwiConfig, string kiwi_task) {
+
+    all_sources		= Pkg::SourceEditGet();
 
     tmp_dir		= Directory::tmpdir;
 
@@ -317,27 +387,13 @@
 	]);
     }
     write_list[0,"__children"] = union (write_list[0,"__children"]:[],
-	maplist (string source, (list<string>) KiwiConfig["sources"]:[], {
-	    return $[
-		"__key"	: "repository",
-		"type"	: "yast2", //FIXME rpm-dir?
-		"__children": [
-		    $[
-			"__key"	: "source",
-			"path"	: adapt_source_path (source),
-		    ]
-		]
-	    ];
-	})
+	maplist (string source, (list<string>) KiwiConfig["sources"]:[],
+	    ``(get_source_value (source))
+	)
     );
     write_list[0,"__children"] = union (write_list[0,"__children"]:[], [
-	$[
-	    "__key"	: "packages",
-	    "type"	: "image",
-//	    "patternType"	: "onlyRequired". // FIXME what does this mean?
-//	    "patternType"	: "plusRecommended",
-	    "__children": union (union (packages_list, patterns_list), ignored_list)
-	],
+	get_image_packages (
+	    KiwiConfig, packages_list, patterns_list, ignored_list),
 	$[
 	    "__key"	: "packages",
 	    "type"	: "boot",
