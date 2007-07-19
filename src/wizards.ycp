@@ -18,7 +18,7 @@ import "Sequencer";
 
 include "product-creator/complex.ycp";
 include "product-creator/dialogs.ycp";
-include "product-creator/kiwi.ycp";
+include "product-creator/kiwi_dialogs.ycp";
 
 
 /**
