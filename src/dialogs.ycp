@@ -884,7 +884,7 @@ more <b>add-on</b> selections and packages.
 
 
         Popup::ShowFeedback(_("Reading data from Package Database..."), _("Please wait..."));
-//        ProductCreator::enableSources();
+        ProductCreator::enableSources();
 
         Popup::ClearFeedback();
 
