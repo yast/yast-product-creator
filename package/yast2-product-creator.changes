@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Jul 25 09:41:05 CEST 2007 - lslezak@suse.cz
+
+- fixed "Back" button behavior in the Isolinux configuration
+  dialog (#289524)
+
+-------------------------------------------------------------------
 Mon Jun 18 11:17:42 CEST 2007 - jsuchome@suse.cz
 
 - changed "Create ISO image" button label, added missing help text
