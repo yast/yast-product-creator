@@ -32,7 +32,7 @@ define symbol AddSequence() ``{
 	"source"	: ``( sourceDialog() ),
 	"config1"	: ``( Configure1Dialog() ),
 	"config2"	: ``( Configure2Dialog() ),
-	"isolinuxcheck" : ``( CheckBootableSrc() ),
+	"isolinuxcheck" : [ ``( CheckBootableSrc() ), true],
 	"isolinux"	: ``( isolinuxDialog() ),
 	"packagemanager": ``( packageSelector() ),
 	"gpgkey"	: ``( gpgKeyDialog() ),
