@@ -30,9 +30,11 @@ install -d $RPM_BUILD_ROOT/var/lib/YaST2/product-creator
 %dir @yncludedir@/product-creator
 @yncludedir@/product-creator/*
 @clientdir@/product-creator.ycp
+@clientdir@/kiwi.ycp
 @moduledir@/*.ycp
 @moduledir@/*.ybc
 @desktopdir@/product-creator.desktop
+@desktopdir@/kiwi.desktop
 @ybindir@/y2mkiso
 %doc @docdir@
 %dir @ydatadir@/product-creator

@@ -19,5 +19,5 @@ Icon=yast-cd-creator
 Exec=/sbin/yast2 kiwi
 
 Name=Live Image Creator
-GenericName=Create the Live or XEN image
+GenericName=Create the Live, USB or XEN image
 X-KDE-SubstituteUID=true

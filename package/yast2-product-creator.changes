@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Thu Aug  2 09:34:21 CEST 2007 - jsuchome@suse.cz
+
+- "installation source" changed to "repository"
+- mark the output product as "base"
+- added simplified UI for kiwi
+- 2.15.1
+
+-------------------------------------------------------------------
 Wed Jul 25 09:41:05 CEST 2007 - lslezak@suse.cz
 
 - fixed "Back" button behavior in the Isolinux configuration

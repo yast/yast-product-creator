@@ -68,9 +68,7 @@
   map get_source_value (string source) {
 
     string type		= "yast2";
-    string source_path	= source;
-    if (substring (source, 0, 1) == "/")
-	source_path	= "dir://" + source;
+    string source_path	= adapt_source_path (source);
 
     foreach (map sourcemap, all_sources, {
 	integer srcid	= sourcemap["SrcId"]:-1;
@@ -90,7 +88,7 @@
 	"__children": [
 	    $[
 		"__key"	: "source",
-		"path"	: source
+		"path"	: source_path
 	    ]
 	]
     ];
