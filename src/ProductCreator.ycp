@@ -93,6 +93,9 @@ global boolean proposal_valid = false;
 // What we want to create with kiwi
 global string kiwi_task	= "iso";
 
+// if the YaST sources should be enabled when opening package selector
+global boolean enable_sources	= true;
+
 // original source configuration, needed to reset the package manager
 list<map<string,any> > original_config = nil;
 
@@ -1493,6 +1496,9 @@ foreach(integer source_id, enabled, ``{
 	// remove the meta information from content file
 	Exec(sformat("/usr/bin/grep -v -e '^KEY ' -e '^META ' '%1/content' > '%1/content.new'", String::Quote(skel_root)));
 	Exec(sformat("/bin/mv '%1/content.new' '%1/content'", String::Quote(skel_root)));
+	// mark the final product as 'base'
+	if (SCR::Execute (.target.bash, sformat("/usr/bin/grep '^TYPE' '%1/content'", String::Quote(skel_root))) != 0)
+	    Exec(sformat("echo 'TYPE base' >> '%1/content'", String::Quote(skel_root)));
 
 	// recreate the index file
 // FIXME: use create_directory when it supports parameter with spaces
@@ -1888,6 +1894,10 @@ global define list<term> GetDirSources(string source) ``{
 
 
 global define void enableSources()``{
+
+    // used by standalone kiwi UI, which does onw sources handling...
+    if (!enable_sources)
+	return;
 
     // TODO FIXME: use better way to reset the source config in the package manager
     if (original_config != nil)

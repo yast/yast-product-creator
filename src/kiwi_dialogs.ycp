@@ -660,7 +660,6 @@ directory."),
     {
 	if (Kiwi::WriteConfigXML (KiwiConfig, kiwi_task))
 	{
-	    /*
 	    string out_dir	= KiwiConfig["iso-directory"]:"";
 	    if (FileUtils::CheckAndCreatePath (out_dir) && Kiwi::PrepareAndCreate (out_dir))
 	    {
@@ -679,7 +678,6 @@ Save the image to the stick now?")))
 		}
 		ret	= true;
 	    }
-	    */
 	}
     }
     if (ret)
@@ -707,12 +705,13 @@ Save the image to the stick now?")))
     map<string,string> content = ProductCreator::ReadContentFile(src_id);
 
     KiwiConfig	= ProductCreator::Config;
+y2internal ("sources: %1", KiwiConfig["sources"]:nil);
     // busy popup
     Popup::ShowFeedback (_("Reading current live image configuration..."), _("Please wait..."));
 
     map default_dirmap	= $[
 	"iso"	: sformat ("%1/kwliveDVD-suse-10.3", images_dir),
-	"xen"	: sformat ("%1/buildhost-suse-10.1", images_dir),
+	"xen"	: sformat ("%1/buildhost-suse-SLES10", images_dir),
 	"usb"	: sformat ("%1/kwliveDVD-suse-10.3", images_dir),
 	"vmx"	: sformat ("%1/kwliveDVD-suse-10.3", images_dir),
     ];
@@ -1388,7 +1387,7 @@ directory.</p>
     string kiwi_configuration	= Config["kiwi_configuration_" + kiwi_task]:"";
     string name			= Config["name"]:"";
     string out_dir		= Config["iso-directory"]:"";
-    map <integer,string> repositories	= $[];//Config["sources"]:[]; FIXME!
+    map <integer,string> repositories	= $[];
 
     // on start, disable all sources (-> move to client?)
     if (Config == $[])
@@ -1442,7 +1441,6 @@ directory.</p>
 	kiwi_configuration	= dir;
 	Config	= eval (Kiwi::ReadConfigXML (kiwi_configuration));
 	name	= Config["name"]:"";
-//	repositories	= [];
 	repositories	= $[];
 	foreach (map repo, (list<map>) Config["repository"]:[], {
 	    string source	= repo["source",0,"path"]:"";
@@ -1459,7 +1457,7 @@ directory.</p>
 		else
 		    id = Pkg::SourceCreate (url + source, "");
 		if (id != -1)
-		    repositories[id]	= source;// FIXME or url?
+		    repositories[id]	= url + source;
 	    }
 	});
 	UI::ChangeWidget (`id (`config), `Value, name);
@@ -1652,6 +1650,7 @@ y2internal ("selected: %1", selected);
 	    integer id, string repo, repositories, ``(repo));
 	ProductCreator::kiwi_task	= kiwi_task;
 	ProductCreator::Config		= Config;
+	ProductCreator::enable_sources	= false;
     }
     y2milestone("Returning %1", ret);
     return (symbol) ret;

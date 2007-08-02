@@ -21,7 +21,8 @@ ynclude_DATA =			\
 	kiwi_dialogs.ycp	
 
 desktop_DATA =			\
-	product-creator.desktop
+	product-creator.desktop	\
+	kiwi.desktop
 
 module_DATA =			\
 	ProductCreator.ycp	\
