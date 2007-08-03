@@ -15,7 +15,7 @@ X-SuSE-YaST-AutoInst=
 X-SuSE-YaST-Geometry=
 X-SuSE-YaST-SortKey=
 
-Icon=yast-cd-creator
+Icon=yast-kiwi
 Exec=/sbin/yast2 kiwi
 
 Name=Live Image Creator
