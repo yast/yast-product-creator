@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Wed Aug  8 15:19:45 CEST 2007 - jsuchome@suse.cz
+
+- yet another fix for "Back" button behavior (#289524)
+- enable editing of isolinux.cfg in case of autoYaST usage (#287443) 
+- kiwi config: fixed path to directory with XEN template 
+- 2.13.8
+
+-------------------------------------------------------------------
 Wed Jul 25 09:41:05 CEST 2007 - lslezak@suse.cz
 
 - fixed "Back" button behavior in the Isolinux configuration

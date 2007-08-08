@@ -713,7 +713,7 @@ Save the image to the stick now?")))
 
     map default_dirmap	= $[
 	"iso"	: sformat ("%1/kwliveDVD-suse-10.3", images_dir),
-	"xen"	: sformat ("%1/buildhost-suse-10.1", images_dir),
+	"xen"	: sformat ("%1/buildhost-suse-SLES10", images_dir),
 	"usb"	: sformat ("%1/kwliveDVD-suse-10.3", images_dir),
 	"vmx"	: sformat ("%1/kwliveDVD-suse-10.3", images_dir),
     ];
