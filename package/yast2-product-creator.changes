@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Aug  8 15:36:56 CEST 2007 - jsuchome@suse.cz
+
+- yet another fix for "Back" button behavior (#289524)
+- enable editing of isolinux.cfg in case of autoYaST usage (#287443)
+- 2.15.2
+
+-------------------------------------------------------------------
 Thu Aug  2 09:34:21 CEST 2007 - jsuchome@suse.cz
 
 - "installation source" changed to "repository"
