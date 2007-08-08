@@ -58,7 +58,6 @@ define symbol AddSequence() ``{
 	"isolinuxcheck" : $[
 	    `next	: "isolinux",
 	    `skip_isolinux : "packagemanager",
-	    `autoyast	: "gpgkey"
 	],
 	"isolinux": $[
 	   `abort	: `abort,
@@ -69,7 +68,8 @@ define symbol AddSequence() ``{
 	   `abort	: `abort,
 	    `next	: "gpgkey",
 	    `accept	: "gpgkey",
-	    `failed	: "summary"
+	    `failed	: "summary",
+	    `cancel	: "isolinuxcheck",
 	],
 	"gpgkey"	: $[
 	   `abort	: `abort,
