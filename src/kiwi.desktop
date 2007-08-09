@@ -18,6 +18,6 @@ X-SuSE-YaST-SortKey=
 Icon=yast-kiwi
 Exec=/sbin/yast2 kiwi
 
-Name=Live Image Creator
-GenericName=Create the Live, USB or XEN image
+Name=Image Creator
+GenericName=Create the Live CD, USB or XEN image
 X-KDE-SubstituteUID=true
