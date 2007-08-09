@@ -705,7 +705,6 @@ Save the image to the stick now?")))
     map<string,string> content = ProductCreator::ReadContentFile(src_id);
 
     KiwiConfig	= ProductCreator::Config;
-y2internal ("sources: %1", KiwiConfig["sources"]:nil);
     // busy popup
     Popup::ShowFeedback (_("Reading current live image configuration..."), _("Please wait..."));
 
@@ -754,9 +753,17 @@ y2internal ("sources: %1", KiwiConfig["sources"]:nil);
     if (!KiwiConfig["_imported"]:false)
     {
 	// for new configuration, do not read all from the template
-y2warning ("------------------------------ new configuration ---------------");
+	y2milestone ("product-creator based configuration...");
 	foreach (string key, ["addons", "packages", "sources"], {
 	    KiwiConfig[key]	= ProductCreator::Config[key]:[];
+	});
+    }
+    else
+    {
+	y2milestone ("imported configuration...");
+	// "sources" are already there...
+	foreach (string key, ["addons", "packages"], {
+	    ProductCreator::Config[key]	= KiwiConfig[key]:[];
 	});
     }
 
@@ -1388,19 +1395,21 @@ directory.</p>
     string name			= Config["name"]:"";
     string out_dir		= Config["iso-directory"]:"";
     map <integer,string> repositories	= $[];
+    // originally enabled list of sources
+    list<map> enabled_sources	= [];
 
-    // on start, disable all sources (-> move to client?)
+    // on start, show the default YaST sources
     if (Config == $[])
     {
 	Pkg::SourceRestore ();
 	Pkg::SourceLoad();
-	list<map> all_sources = Pkg::SourceEditGet();
-	all_sources = maplist (map source, all_sources, {
-	    source["enabled"]   = false;
-	    return source;
+	Config["sources"]	= maplist (map source, Pkg::SourceEditGet (), {
+	    integer srcid       = source["SrcId"]:-1;
+	    map data = Pkg::SourceGeneralData (srcid);
+	    string url	= data["url"]:"";
+	    repositories[srcid]	= url;
+	    return url;
 	});
-	Pkg::SourceEditSet ((list<map<string, any> >) all_sources);
-	Pkg::SourceLoad();
     }
     else if (Config["sources"]:[] != [])
     {
@@ -1425,15 +1434,6 @@ directory.</p>
 	// 1. delete previous sources (were in repositories list)
 	foreach (map source, Pkg::SourceEditGet (), {
 	    integer srcid       = source["SrcId"]:-1;
-	    /*
-	    map data = Pkg::SourceGeneralData (srcid);
-	    string url	= data["url"]:"";
-	    string stripped	= url;
-	    if (substring (url, 0, 6) == "dir://")
-		stripped	= substring (url, 6);
-	    if (contains(repositories, url) || contains(repositories, stripped))
-		Pkg::SourceDelete (srcid);
-	    */
 	    if (haskey (repositories, srcid))
 		Pkg::SourceDelete (srcid);
 	});
@@ -1465,6 +1465,12 @@ directory.</p>
 	    maplist (integer id, string repo, repositories, ``(
 		`item (`id (id), repo)))
 	);
+	foreach (string type, map data, Config["type"]:$[], {
+	    kiwi_task	= type;
+	    if (data["primary"]:"" == "true")
+		break;
+	});
+	UI::ChangeWidget (`id (`type), `Value, kiwi_task);
     }
 
     void update_repo_table () {
@@ -1484,17 +1490,17 @@ directory.</p>
 	`Frame (_("Image Type"),
 	  `RadioButtonGroup (`id (`type), `HBox (`HSpacing (), `VBox (
 	    `VSpacing (0.2),
-	    `Left (`RadioButton (`id (`iso), `opt (`notify),
+	    `Left (`RadioButton (`id ("iso"), `opt (`notify),
 		// radio button label
 		_("&Live ISO Image"), kiwi_task == "iso")),
-	    `Left (`RadioButton (`id (`xen), `opt (`notify),
+	    `Left (`RadioButton (`id ("xen"), `opt (`notify),
 		// radio button label
 		_("&Xen Image"), kiwi_task == "xen")),
-	    `Left (`RadioButton (`id (`usb), `opt (`notify),
+	    `Left (`RadioButton (`id ("usb"), `opt (`notify),
 		// radio button label
 		_("&USB Stick Image"), kiwi_task == "usb")),
 	    // radio button label
-	    `Left (`RadioButton (`id (`vmx), `opt (`notify),
+	    `Left (`RadioButton (`id ("vmx"), `opt (`notify),
 		_("&Virtual Disk Image"), kiwi_task == "vmx")),
 	    `VSpacing (0.2)
 	  )))
@@ -1591,7 +1597,6 @@ directory.</p>
 	{
 	    integer selected	= (integer)
 		UI::QueryWidget (`id (`repositories), `CurrentItem);
-y2internal ("selected: %1", selected);
             map generalData	= Pkg::SourceGeneralData (selected);
             string url		= generalData["url"]:"";
 	    string url_selected	= url;
@@ -1605,7 +1610,8 @@ y2internal ("selected: %1", selected);
 		url = URL::Build (parsed);
 	    }
 	    url	= SourceDialogs::EditPopup (url);
-	    if (url == "" || url == nil) break;
+	    if (url == "" || url == nil || url == generalData["url"]:"")
+		continue;
 	    // remove current url + add new one
 	    Pkg::SourceDelete (selected);
 	    repositories	= remove (repositories, selected);
@@ -1622,6 +1628,14 @@ y2internal ("selected: %1", selected);
 	    repositories[id]	= url;
 	    update_repo_table ();
 	}
+	else if (ret == `delete)
+	{
+	    integer selected	= (integer)
+		UI::QueryWidget (`id (`repositories), `CurrentItem);
+	    Pkg::SourceDelete (selected);
+	    repositories	= remove (repositories, selected);
+	    update_repo_table ();
+	}
 	else if (ret == `next)
 	{
 	    out_dir	= (string) UI::QueryWidget (`id (`out_dir), `Value);
@@ -1633,7 +1647,7 @@ y2internal ("selected: %1", selected);
 		continue;
 	    }
 	    break;
-// FIXME maybe change the type - can be different to the imported on
+	    kiwi_task	= (string)  UI::QueryWidget (`id (`type), `Value);
 	}
     }
     string boot	= Config["type",kiwi_task,"boot"]:"";
@@ -1648,9 +1662,18 @@ y2internal ("selected: %1", selected);
         Config["iso-directory"]	= out_dir;
 	Config["sources"]	= maplist (
 	    integer id, string repo, repositories, ``(repo));
-	ProductCreator::kiwi_task	= kiwi_task;
+	if (Config["sources"]:[] != [])
+	    ProductCreator::enable_sources	= false;
+	else
+	{
+	    // reenable original sources
+	    Pkg::SourceRestore ();
+	    Pkg::SourceLoad();
+	}
+	if (Config["name"]:"" == "")
+	    Config["name"]	= UI::QueryWidget (`id (`config), `Value);
 	ProductCreator::Config		= Config;
-	ProductCreator::enable_sources	= false;
+	ProductCreator::kiwi_task	= kiwi_task;
     }
     y2milestone("Returning %1", ret);
     return (symbol) ret;

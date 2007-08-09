@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu Aug  9 14:42:49 CEST 2007 - jsuchome@suse.cz
+
+- kiwi UI: enable creating config from scratch, with default
+  YaST sources
+- 2.15.3 
+
+-------------------------------------------------------------------
 Wed Aug  8 15:36:56 CEST 2007 - jsuchome@suse.cz
 
 - yet another fix for "Back" button behavior (#289524)
