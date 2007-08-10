@@ -1398,6 +1398,21 @@ directory.</p>
     // originally enabled list of sources
     list<map> enabled_sources	= [];
 
+    // help text for kiwi UI preparation
+    string help	= _("<p>Enter the name of your image configuration or <b>Import</b> the directory with the existing one.</p>") +
+
+    // help text for kiwi UI preparation, cont.
+    _("<p>Choose the <b>Image Type</b> which should be created.</p>") +
+
+    // help text for kiwi UI preparation, cont.
+    _("<p>Select <b>Output Directory</b> for the created image.</p>") +
+
+    // help text for kiwi UI preparation, cont.
+    _("<p>Modify the list of <b>Package Repositories</b> that will be used for creating the image. If the list is empty, current system repositories will be used.</p>") +
+
+    // help text for kiwi UI preparation, cont.
+    _("<p>Use <b>Next</b> to continue with the configuration.</p>");
+
     // on start, show the default YaST sources
     if (Config == $[])
     {
@@ -1526,7 +1541,7 @@ directory.</p>
 	)
     );
     // dialog caption
-    Wizard::SetContentsButtons (_("Image preparation"), contents, "",
+    Wizard::SetContentsButtons (_("Image preparation"), contents, help,
 	Label::BackButton(), Label::NextButton());
 
     if (Config == $[] && kiwi_configuration != "")

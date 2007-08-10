@@ -10,11 +10,32 @@
 {
     import "CommandLine";
     import "Progress";
-
+    import "ProductCreator";
     textdomain "product-creator";
+
+
+    void ProcessConfigFileOption(map params)
+    {
+	if (haskey(params, "configfile"))
+	{
+	    string new_config = params["configfile"]:"";
+
+	    if (new_config != nil && new_config != "")
+	    {
+		y2milestone("Using config file: %1", new_config);
+
+		// TODO FIXME: set the config file path in "initialize" handler,
+		// don't read the default config file if the "configfile" option is used
+		ProductCreator::ConfigFile = new_config;
+		ProductCreator::Read();
+	    }
+	}
+    }
 
     boolean ListHandler(map params)
     {
+	ProcessConfigFileOption(params);
+
 	foreach(string name, map<string, any> conf, ProductCreator::Configs,
 	    {
 		CommandLine::Print(name);
@@ -27,6 +48,8 @@
     boolean CreateIsoHandler(map params)
     {
 	y2milestone("CreateIsoHandler parameters: %1", params);
+
+	ProcessConfigFileOption(params);
 
 	string name = params["name"]:"";
 
@@ -41,12 +64,15 @@
 		return false;
 	    }
 
-	    string file = params["passphrase"]:"";
+	    string file = params["passphrase_file"]:"";
 	    if (file != nil && file != "")
 	    {
 		y2milestone("Reading passphrase from file %1...", file);
 		ProductCreator::gpg_passphrase = (string)SCR::Read(.target.string, file);
 	    }
+
+	    if (haskey (params, "passphrase"))
+		ProductCreator::gpg_passphrase = params["passphrase"]:"";
 
 	    // disable the progress
 	    boolean progress = Progress::set(false);
