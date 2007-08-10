@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Fri Aug 10 13:30:54 CEST 2007 - jsuchome@suse.cz
+
+- helptext for kiwi UI
+- CLI option for gpg passphrase (patch by daniel.rahn and lslezak,
+  #287477)
+- 2.15.4 
+
+-------------------------------------------------------------------
 Thu Aug  9 14:42:49 CEST 2007 - jsuchome@suse.cz
 
 - kiwi UI: enable creating config from scratch, with default
