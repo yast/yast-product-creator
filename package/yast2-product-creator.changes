@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Aug 10 14:48:44 CEST 2007 - jsuchome@suse.cz
+
+- CLI option for gpg passphrase (daniel.rahn and lslezak, #287477)
+- 2.13.9
+
+-------------------------------------------------------------------
 Wed Aug  8 15:19:45 CEST 2007 - jsuchome@suse.cz
 
 - yet another fix for "Back" button behavior (#289524)
