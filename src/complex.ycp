@@ -136,7 +136,7 @@
                 break;
             }
             /* edit */
-            else if(ret == `edit_button) {
+            else if(ret == `edit_button || ret == `table) {
                 ProductCreator::LoadConfig(current);
                 ret = `edit;
                 break;
