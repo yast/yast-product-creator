@@ -450,7 +450,7 @@
         y2debug("sources: %1", sources);
 
         term table =
-            `Table( `id( `table ), `opt( `keepSorting ),
+            `Table( `id( `table ), `opt( `keepSorting, `notify ),
                     `header(_("Selected"),  _("Status"), _("Name"), _("URL") ),
                     sources
                   );
@@ -493,6 +493,11 @@
 
         while(true) {
             ret = UI::UserInput();
+	    if (ret == `table)
+	    {
+                integer ID = (integer)UI::QueryWidget(`id(`table),`CurrentItem);
+                ret = contains (selected_items, ID) ? `remove : `select;
+	    }
             /* abort? */
             if(ret == `abort || ret == `cancel) {
                 if(ProductCreator::ReallyAbort()) break;
