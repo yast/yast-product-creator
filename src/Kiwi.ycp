@@ -27,6 +27,8 @@
 
   global string images_dir	= "/usr/share/kiwi/image";
 
+  list<map> all_sources		= [];
+
   // where the kiwi configuration files are stored
   string config_dir	= "";
 
@@ -57,8 +59,39 @@
 
     if (substring (source, 0, 6) == "dir://")
 	return substring (source, 6);
-    //FIXME plaindir -> rpm-dir
     return source;
+  }
+
+  /**
+   * generate the 'repository' tag
+   */
+  map get_source_value (string source) {
+
+    string type		= "yast2";
+    string source_path	= adapt_source_path (source);
+
+    foreach (map sourcemap, all_sources, {
+	integer srcid	= sourcemap["SrcId"]:-1;
+        map data	= Pkg::SourceGeneralData (srcid);
+	string url	= data["url"]:"";
+	if (url == source || url == source_path)
+	{
+	    if (data["type"]:"" == "Plaindir")
+		type	= "rpm-dir";
+	    if (data["type"]:"" == "YUM")
+		type	= "rpm-md";
+	}
+    });
+    return $[
+	"__key"	: "repository",
+	"type"	: type,
+	"__children": [
+	    $[
+		"__key"	: "source",
+		"path"	: source_path
+	    ]
+	]
+    ];
   }
 
   /**
@@ -181,6 +214,8 @@
    * Write currect configuration to new config.xml
    */
   global boolean WriteConfigXML (map KiwiConfig, string kiwi_task) {
+
+    all_sources		= Pkg::SourceEditGet();
 
     tmp_dir		= Directory::tmpdir;
 
@@ -317,18 +352,9 @@
 	]);
     }
     write_list[0,"__children"] = union (write_list[0,"__children"]:[],
-	maplist (string source, (list<string>) KiwiConfig["sources"]:[], {
-	    return $[
-		"__key"	: "repository",
-		"type"	: "yast2", //FIXME rpm-dir?
-		"__children": [
-		    $[
-			"__key"	: "source",
-			"path"	: adapt_source_path (source),
-		    ]
-		]
-	    ];
-	})
+	maplist (string source, (list<string>) KiwiConfig["sources"]:[],
+	    ``(get_source_value (source))
+	)
     );
     write_list[0,"__children"] = union (write_list[0,"__children"]:[], [
 	$[
@@ -411,18 +437,23 @@
 
     // construct the dialog
     UI::OpenDialog(`opt(`decorated), `HBox(`HSpacing(1.5),
-    `VSpacing(25),
     `VBox(
         `HSpacing(85),
-        `VSpacing(0.5),
-	// label
-        `ReplacePoint (`id (`rpl), `Left (`Label(_("Preparing for Image Creation")))),
-        `VSpacing(0.5),
-        `LogView (`id (`log), "", 8, 0),
-        `VSpacing(0.5),
-	`ReplacePoint (`id (`rp), `PushButton (`id(`cancel),`opt(`key_F9), Label::CancelButton ())),
-        `VSpacing(0.5)),
-    `HSpacing(1.5)
+	`VWeight (2, `VBox (
+	    `VSpacing(0.5),
+	    // label
+	    `ReplacePoint (`id (`rpl), `Left (`Label(_("Preparing for Image Creation")))),
+	    `VSpacing(0.5),
+	    `LogView (`id (`log), "", 8, 0)
+	)),
+	`VWeight (1, `VBox (
+	    `VSpacing(0.5),
+	    `LogView (`id (`errlog), "", 8, 0),
+	    `VSpacing(0.5),
+	    `ReplacePoint (`id (`rp), `PushButton (`id(`cancel),`opt(`key_F9), Label::CancelButton ())),
+	    `VSpacing(0.5)
+	))
+    ), `HSpacing(1.5)
     ));
 
     symbol ret		= nil;
@@ -440,7 +471,11 @@
 		UI::ChangeWidget (`id(`log), `LastLine, line + "\n");
 	    });
 
-	    list script_err  = (list) SCR::Read(.background.newerr);
+	    list<string> err = (list<string>) SCR::Read(.background.newerr);
+	    foreach (string line, err, {
+		line	= String::Replace (line, "\r", "\n");
+		UI::ChangeWidget (`id(`errlog), `LastLine, line + "\n");
+	    });
         }
 	else if (!(boolean)SCR::Read(.background.isrunning))
 	{
