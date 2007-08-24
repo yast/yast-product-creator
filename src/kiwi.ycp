@@ -11,6 +11,7 @@
 
   import "CWM";
   import "CWMTab";
+  import "Directory";
   import "ProductCreator";
   import "FileUtils";
   import "Label";
@@ -724,6 +725,12 @@ Save the image to the stick now?")))
 
     if (!FileUtils::Exists (kiwi_configuration))
     {
+	// use local template if default dir does not exist (bug #289552)
+	if (!FileUtils::Exists (default_dir))
+	{
+	    default_dir = Directory::datadir+"/product-creator/kiwi_templates/";
+	    default_dir	= default_dir + (kiwi_task == "xen" ? "xen" : "iso");
+	}
 	y2warning ("directory %1 is not available, using %2", kiwi_configuration, default_dir);
 	kiwi_configuration	= default_dir;
     }
