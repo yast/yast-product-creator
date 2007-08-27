@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Mon Aug 27 11:18:37 CEST 2007 - jsuchome@suse.cz
+
+- do not require packages with image descriptions, include required
+  files (originally created by ms@suse.de for kiwi-desc-buildservice
+  and kiwi-desc-livesystem) as templates (#289552)
+- show kiwi error output in separate window 
+- enable Browse button for output directory
+- 2.15.6
+
+-------------------------------------------------------------------
 Tue Aug 14 13:17:24 CEST 2007 - jsuchome@suse.cz
 
 - enable double-clicks in tables
