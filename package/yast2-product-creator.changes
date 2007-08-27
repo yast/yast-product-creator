@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Fri Aug 24 14:57:50 CEST 2007 - jsuchome@suse.cz
+
+- do not require packages with image descriptions, include required
+  files (originally created by ms@suse.de for kiwi-desc-buildservice
+  and kiwi-desc-livesystem) as templates (#289552)
+- show kiwi error output in separate window
+- mark plaindir installation types as rpm-dir in config.xml
+- 2.13.10
+
+-------------------------------------------------------------------
 Fri Aug 10 14:48:44 CEST 2007 - jsuchome@suse.cz
 
 - CLI option for gpg passphrase (daniel.rahn and lslezak, #287477)
