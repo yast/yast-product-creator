@@ -465,18 +465,23 @@
 
     // construct the dialog
     UI::OpenDialog(`opt(`decorated), `HBox(`HSpacing(1.5),
-    `VSpacing(25),
     `VBox(
         `HSpacing(85),
-        `VSpacing(0.5),
-	// label
-        `ReplacePoint (`id (`rpl), `Left (`Label(_("Preparing for Image Creation")))),
-        `VSpacing(0.5),
-        `LogView (`id (`log), "", 8, 0),
-        `VSpacing(0.5),
-	`ReplacePoint (`id (`rp), `PushButton (`id(`cancel),`opt(`key_F9), Label::CancelButton ())),
-        `VSpacing(0.5)),
-    `HSpacing(1.5)
+	`VWeight (2, `VBox (
+	    `VSpacing(0.5),
+	    // label
+	    `ReplacePoint (`id (`rpl), `Left (`Label(_("Preparing for Image Creation")))),
+	    `VSpacing(0.5),
+	    `LogView (`id (`log), "", 8, 0)
+	)),
+	`VWeight (1, `VBox (
+	    `VSpacing(0.5),
+	    `LogView (`id (`errlog), "", 8, 0),
+	    `VSpacing(0.5),
+	    `ReplacePoint (`id (`rp), `PushButton (`id(`cancel),`opt(`key_F9), Label::CancelButton ())),
+	    `VSpacing(0.5)
+	))
+    ), `HSpacing(1.5)
     ));
 
     symbol ret		= nil;
@@ -494,7 +499,11 @@
 		UI::ChangeWidget (`id(`log), `LastLine, line + "\n");
 	    });
 
-	    list script_err  = (list) SCR::Read(.background.newerr);
+	    list<string> err = (list<string>) SCR::Read(.background.newerr);
+	    foreach (string line, err, {
+		line	= String::Replace (line, "\r", "\n");
+		UI::ChangeWidget (`id(`errlog), `LastLine, line + "\n");
+	    });
         }
 	else if (!(boolean)SCR::Read(.background.isrunning))
 	{
