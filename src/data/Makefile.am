@@ -1,6 +1,7 @@
 #
 # Makefile.am for devtools/devtools/skeletons/config/agents
 #
+SUBDIRS = kiwi_templates
 
 ydatadir = @ydatadir@/product-creator
 
