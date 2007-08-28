@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Aug 28 10:58:22 CEST 2007 - jsuchome@suse.cz
+
+- include the package from "post-packages" section of autoyast
+  profile (#291776)
+- 2.13.11 
+
+-------------------------------------------------------------------
 Fri Aug 24 14:57:50 CEST 2007 - jsuchome@suse.cz
 
 - do not require packages with image descriptions, include required

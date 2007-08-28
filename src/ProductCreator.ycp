@@ -2282,6 +2282,18 @@ global define boolean readControlFile(string filename) ``{
 
     PackageAI::toinstall = software["packages"]:[];
     Config["packages"] = AutoinstSoftware::autoinstPackages();
+
+    // add "post-packages"
+    list post_packages = software["post-packages"]:[];
+    if (size(post_packages) > 0)
+    {
+	y2milestone("Adding \"post-packages\": %1", post_packages);
+	Config["packages"] = union(Config["packages"]:[], post_packages);
+    }
+
+    // TODO: remove also "remove-packages" from the list?
+    // Is it safe to remove them due to possible dependencies??
+
     y2milestone("Config: %1", Config );
     profile_parsed = true;
     return true;
