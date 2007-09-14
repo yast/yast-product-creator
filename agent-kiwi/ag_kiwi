@@ -59,8 +59,8 @@ while (<STDIN>)
 	    }
 	}
 	my $prefs	= $optionsNodeList -> get_node(1);
-	foreach my $tag ("packagemanager", "version", "rpm-check-signatures", "rpm-force",
-	    "size") {
+	foreach my $tag ("packagemanager", "version", "rpm-check-signatures",
+	    "rpm-force", "size", "defaultdestination") {
 	    my $element	= $prefs -> getElementsByTagName ($tag);
 	    $retmap{$tag} = $element-> get_node(1)->textContent () if ($element);
 	}
@@ -97,6 +97,9 @@ while (<STDIN>)
 	my $image	= $systemTree -> getElementsByTagName ("image")->get_node (1);
 	my $image_name	= $image -> getAttribute ("name");
 	$retmap{"name"}	= $image_name if $image_name;
+
+	my $scheme_ver	= $image -> getAttribute ("schemeversion");
+	$retmap{"schemeversion"}	= $scheme_ver if $scheme_ver;
 
 	$retmap{"users"}	= {};
 	foreach my $usernode ($usrdataNodeList -> get_nodelist()) {
