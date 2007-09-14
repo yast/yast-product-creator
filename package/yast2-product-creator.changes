@@ -1,4 +1,20 @@
 -------------------------------------------------------------------
+Sun Sep  2 21:20:26 CEST 2007 - jsuchome@suse.cz
+
+- write schemeversion to config.xml
+- save new kiwi image configurations to vardir/product-creator
+- do not import already imported and modified configuration
+- enable modifications of configurations without creating images
+- require root for running yast2 kiwi (#309456)
+- 2.15.7
+
+-------------------------------------------------------------------
+Tue Aug 28 11:00:31 CEST 2007 - jsuchome@suse.cz
+
+- include the package from "post-packages" section of autoyast
+  profile (#291776) 
+
+-------------------------------------------------------------------
 Mon Aug 27 11:18:37 CEST 2007 - jsuchome@suse.cz
 
 - do not require packages with image descriptions, include required

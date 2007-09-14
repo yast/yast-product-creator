@@ -23,10 +23,14 @@
   import "String";
 
   string encryption_method	= nil;
+
   global string tmp_dir	= "";
 
-  global string images_dir	= "/usr/share/kiwi/image";
+  global string images_dir      = Directory::vardir + "/product-creator/images";
 
+  global string default_packagemanager	= "smart";
+
+  // all repositories of current configuration
   list<map> all_sources		= [];
 
   // where the kiwi configuration files are stored
@@ -98,7 +102,7 @@
    * generate the name of directory with kiwi configuration
    */
   string get_config_dir (string name, string task) {
-    return "/kw" + task + "-YaST-" + deletechars (name, " \t");
+    return deletechars (name, " \t");
   }
 
   /**
@@ -106,11 +110,14 @@
    */
   map get_type_value (map config, string task) {
 
+    string boot_image   = sformat ("%1boot/%2", task, config[task + "boot"]:"suse-10.2");
+    if (config["type",task,"boot"]:"" != "")
+	boot_image      = config["type",task,"boot"]:"";
     map ret	= $[
 	"__key"		: "type",
 	"__value"	: task,
 	"primary"	: "true",
-	"boot"		: sformat ("%1boot/%2", task, config[task + "boot"]:"suse-10.2"),
+	"boot"		: boot_image,
 //FIXME				(KiwiConfig["compressed"]:false ? ",compressed" : ""),
     ];
     if (task != "iso")
@@ -223,13 +230,16 @@
 	ret["xen_memory"]	= tointeger (packages["xen","memory"]:"512");
     foreach (string key, [ "author", "contact", "specification",
 	"packagemanager", "version", "rpm-check-signatures", "rpm-force",
-	"sizeunit", "type", "name", "repository" ],
+	"sizeunit", "type", "name", "repository",  "defaultdestination",
+	"schemeversion"],
     {
 	if (config[key]:nil != nil)
 	    ret[key]	= config[key]:nil;
     });
     if (haskey (config, "size"))
 	ret["size"]	= tointeger (config["size"]:"2700");
+    if (haskey (config, "defaultdestination"))
+	ret["iso-directory"]    = config["defaultdestination"]:"";
     foreach (string user, map usermap, (map<string,map>) config["users"]:$[], {
 	if (!haskey (ret, "users"))
 	    ret["users"]     = $[];
@@ -319,6 +329,7 @@
     list write_list	= [ $[
       "__key"	: "image",
       "name"	: KiwiConfig["name"]:"",
+      "schemeversion"   : KiwiConfig["schemeversion"]:"1.4",
       "__children"	: [
 	$[
 	    "__key"	: "description",
@@ -353,8 +364,7 @@
 		],
 		$[
 		    "__key"	: "packagemanager",
-//		    "__value"   : "zypper", FIXME still not working for SLES10SP1...
-		    "__value"   : "smart",
+		    "__value"   : KiwiConfig["packagemanager"]:default_packagemanager
 		],
 		$[
 		    "__key"	: "rpm-check-signatures",
@@ -363,6 +373,10 @@
 		$[
 		    "__key"	: "rpm-force",
 		    "__value"	: KiwiConfig["rpm-force"]:"True",
+		],
+		$[
+		    "__key"	: "defaultdestination",
+		    "__value"	: KiwiConfig["iso-directory"]:"",
 		],
 	    ],
 	],
@@ -411,7 +425,8 @@
     }
 
     string write_string	= Map2XML (write_list[0]:$[], 0);
-    config_dir	= tmp_dir + get_config_dir (KiwiConfig["name"]:"", kiwi_task);
+    config_dir	= tmp_dir + "/" +
+	get_config_dir (KiwiConfig["name"]:"", kiwi_task);
     SCR::Execute (.target.mkdir, config_dir);
     SCR::Write (.target.string, config_dir + "/config.xml", write_string);
     foreach (string dir, ["root_dir", "config_dir"], {
@@ -563,6 +578,8 @@
   global string SaveConfiguration (map KiwiConfig, string kiwi_task) {
     if (config_dir == "" || !FileUtils::Exists (config_dir))
 	return nil;
+    if (!FileUtils::Exists (images_dir))
+	SCR::Execute (.target.mkdir, images_dir);
     SCR::Execute (.target.bash, sformat ("cp -ar %1 %2/", config_dir, images_dir));
     return (images_dir + get_config_dir (KiwiConfig["name"]:"", kiwi_task));
   }

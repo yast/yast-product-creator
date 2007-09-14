@@ -15,6 +15,7 @@ textdomain "product-creator";
 include "product-creator/kiwi_dialogs.ycp";
 
 import "CommandLine";
+import "Confirm";
 import "PackageCallbacksInit";
 import "Sequencer";
 
@@ -41,8 +42,15 @@ define boolean KiwiSequence() {
     ];
 
     Wizard::CreateDialog();
-    Wizard::SetDesktopIcon("cd-creator");
-    if (!Package::Install ("kiwi"))
+    Wizard::SetDesktopIcon("kiwi");
+
+    if (!Confirm::MustBeRoot ())
+    {
+	UI::CloseDialog ();
+	return false;
+    }
+
+    if (!Package::InstallAll (["kiwi", "yast2-instserver"]))
     {
         Popup::Error(_("Installation of required packages
 failed."));

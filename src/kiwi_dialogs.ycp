@@ -30,9 +30,6 @@
   // what are we configuring now ("iso"/"xen"/...)
   string kiwi_task	= "";
 
-  // directory with kiwi images
-  string images_dir	= "";
-
   // return the id of actual widget for boot image
   string boot_image_widget () {
     return kiwi_task + "boot";
@@ -42,11 +39,13 @@
   list<term> GetAvailableImages (string subdir) {
 
     list<term> ret	= [];
-    map out = (map) SCR::Execute (.target.bash_output, sformat ("ls %1/%2", images_dir, subdir));
+    string dir          = "/usr/share/kiwi/image/";
+    map out = (map) SCR::Execute (.target.bash_output,
+	sformat ("ls %1/%2", dir, subdir));
     if (out["exit"]:0 != 0)
 	return ret;
     foreach (string file, splitstring (out["stdout"]:"", "\n"), {
-	if (file != "" && FileUtils::IsDirectory (sformat ("%1/%2/%3", images_dir, subdir, file)))
+	if (file != "" && FileUtils::IsDirectory (sformat ("%1/%2/%3", dir, subdir, file)))
 	{
 	    ret	= add (ret, `item (`id(file), file, file == KiwiConfig[subdir]:""));
 	}
@@ -624,7 +623,6 @@ Try again."));
   define boolean CreateImage (string key, map event) {
     if (event["ID"]:nil != `next)
 	return true;
-    boolean ret	= false;
 
     map question	= $[
 	// popup question
@@ -657,9 +655,10 @@ directory."),
 directory."),
     ];
 
+    Kiwi::WriteConfigXML (KiwiConfig, kiwi_task);
     if (Popup::YesNo (question[kiwi_task]:""))
     {
-	if (Kiwi::WriteConfigXML (KiwiConfig, kiwi_task))
+	if (true)
 	{
 	    string out_dir	= KiwiConfig["iso-directory"]:"";
 	    if (FileUtils::CheckAndCreatePath (out_dir) && Kiwi::PrepareAndCreate (out_dir))
@@ -677,19 +676,15 @@ Save the image to the stick now?")))
 		{
 		    Popup::Message (sformat (success[kiwi_task]:"", out_dir));
 		}
-		ret	= true;
 	    }
 	}
     }
-    if (ret)
+    string dir	= Kiwi::SaveConfiguration (KiwiConfig, kiwi_task);
+    if (dir != nil && dir != "")
     {
-	string dir	= Kiwi::SaveConfiguration (KiwiConfig, kiwi_task);
-	if (dir != nil && dir != "")
-	{
-	    ProductCreator::Config["kiwi_configuration_" + kiwi_task] = dir;
-	}
+	ProductCreator::Config["kiwi_configuration_" + kiwi_task] = dir;
     }
-    return ret;
+    return true;
   }
 
   /**
@@ -699,7 +694,7 @@ Save the image to the stick now?")))
   define void InitImageConfiguration () {
 
     kiwi_task	= ProductCreator::kiwi_task;
-    images_dir	= Kiwi::images_dir;
+    string kiwi_dir     = "/usr/share/kiwi/image/";
 
     // read the information from the base product
     integer src_id	= ProductCreator::checkProductDependency ();
@@ -710,10 +705,10 @@ Save the image to the stick now?")))
     Popup::ShowFeedback (_("Reading current live image configuration..."), _("Please wait..."));
 
     map default_dirmap	= $[
-	"iso"	: sformat ("%1/kwliveDVD-suse-10.3", images_dir),
-	"xen"	: sformat ("%1/buildhost-suse-SLES10", images_dir),
-	"usb"	: sformat ("%1/kwliveDVD-suse-10.3", images_dir),
-	"vmx"	: sformat ("%1/kwliveDVD-suse-10.3", images_dir),
+	"iso"	: sformat ("%1/kwliveDVD-suse-10.3", kiwi_dir),
+	"xen"	: sformat ("%1/buildhost-suse-SLES10", kiwi_dir),
+	"usb"	: sformat ("%1/kwliveDVD-suse-10.3", kiwi_dir),
+	"vmx"	: sformat ("%1/kwliveDVD-suse-10.3", kiwi_dir),
     ];
 
     // path to current config directory
@@ -755,10 +750,11 @@ Save the image to the stick now?")))
 		KiwiConfig[file]	= contents;
 	}
     });
-    KiwiConfig = (map<string,any>)union(KiwiConfig, Kiwi::ReadConfigXML (kiwi_configuration));
 
+    map<string,any> read_config = Kiwi::ReadConfigXML (kiwi_configuration);
     if (!KiwiConfig["_imported"]:false)
     {
+	KiwiConfig = (map<string,any>) union (KiwiConfig, read_config);
 	// for new configuration, do not read all from the template
 	y2milestone ("product-creator based configuration...");
 	foreach (string key, ["addons", "packages", "sources"], {
@@ -768,6 +764,13 @@ Save the image to the stick now?")))
     else
     {
 	y2milestone ("imported configuration...");
+	// ignore options already set earlier...
+	foreach (string key, any val, read_config, {
+	    if (!contains (["name", "iso-directory", "sources"], key))
+	    {
+		KiwiConfig[key] = val;
+	    }
+	});
 	// "sources" are already there...
 	foreach (string key, ["addons", "packages"], {
 	    ProductCreator::Config[key]	= KiwiConfig[key]:[];
@@ -953,71 +956,6 @@ Save the image to the stick now?")))
 	"validate_type"	: `function,
 	"validate_function"	: CreateImage,
 	"no_help"	: true,
-    ],
-    // widgets for config.xml tab
-    "isoboot" : $[
-	"widget"	: `combobox,
-	"opt"		: [ `hstretch, `notify ],
-	// combo box label
-	"label"		: _("C&D Boot Image"),
-	// help text for "C&D Boot Image", %1/%2 is path (on extra line)
-	"help"		: sformat (_("<p>Choose one <b>CD Boot Image</b> from the<br>
-<tt>%1/%2</tt><br>
-directory.</p>
-"),
-	    Kiwi::images_dir, boot_image_widget ()),
-	"items"		: [],
-	"init"		: InitBootCombo,
-	"store"		: StoreBootCombo,
-	"handle"	: HandleBootCombo,
-    ],
-    "xenboot" : $[
-	"widget"	: `combobox,
-	"opt"		: [ `hstretch, `notify ],
-	// combo box label
-	"label"		: _("&Xen Boot Image"),
-	// help text for "XEN Boot Image"
-	"help"		: sformat (_("<p>Choose one <b>Xen Boot Image</b> from the<br>
-<tt>%1/%2</tt><br>
-directory.</p>
-"),
-	    Kiwi::images_dir, boot_image_widget ()),
-	"items"		: [],
-	"init"		: InitBootCombo,
-	"store"		: StoreBootCombo,
-	"handle"	: HandleBootCombo,
-    ],
-    "usbboot" : $[
-	"widget"	: `combobox,
-	"opt"		: [ `hstretch, `notify ],
-	// combo box label
-	"label"		: _("&USB Stick Boot Image"),
-	// help text for "XEN Boot Image"
-	"help"		: sformat (_("<p>Choose one <b>USB stick Boot Image</b> from the<br>
-<tt>%1/%2</tt><br>
-directory.</p>
-"),
-	    Kiwi::images_dir, boot_image_widget ()),
-	"items"		: [],
-	"init"		: InitBootCombo,
-	"store"		: StoreBootCombo,
-	"handle"	: HandleBootCombo,
-    ],
-    "vmxboot" : $[
-	"widget"	: `combobox,
-	"opt"		: [ `hstretch, `notify ],
-	// combo box label
-	"label"		: _("&Virtual Disk Boot Image"),
-	// help text for "XEN Boot Image"
-	"help"		: sformat (_("<p>Choose one <b>Virtual Disk Boot Image</b> from the<br>
-<tt>%1/%2</tt><br>
-directory.</p>
-"),
-	    Kiwi::images_dir, boot_image_widget ()),
-	"items"		: [],
-	"init"		: InitBootCombo,
-	"store"		: StoreBootCombo,
-	"handle"	: HandleBootCombo,
     ],
     "configure_boot"	: $[
 	"widget"	: `push_button,
@@ -1383,7 +1321,8 @@ directory.</p>
 	"contents"		: contents,
 	"caption"		: caption[kiwi_task]:"",
 	"back_button"		: Label::BackButton (),
-	"next_button"		: next_button[kiwi_task]:Label::NextButton (),
+//	"next_button"		: next_button[kiwi_task]:Label::NextButton (),
+	"next_button"		: Label::FinishButton (),
     ]);
     y2milestone("Returning %1", ret);
     return ret;
@@ -1678,8 +1617,8 @@ directory.</p>
 		UI::SetFocus (`id (`out_dir));
 		continue;
 	    }
-	    break;
 	    kiwi_task	= (string)  UI::QueryWidget (`id (`type), `Value);
+	    break;
 	}
     }
     string boot	= Config["type",kiwi_task,"boot"]:"";
