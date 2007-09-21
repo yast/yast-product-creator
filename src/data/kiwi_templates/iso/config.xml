@@ -7,7 +7,6 @@
 	<preferences>
 		<version>1</version>
 		<size unit="M">2700</size>
-		<packagemanager>smart</packagemanager>
 		<rpm-check-signatures>False</rpm-check-signatures>
 		<rpm-force>True</rpm-force>
 	</preferences>
@@ -18,9 +17,7 @@
 		<opensusePattern name="base"/>
 		<opensusePattern name="x11"/>
 		<opensusePattern name="apparmor"/>
-		<opensusePattern name="imaging"/>
 		<opensusePattern name="kde"/>
-		<opensusePattern name="kde_imaging"/>
 		<ignore  name="smtp_daemon"/>
 		<ignore  name="pfscalibratio"/>
 		<ignore  name="jaf-demo"/>

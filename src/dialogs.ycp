@@ -25,6 +25,7 @@
     import "GPGWidgets";
     import "CWM";
     import "String";
+    import "Package";
 
     include "product-creator/helps.ycp";
 
@@ -503,6 +504,9 @@
 		map general_info = Pkg::SourceGeneralData(SrcID);
 		boolean found_architecture = false;
 
+		string arch = Arch::architecture ();
+		if (arch == "s390_64") arch = "s390x";
+
 		// architecture check is possible only for YaST sources
 		if (general_info["type"]:"" == "YaST")
 		{
@@ -512,7 +516,7 @@
 
 		    foreach(string key, string value, read_content,
 			{
-			    if (key == "ARCH." + Arch::architecture())
+			    if (key == "ARCH." + arch)
 			    {
 				found_architecture = true;
 				break;
@@ -526,7 +530,7 @@
 		    found_architecture = true;
 		}
 
-		y2milestone("Architecture %1 is supported: %2", Arch::architecture(), found_architecture);
+		y2milestone("Architecture %1 is supported: %2", arch, found_architecture);
 
 		if (true)
 		{
@@ -541,7 +545,7 @@
 		{
 		    Report::Error(sformat(_("The source does not support the architecture of this machine (%1).
 Select another source.
-"), Arch::architecture()));
+"), arch));
 		}
             }
             else if (ret == `remove)
@@ -870,7 +874,10 @@ more <b>add-on</b> selections and packages.
         any ret = nil;
 
 	// set a mount point - there is no use to display DU of the current system
-	Pkg::TargetInitDU([ $[ "name" : "/", "free" : 999*1024*1024 /* 999GB */, "used" : 0, "readonly" : false ] ]);
+	Pkg::TargetInitDU([ $[ "name" : "/",
+	    "free" : ProductCreator::max_size_mb * 1024,
+	    "used" : 0, "readonly" : false ]
+	]);
 
         /* dialog caption */
         string caption = _("Software Selection");

@@ -1,0 +1,17 @@
+/**
+ * File:
+ *   cfg_product-creator.scr
+ * Summary:
+ *   SCR Agent for reading/writing /etc/sysconfig/product-creator
+ *   using the sysconfig-agent
+ *
+ * $Id: cfg_product-creator.scr 13009 2003-12-10 13:59:07Z jsuchome $
+ *
+ * Read/Sets the values defined in <tt>/etc/sysconfig/product-creator</tt>
+ * in an easy manner.
+ */
+.sysconfig.product-creator
+
+`ag_ini(
+  `SysConfigFile("/etc/sysconfig/product-creator")
+)

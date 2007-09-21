@@ -8,7 +8,8 @@ yncludedir = @yncludedir@/product-creator
 YCPCFLAGS = -I ./include
 
 client_DATA =			\
-	product-creator.ycp		
+	product-creator.ycp	\
+	image-creator.ycp
 
 ynclude_DATA =			\
 	helps.ycp		\
@@ -17,11 +18,11 @@ ynclude_DATA =			\
 	complex.ycp		\
 	routines.ycp		\
 	commandline.ycp		\
-	kiwi.ycp
-
+	kiwi_dialogs.ycp	
 
 desktop_DATA =			\
-	product-creator.desktop
+	product-creator.desktop	\
+	image-creator.desktop
 
 module_DATA =			\
 	ProductCreator.ycp	\

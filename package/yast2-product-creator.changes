@@ -1,4 +1,27 @@
 -------------------------------------------------------------------
+Tue Sep 18 09:46:27 CEST 2007 - jsuchome@suse.cz
+
+- support for kiwi images templates (F302371)
+- support project control for images (F302370)
+- use zypper instead of smart
+- write schemeversion to config.xml
+- directories with templates are specified in sysconfig/product-creator
+- enable modifications of configurations without creating images
+- do not import already imported and modified configuration
+- enable support for unlisted boot images (e.g. netboot)
+- show the maximum available space
+- use lazy initialization of installation sources
+- tell zypper to ignore zypp lock (#310581)
+- remove 'prepare' directory before calling kiwi (#325664)
+- use defaultroot value from config.xml for 'prepare' directory (F302371)
+- 2.13.12 
+
+-------------------------------------------------------------------
+Mon Sep 17 15:27:43 CEST 2007 - jsuchome@suse.cz
+
+- support installation sources of s390x (#301362)
+
+-------------------------------------------------------------------
 Tue Aug 28 10:58:22 CEST 2007 - jsuchome@suse.cz
 
 - include the package from "post-packages" section of autoyast
