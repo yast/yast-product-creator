@@ -7,7 +7,6 @@
 	<preferences>
 		<version>1</version>
 		<size unit="M">2700</size>
-		<packagemanager>smart</packagemanager>
 		<rpm-check-signatures>False</rpm-check-signatures>
 		<rpm-force>True</rpm-force>
 	</preferences>

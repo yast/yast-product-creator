@@ -11,14 +11,16 @@
 
 textdomain "product-creator";
 
+import "Kiwi";
 import "Wizard";
 import "Popup";
 import "Package";
+import "PackageCallbacksInit";
 import "Sequencer";
 
 include "product-creator/complex.ycp";
 include "product-creator/dialogs.ycp";
-include "product-creator/kiwi.ycp";
+include "product-creator/kiwi_dialogs.ycp";
 
 
 /**
@@ -135,12 +137,27 @@ symbol InitSources () {
 }
 
 /**
+ * Initialize the list of current repositories (before any other handling):
+ * we need to know their id's so it is possible to delete them when new
+ * kiwi config is imported (and its repos should be added)
+ */
+symbol InitRepositories () {
+
+    Kiwi::current_repositories	= Kiwi::InitCurrentRepositories ();
+    // TODO general Read function...
+    Kiwi::ReadImageTemplates ();
+    return `next;
+}
+
+/**
  */
 define symbol KiwiSequence() ``{
     map aliases = $[
 	"init_sources"	: [ ``( InitSources () ), true ],
 	"kiwi"		: ``( KiwiDialog () ),
 	"summary"	: ``( CommitConfig() ),
+
+	// FIXME check if it was only kiwi config...
 	"write"		: ``( WriteDialog() ),
     ];
 
@@ -148,6 +165,7 @@ define symbol KiwiSequence() ``{
 	"ws_start"	: "init_sources",
 	"init_sources"	: $[
 	    `next	: "kiwi",
+	    `prepare	: "prepare"
 	],
 	"kiwi": $[
 	    `abort	: `abort,
@@ -162,6 +180,40 @@ define symbol KiwiSequence() ``{
 	],
     ];
     return Sequencer::Run( aliases, sequence );
+}
+
+define symbol ImageCreatorSequence() {
+
+    map aliases = $[
+	"init_repositories"	: [ ``( InitRepositories () ), true ],
+	"images_overview"	: ``( ImagesOverviewDialog() ),
+	"kiwi_prepare"		: ``( PrepareDialog() ),
+	"kiwi"			: ``( KiwiDialog () ),
+    ];
+    map sequence = $[
+	"ws_start"	: "init_repositories",
+	"init_repositories" : $[
+	    `next	: "images_overview"
+	],
+	"images_overview" : $[
+	    `abort	: `abort,
+	    `kiwi	: "kiwi_prepare",
+	    `next	: `next,
+	],
+	"kiwi_prepare" : $[
+	    `abort	: `abort,
+	    `next	: "kiwi"
+	],
+	"kiwi": $[
+	    `abort	: `abort,
+	    `next	: "images_overview",
+	],
+    ];
+
+    PackageCallbacksInit::InitPackageCallbacks();
+
+    symbol ret = Sequencer::Run(aliases, sequence);
+    return ret;
 }
 
 /**
