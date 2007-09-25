@@ -169,7 +169,7 @@
                 break;
             }
             else if(ret == `iso_button &&
-		Package::InstallAll (["kiwi", "kiwi-desc-isoboot", "kiwi-desc-livesystem"])) {
+		Package::InstallAll (["kiwi", "kiwi-desc-isoboot"])) {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
 		ProductCreator::kiwi_task	= "iso";
@@ -177,7 +177,7 @@
                 break;
             }
 	    else if (ret == `xen_button &&
-		Package::InstallAll (["kiwi", "kiwi-desc-xenboot", "kiwi-desc-buildservice"])) {
+		Package::InstallAll (["kiwi", "kiwi-desc-xenboot"])) {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
 		ProductCreator::kiwi_task	= "xen";
@@ -185,7 +185,7 @@
 		break;
 	    }
 	    else if (ret == `usb_button &&
-		Package::InstallAll (["kiwi", "kiwi-desc-usbboot", "kiwi-desc-livesystem"])) {
+		Package::InstallAll (["kiwi", "kiwi-desc-usbboot"])) {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
 		ProductCreator::kiwi_task	= "usb";
@@ -193,7 +193,7 @@
 		break;
 	    }
 	    else if (ret == `vmx_button &&
-		Package::InstallAll (["kiwi", "kiwi-desc-vmxboot", "kiwi-desc-livesystem"])) {
+		Package::InstallAll (["kiwi", "kiwi-desc-vmxboot"])) {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
 		ProductCreator::kiwi_task	= "vmx";
