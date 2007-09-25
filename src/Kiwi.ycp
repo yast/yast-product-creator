@@ -465,18 +465,10 @@
 	return false;
     }
 
-    /* rather do not remove, filesystem can be mounted
     if (FileUtils::Exists (tmp_dir + "/myphysical"))
     {
 	SCR::Execute (.target.bash, sformat ("rm -rf %1/myphysical", tmp_dir));
     }
-    */
-
-    string cmd	= sformat ("kiwi --root %1/myphysical --prepare %2 --logfile terminal", tmp_dir, config_dir);
-
-    y2milestone ("calling '%1'", cmd);
-
-    SCR::Execute (.background.run_output_err, cmd);
 
     // construct the dialog
     UI::OpenDialog(`opt(`decorated), `HBox(`HSpacing(1.5),
@@ -499,6 +491,27 @@
     ), `HSpacing(1.5)
     ));
 
+    void update_output () {
+        // read the output line from irw:
+	list<string> out	= (list<string>)SCR::Read(.background.newout);
+	foreach (string line, out, {
+	    line	= String::Replace (line, "\r", "\n");
+	    UI::ChangeWidget (`id(`log), `LastLine, line + "\n");
+	});
+
+	list<string> err = (list<string>) SCR::Read(.background.newerr);
+	foreach (string line, err, {
+	    line	= String::Replace (line, "\r", "\n");
+	    UI::ChangeWidget (`id(`errlog), `LastLine, line + "\n");
+	});
+    }
+
+    string cmd	= sformat ("kiwi --root %1/myphysical --prepare %2 --logfile terminal", tmp_dir, config_dir);
+
+    y2milestone ("calling '%1'", cmd);
+
+    SCR::Execute (.background.run_output_err, cmd);
+
     symbol ret		= nil;
     boolean creating	= false;
     do
@@ -507,21 +520,12 @@
         if ((boolean) SCR::Read(.background.output_open) &&
 	    (integer) SCR::Read(.background.newlines)>0)
         {
-            // read the output line from irw:
-	    list<string> out	= (list<string>)SCR::Read(.background.newout);
-	    foreach (string line, out, {
-		line	= String::Replace (line, "\r", "\n");
-		UI::ChangeWidget (`id(`log), `LastLine, line + "\n");
-	    });
-
-	    list<string> err = (list<string>) SCR::Read(.background.newerr);
-	    foreach (string line, err, {
-		line	= String::Replace (line, "\r", "\n");
-		UI::ChangeWidget (`id(`errlog), `LastLine, line + "\n");
-	    });
+	    update_output ();
         }
 	else if (!(boolean)SCR::Read(.background.isrunning))
 	{
+	    update_output ();
+
 	    integer status	= (integer) SCR::Read (.background.status);
 	    if (status != 0)
 	    {

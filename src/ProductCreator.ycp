@@ -62,6 +62,7 @@ global string skel_root = "";
 
 global boolean profile_parsed = false;
 
+global integer max_size_mb      = 999 * 1024;
 
 /* Configuration Map */
 global map<string, any> Config = $[];

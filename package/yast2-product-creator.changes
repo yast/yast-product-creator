@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Mon Sep 24 08:44:56 CEST 2007 - jsuchome@suse.cz
+
+- do not close module after kiwi failure (#327593)
+- check stderr and stdout after kiwi finish/failure (#327610)
+- count the maximum size in package selector (#327901)
+- kiwi.ycp requires kiwi-desc-*boot
+- simpler kiwi template for iso
+- 2.15.8
+
+-------------------------------------------------------------------
 Sun Sep  2 21:20:26 CEST 2007 - jsuchome@suse.cz
 
 - write schemeversion to config.xml

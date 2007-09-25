@@ -114,6 +114,11 @@
     if (event["ID"]:nil == key)
     {
 	string sw_selection	= KiwiConfig["sw_selection"]:"image";
+
+	integer mbytes  = (integer) UI::QueryWidget (`id ("size"), `Value);
+        if (UI::QueryWidget (`id ("sizeunit"), `Value) == "G")
+	    mbytes      = mbytes * 1024;
+	ProductCreator::max_size_mb     = mbytes;
 	if (sw_selection == "image" && packageSelector () != `cancel)
 	{
 	    KiwiConfig["addons"]	= ProductCreator::Config["addons"]:[];
@@ -623,7 +628,7 @@ Try again."));
   define boolean CreateImage (string key, map event) {
     if (event["ID"]:nil != `next)
 	return true;
-
+    boolean ret	= true;
     map question	= $[
 	// popup question
 	"iso"	: _("Create ISO image now?"),
@@ -677,6 +682,10 @@ Save the image to the stick now?")))
 		    Popup::Message (sformat (success[kiwi_task]:"", out_dir));
 		}
 	    }
+	    else
+	    {
+		ret	= false;
+	    }
 	}
     }
     string dir	= Kiwi::SaveConfiguration (KiwiConfig, kiwi_task);
@@ -684,7 +693,7 @@ Save the image to the stick now?")))
     {
 	ProductCreator::Config["kiwi_configuration_" + kiwi_task] = dir;
     }
-    return true;
+    return ret;
   }
 
   /**

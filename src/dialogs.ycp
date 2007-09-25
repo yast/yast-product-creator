@@ -876,7 +876,10 @@ more <b>add-on</b> selections and packages.
         any ret = nil;
 
 	// set a mount point - there is no use to display DU of the current system
-	Pkg::TargetInitDU([ $[ "name" : "/", "free" : 999*1024*1024 /* 999GB */, "used" : 0, "readonly" : false ] ]);
+	Pkg::TargetInitDU([ $[ "name" : "/",
+	    "free" : ProductCreator::max_size_mb * 1024,
+	    "used" : 0, "readonly" : false ]
+	]);
 
         /* dialog caption */
         string caption = _("Software Selection");
