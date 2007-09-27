@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Sep 27 16:03:04 CEST 2007 - lslezak@suse.cz
+
+- fixed a typo in the description of "passphrase_file" option
+  (#309537)
+
+-------------------------------------------------------------------
 Mon Sep 24 08:44:56 CEST 2007 - jsuchome@suse.cz
 
 - do not close module after kiwi failure (#327593)
