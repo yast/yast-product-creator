@@ -36,7 +36,7 @@ while (<STDIN>)
 	for (my $i=1;$i<= $packageNodeList->size();$i++) {
 	    my $node = $packageNodeList -> get_node($i);
 	    my $type = $node -> getAttribute ("type");
-	    y2milestone ("package list type: $type");
+	    y2debug ("package list type: $type");
 	    $retmap{$key}{$type}	= {};
 	    my $patterntype = $node -> getAttribute ("patternType");
 	    $retmap{$key}{$type}{"patternType"} = $patterntype if $patterntype;
@@ -60,7 +60,8 @@ while (<STDIN>)
 	}
 	my $prefs	= $optionsNodeList -> get_node(1);
 	foreach my $tag ("packagemanager", "version", "rpm-check-signatures",
-	    "rpm-force", "size", "defaultdestination", "defaultroot") {
+	    "rpm-force", "size", "defaultdestination", "defaultroot", "locale")
+	{
 	    my $element	= $prefs -> getElementsByTagName ($tag);
 	    $retmap{$tag} = $element->get_node(1)->textContent () if ($element);
 	}
@@ -96,10 +97,16 @@ while (<STDIN>)
 
 	my $image	= $systemTree -> getElementsByTagName ("image")->get_node (1);
 	my $image_name	= $image -> getAttribute ("name");
-	$retmap{"name"}	= $image_name if $image_name;
+	if ($image_name) {
+	    $retmap{"name"}	= $image_name;
+	    y2milestone ("image name: $image_name");
+	}
 
 	my $scheme_ver	= $image -> getAttribute ("schemeversion");
 	$retmap{"schemeversion"}	= $scheme_ver if $scheme_ver;
+
+	my $inherit	= $image -> getAttribute ("inherit");
+	$retmap{"inherit"}	= $inherit if $inherit;
 
 	$retmap{"users"}	= {};
 	foreach my $usernode ($usrdataNodeList -> get_nodelist()) {
@@ -123,7 +130,7 @@ while (<STDIN>)
 	for (my $i=1;$i<= $driversNodeList->size();$i++) {
 	    my $node = $driversNodeList -> get_node($i);
 	    my $type = $node -> getAttribute ("type");
-	    y2milestone ("driver list type: $type");
+	    y2debug ("driver list type: $type");
 	    $retmap{$key}{$type}	= {};
 	    foreach my $tag ("file") {
 		my @list		= ();

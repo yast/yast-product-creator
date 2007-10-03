@@ -7,7 +7,7 @@
 # Items are separated by spaces.
 #
 #
-IMAGE_TEMPLATES=""
+IMAGE_TEMPLATES="/var/lib/YaST2/product-creator/templates"
 
 ## Path:	System/Yast2/Product-creator
 ## Description:	YaST2 Product Creator
