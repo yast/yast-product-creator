@@ -144,8 +144,7 @@ symbol InitSources () {
 symbol InitRepositories () {
 
     Kiwi::current_repositories	= Kiwi::InitCurrentRepositories ();
-    // TODO general Read function...
-    Kiwi::ReadImageTemplates ();
+    Kiwi::Read ();
     return `next;
 }
 

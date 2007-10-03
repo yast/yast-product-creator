@@ -645,7 +645,7 @@ Try again."));
   define boolean CreateImage (string key, map event) {
     if (event["ID"]:nil != `next)
 	return true;
-
+    boolean ret	= true;
     map question	= $[
 	// popup question
 	"iso"	: _("Create ISO image now?"),
@@ -703,6 +703,10 @@ Save the image to the stick now?")))
 directory."), out_dir));
 		}
 	    }
+	    else
+	    {
+		ret	= false;
+	    }
 	}
     }
     string dir	= Kiwi::SaveConfiguration (KiwiConfig, kiwi_task);
@@ -710,7 +714,7 @@ directory."), out_dir));
     {
 	ProductCreator::Config["kiwi_configuration_" + kiwi_task] = dir;
     }
-    return true;
+    return ret;
   }
 
   /**
@@ -775,6 +779,20 @@ directory."), out_dir));
 		KiwiConfig[file]	= contents;
 	}
     });
+    // take care of the rest in the input directory (#330052)
+    list import_files	= [];
+    map out = (map) SCR::Execute (.target.bash_output,
+	sformat ("ls -A1 -d %1/* 2>/dev/null", kiwi_configuration));
+    foreach (string line, splitstring (out["stdout"]:"", "\n"), {
+	if (line == "") return;
+	string last	= substring (line, findlastof (line, "/") + 1);
+	if (contains (["images.sh", "config.sh", "config.xml", "root","config"],
+	    last))
+	    return;
+	import_files	= add (import_files, line);
+    });
+    KiwiConfig["import_files"]	= import_files;
+
 
     map<string,any> read_config	= Kiwi::ReadConfigXML (kiwi_configuration);
     if (!KiwiConfig["_imported"]:false)
@@ -1438,9 +1456,9 @@ return ret;
     string kiwi_configuration	= Config["kiwi_configuration_" + kiwi_task]:"";
     string name			= Config["name"]:"";
     string out_dir		= Config["iso-directory"]:"";
-//    map <integer,string> repositories	= Kiwi::current_repositories;
     map <integer,map> repositories	= Kiwi::current_repositories;
     boolean new_configuration	= (Config == $[]);
+    boolean append_name		= false;
 
     string help	= (new_configuration ?
 	// help text for kiwi UI preparation
@@ -1448,7 +1466,7 @@ return ret;
 	: "") +
 
     // help text for kiwi UI preparation
-    (new_configuration ? sformat (_("<p>For information about configuration templates, see <tt>%1</tt> file.</p>"), Directory::vardir + "/product-creator/image_templates") : "") +
+    (new_configuration ? sformat (_("<p>Place custom configuration templates under <tt>%1</tt> directory.</p>"), Kiwi::templates_dirs[0]:"") : "") +
 
     // help text for kiwi UI preparation, cont.
     _("<p>Choose the <b>Image Type</b> which should be created.</p>") +
@@ -1480,34 +1498,9 @@ return ret;
     // on start, show the default YaST sources
     if (Config == $[])
     {
-	/* - sources already initialized? FIXME not for kiwi.ycp
-	Pkg::SourceRestore ();
-	Pkg::SourceLoad();
-	Config["sources"]	= maplist (map source, Pkg::SourceEditGet (), {
-	    integer srcid       = source["SrcId"]:-1;
-	    map data = Pkg::SourceGeneralData (srcid);
-	    string url	= data["url"]:"";
-	    repositories[srcid]	= url;
-	    return url;
-	});
-	*/
     }
     else if (Config["sources"]:[] != [] && repositories == $[])
     {
-	/*
-	list sources	= Config["sources"]:[];
-	list<map> all_sources = Pkg::SourceEditGet();
-	foreach (map source, all_sources, {
-	    integer srcid       = source["SrcId"]:-1;
-	    map data = Pkg::SourceGeneralData (srcid);
-	    string url	= data["url"]:"";
-	    string stripped	= url;
-	    if (substring (url, 0, 6) == "dir://")
-		stripped	= substring (url, 6);
-	    if (contains(sources, url) || contains (sources, stripped))
-		repositories[srcid]	= url;
-	});
-	*/
 	integer i	= 0;
 	foreach (string src, Config["sources"]:[], {
 	    repositories[i]	= $[
@@ -1533,7 +1526,7 @@ return ret;
 	    (config == $[] ? Kiwi::ReadConfigXML (kiwi_configuration) : config);
 	// busy popup
 	Popup::ShowFeedback (_("Importing repositories..."), _("Please wait..."));
-	repositories		= Kiwi::ImportImageRepositories (Config);
+	repositories		= Kiwi::ImportImageRepositories (Config, dir);
 	Popup::ClearFeedback ();
 	if (!new_configuration)
 	{
@@ -1545,7 +1538,7 @@ return ret;
 	    Config["version"]	= "1.0.0";
 	}
 	if (Config["iso-directory"]:"" != "")
-	    UI::ChangeWidget (`id (`out_dir), `Value, Config["iso-directory"]:"");
+	    UI::ChangeWidget(`id(`out_dir), `Value, Config["iso-directory"]:"");
 	update_repo_table ();
 	list type_items	= basic_type_items;
 	boolean primary	= false;
@@ -1616,6 +1609,11 @@ return ret;
 	    `VBox (
 		`Label (""),
 		`PushButton (`id (`browse), Label::BrowseButton ())
+	    ),
+	    `VBox (
+		`Label (""),
+		// checkbox label
+		`CheckBox (`id (`append), _("A&ppend Name"), append_name)
 	    )
 	),
 	`VSpacing (0.2),
@@ -1706,12 +1704,6 @@ return ret;
 	    if (url != "")
 	    {
 		boolean present	= false;
-		/*
-		foreach (integer id, string repo, repositories, {
-		    if (repo == url)
-			present	= true;
-		});
-		*/
 		foreach (integer id, map repo, repositories, {
 		    if (repo["url"]:"" == url)
 		    {
@@ -1721,24 +1713,12 @@ return ret;
 		});
 		if (present) break;
 
-//		integer id	= -1;
 		map parsed = URL::Parse(url);
 		if (parsed["scheme"]:"" == "pkg")
 		{
 		    parsed["scheme"] = "dir";
 		    url = URL::Build (parsed);
-//		    id = Pkg::SourceCreateType (url, "", "Plaindir");
 		}
-		/*
-		else
-		    id = Pkg::SourceCreate (url, "");
-
-		if (id != -1)
-		{
-		    repositories[id]	= url;
-		    update_repo_table ();
-		}
-		*/
 		repositories[size (repositories)]	= $[
 		    "url"		: url,
 		    "plaindir"	: parsed["scheme"]:"" == "dir"
@@ -1750,13 +1730,8 @@ return ret;
 	{
 	    integer selected	= (integer)
 		UI::QueryWidget (`id (`repositories), `CurrentItem);
-	    /*
-            map generalData	= Pkg::SourceGeneralData (selected);
-            string url		= generalData["url"]:"";
-	    */
 	    string url		= repositories[selected,"url"]:"";
 	    string selected_url	= url;
-//	    boolean plaindir	= generalData["type"]:"YaST" == "Plaindir";
 	    boolean plaindir    = repositories[selected,"plaindir"]:false;
 	    // change schema if the source type is plaindir
 	    // to show the right popup dialog
@@ -1770,21 +1745,13 @@ return ret;
 	    if (url == "" || url == nil || url == selected_url);
 		continue;
 	    // remove current url + add new one
-//	    Pkg::SourceDelete (selected);
 	    repositories	= remove (repositories, selected);
-//	    integer id	= -1;
 	    map parsed = URL::Parse(url);
 	    if (parsed["scheme"]:"" == "pkg")
 	    {
 		parsed["scheme"] = "dir";
 		url = URL::Build (parsed);
-//		id = Pkg::SourceCreateType (url, "", "Plaindir");
 	    }
-	    /*
-	    else
-		id = Pkg::SourceCreate (url, "");
-	    repositories[id]	= url;
-	    */
 	    repositories[size (repositories)]	= $[
 		"url"		: url,
 		"plaindir"	: parsed["scheme"]:"" == "dir"
@@ -1795,7 +1762,6 @@ return ret;
 	{
 	    integer selected	= (integer)
 		UI::QueryWidget (`id (`repositories), `CurrentItem);
-//	    Pkg::SourceDelete (selected);
 	    repositories	= remove (repositories, selected);
 	    update_repo_table ();
 	}
@@ -1811,7 +1777,14 @@ return ret;
 	}
 	else if (ret == `next)
 	{
-	    string name	= (string) UI::QueryWidget (`id (`config), `Value);
+	    name	= (string) UI::QueryWidget (`id (`config), `Value);
+	    if (name == "")
+	    {
+		// error popup
+		Report::Error(_("Enter the name of the configuration."));
+		UI::SetFocus (`id (`config));
+		continue;
+	    }
 	    if (new_configuration &&
 		FileUtils::Exists (Kiwi::images_dir + "/" + name))
 	    {
@@ -1844,7 +1817,7 @@ Choose a different one."), name));
 	Config["kiwi_configuration_" + kiwi_task]	= kiwi_configuration;
         Config["_imported"]	= true;
         Config["iso-directory"]	= out_dir;
-	Config["name"]	= UI::QueryWidget (`id (`config), `Value);
+	Config["name"]		= name;
 	/*
 	Config["sources"]	= maplist (
 	    integer id, string repo, repositories, ``(repo));

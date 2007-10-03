@@ -1,11 +1,25 @@
 -------------------------------------------------------------------
-Tue Sep 18 09:46:27 CEST 2007 - jsuchome@suse.cz
+Tue Oct  2 11:49:14 CEST 2007 - jsuchome@suse.cz
 
+- copy whole content of imported kiwi config directory (#330052)
+- save defaultroot value to config.xml (#330059)
+- don't ignore 'inherit' tag (#330079)
+- added support for "this://" in repository paths (#330095)
+- 2.13.12 
+
+-------------------------------------------------------------------
+Mon Oct  1 14:43:47 CEST 2007 - jsuchome@suse.cz
+
+- do not close module after kiwi failure (#327593)
+- check stderr and stdout after kiwi finish/failure (#327610)
+- do not allow configuration without name (#328003)
+- destination directory specified in sysconfig file (#327055)
 - support for kiwi images templates (F302371)
 - support project control for images (F302370)
 - use zypper instead of smart
 - write schemeversion to config.xml
-- directories with templates are specified in sysconfig/product-creator
+- directories with templates are specified in
+  /etc/sysconfig/product-creator
 - enable modifications of configurations without creating images
 - do not import already imported and modified configuration
 - enable support for unlisted boot images (e.g. netboot)
@@ -14,7 +28,6 @@ Tue Sep 18 09:46:27 CEST 2007 - jsuchome@suse.cz
 - tell zypper to ignore zypp lock (#310581)
 - remove 'prepare' directory before calling kiwi (#325664)
 - use defaultroot value from config.xml for 'prepare' directory (F302371)
-- 2.13.12 
 
 -------------------------------------------------------------------
 Mon Sep 17 15:27:43 CEST 2007 - jsuchome@suse.cz

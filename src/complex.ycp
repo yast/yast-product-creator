@@ -646,7 +646,7 @@ sformat (_("Delete configutation %1 now?"), current)))
 		string dir	=
 		    config["kiwi_configuration_"+ config["current_task"]:""]:"";
 		// TODO at the end? (solve possible new config with same name..)
-		if (dir != "" && issubstring (dir, Directory::vardir))
+		if (dir != "" && issubstring (dir, Kiwi::images_dir))
 		    SCR::Execute (.target.bash, "rm -rf " + dir);
 		Configurations	= remove (Configurations, current);
 		overview = filter (term it, (list<term>) overview,
@@ -670,7 +670,9 @@ sformat (_("Delete configutation %1 now?"), current)))
 	    }
 	    if (Package::InstallAll (to_install))
 	    {
-		Kiwi::ImportImageRepositories (ProductCreator::Config);
+		string dir	=
+		    ProductCreator::Config["kiwi_configuration_" + task]:"";
+		Kiwi::ImportImageRepositories (ProductCreator::Config, dir);
 		Kiwi::kiwi_task	= task;
 		ret = `kiwi;
 		break;
