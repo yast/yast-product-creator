@@ -759,6 +759,19 @@ Save the image to the stick now?")))
 		KiwiConfig[file]	= contents;
 	}
     });
+    // take care of the rest in the input directory (#330052)
+    list import_files   = [];
+    map out = (map) SCR::Execute (.target.bash_output,
+	sformat ("ls -A1 -d %1/* 2>/dev/null", kiwi_configuration));
+    foreach (string line, splitstring (out["stdout"]:"", "\n"), {
+	if (line == "") return;
+	string last     = substring (line, findlastof (line, "/") + 1);
+	if (contains (["images.sh", "config.sh", "config.xml", "root","config"],
+	    last))
+	    return;
+	import_files    = add (import_files, line);
+    });
+    KiwiConfig["import_files"]  = import_files;
 
     map<string,any> read_config = Kiwi::ReadConfigXML (kiwi_configuration);
     if (!KiwiConfig["_imported"]:false)
@@ -1411,6 +1424,8 @@ Save the image to the stick now?")))
 	kiwi_configuration	= dir;
 	Config	= eval (Kiwi::ReadConfigXML (kiwi_configuration));
 	name	= Config["name"]:"";
+	if (Config["iso-directory"]:"" != "")
+	    UI::ChangeWidget (`id (`out_dir),`Value,Config["iso-directory"]:"");
 	repositories	= $[];
 	foreach (map repo, (list<map>) Config["repository"]:[], {
 	    string source	= repo["source",0,"path"]:"";
@@ -1618,6 +1633,14 @@ Save the image to the stick now?")))
 	}
 	else if (ret == `next)
 	{
+	    name	= (string) UI::QueryWidget (`id (`config), `Value);
+	    if (name == "")
+	    {
+		// error popup
+		Report::Error(_("Enter the name of the configuration."));
+		UI::SetFocus (`id (`config));
+		continue;
+	    }
 	    out_dir	= (string) UI::QueryWidget (`id (`out_dir), `Value);
 	    if (out_dir == "")
 	    {
@@ -1637,6 +1660,7 @@ Save the image to the stick now?")))
     }
     if (ret == `next)
     {
+	Config["name"]		= name;
 	Config["kiwi_configuration_" + kiwi_task]	= kiwi_configuration;
         Config["_imported"]	= true;
         Config["iso-directory"]	= out_dir;
@@ -1650,8 +1674,6 @@ Save the image to the stick now?")))
 	    Pkg::SourceRestore ();
 	    Pkg::SourceLoad();
 	}
-	if (Config["name"]:"" == "")
-	    Config["name"]	= UI::QueryWidget (`id (`config), `Value);
 	ProductCreator::Config		= Config;
 	ProductCreator::kiwi_task	= kiwi_task;
     }
