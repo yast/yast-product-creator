@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Thu Oct  4 09:50:06 CEST 2007 - jsuchome@suse.cz
+
+- add a default user to the iso template (#328145)
+- new template based on current kiwi-desc-livesystem (#328003)
+- do not allow configuration without name (#328003)
+- 2.15.9
+
+-------------------------------------------------------------------
 Mon Sep 24 08:44:56 CEST 2007 - jsuchome@suse.cz
 
 - do not close module after kiwi failure (#327593)
