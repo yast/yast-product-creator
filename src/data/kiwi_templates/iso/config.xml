@@ -10,41 +10,17 @@
 		<rpm-check-signatures>False</rpm-check-signatures>
 		<rpm-force>True</rpm-force>
 	</preferences>
+	<users group="users">
+	    <user home="/home/linux" name="linux"/>
+	    <user home="/root" name="root"/>
+	</users>
 	<packages type="image" patternType="plusRecommended">
 		<package name="xkeyboard-config"/>
+		<package name="sax2"/>
 		<opensusePattern name="default"/>
 		<opensusePattern name="base"/>
 		<opensusePattern name="x11"/>
-		<ignore  name="smtp_daemon"/>
-		<ignore  name="pfscalibratio"/>
-		<ignore  name="jaf-demo"/>
-		<ignore  name="jaf-javadoc"/>
-		<ignore  name="jaf-manual"/>
-		<ignore  name="jai"/>
-		<ignore  name="java-1_4_2-sun"/>
-		<ignore  name="java-1_4_2-sun-alsa"/>
-		<ignore  name="java-1_4_2-sun-devel"/>
-		<ignore  name="java-1_4_2-sun-jdbc"/>
-		<ignore  name="java-1_4_2-sun-plugin"/>
-		<ignore  name="javamail-manual"/>
-		<ignore  name="jmx-javadoc"/>
-		<ignore  name="jta-javadoc"/>
-		<ignore  name="mcelog"/>
-		<ignore  name="numactl"/>
-		<ignore  name="wesnoth-data-small"/>
-		<ignore  name="sendmail"/>
-		<ignore  name="exim"/>
-		<ignore  name="AdobeICCProfiles"/>
-		<ignore  name="RealPlayer"/>
-		<ignore  name="agfa-fonts"/>
-		<ignore  name="flash-player"/>
-		<ignore  name="java-1_5_0-sun"/>
-		<ignore  name="java-1_5_0-sun-plugin"/>
-		<ignore  name="java-1_5_0-sun-jdbc"/>
-		<ignore  name="java-1_5_0-sun-devel"/>
-		<ignore  name="java-1_5_0-sun-alsa"/>
-		<ignore  name="opensuse-quickstart_en"/>
-		<ignore  name="util-linux-crypto"/>
+		<opensusePattern name="kde"/>
 	</packages>
 	<packages type="xen" memory="512" disk="/dev/sda">
 		<package name="kernel-xen"/>

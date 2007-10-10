@@ -6,9 +6,6 @@ SUBDIRS= network
 ydatadir = @ydatadir@/product-creator/kiwi_templates/iso/root/etc/sysconfig
 
 ydata_DATA =	\
-	console		\
-	displaymanager	\
-	keyboard	\
-	windowmanager
+	displaymanager
 
 EXTRA_DIST = $(ydata_DATA)
