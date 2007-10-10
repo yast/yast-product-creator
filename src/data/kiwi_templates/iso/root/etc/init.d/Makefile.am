@@ -4,6 +4,6 @@
 ydatadir = @ydatadir@/product-creator/kiwi_templates/iso/root/etc/init.d
 
 ydata_SCRIPTS =	\
-	boot
+	create_xconf
 
 EXTRA_DIST = $(ydata_SCRIPTS)

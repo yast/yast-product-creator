@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Thu Oct  4 09:50:06 CEST 2007 - jsuchome@suse.cz
+
+- add a default user to the iso template (#328145)
+- new template based on current kiwi-desc-livesystem (#328003)
+- do not allow configuration without name (#328003)
+- 2.16.0
+
+-------------------------------------------------------------------
 Thu Sep 27 16:03:04 CEST 2007 - lslezak@suse.cz
 
 - fixed a typo in the description of "passphrase_file" option

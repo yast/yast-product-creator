@@ -10,6 +10,10 @@
 		<rpm-check-signatures>False</rpm-check-signatures>
 		<rpm-force>True</rpm-force>
 	</preferences>
+	<users group="users">
+	    <user home="/home/linux" name="linux"/>
+	    <user home="/root" name="root"/>
+	</users>
 	<packages type="image">
 	    <package name="OpenIPMI"/>
 		<package name="lvm2"/>
