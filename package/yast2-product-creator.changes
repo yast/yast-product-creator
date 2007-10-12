@@ -1,4 +1,16 @@
 -------------------------------------------------------------------
+Fri Oct 12 11:15:01 CEST 2007 - jsuchome@suse.cz
+
+- fix adding CD/DVD/SLP repositories (#333106) 
+- show correct list of repositories when going back (#332253)
+- use system repositories when none is specified (#332253) 
+- menubutton for adding system repositories (#332253)
+- added SUPPORTED_BOOT_IMAGES to /etc/sysconfig/product-creator:
+  possibility to limit list of offered boot images (#331733)
+- append image name to defaultdestination and defaultroot (#327057)
+- 2.13.13
+
+-------------------------------------------------------------------
 Tue Oct  2 11:49:14 CEST 2007 - jsuchome@suse.cz
 
 - copy whole content of imported kiwi config directory (#330052)

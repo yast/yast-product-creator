@@ -18,6 +18,7 @@
   import "Kiwi";
   import "Popup";
   import "SourceDialogs";
+  import "SourceManager";
   import "Summary";
   import "URL";
   import "Wizard";
@@ -1475,7 +1476,7 @@ return ret;
     _("<p>Select <b>Output Directory</b> for the created image.</p>") +
 
     // help text for kiwi UI preparation, cont.
-    _("<p>Modify the list of <b>Package Repositories</b> that will be used for creating the image. If the list is empty, current system repositories will be used.</p>") +
+    _("<p>Modify the list of <b>Package Repositories</b> that will be used for creating the image. Use <b>Add From System</b> to add one of current system repository.</p>") +
 
     // help text for kiwi UI preparation, cont.
     _("<p>Use <b>Next</b> to continue with the configuration.</p>");
@@ -1492,14 +1493,42 @@ return ret;
     ];
     map task2label	= $[
 	// combo box item
-	"pxe"	: _("Network Boot Image")
+	"pxe"	: _("Network Boot Image"),
+	// combo box item
+	"iso"	: _("Live ISO Image"),
+	// combo box item
+	"xen"	: _("Xen Image"),
+	// combo box item
+	"usb"	: _("USB Stick Image"),
+	// combo box item
+	"vmx"	: _("Virtual Disk Image")
     ];
 
-    // on start, show the default YaST sources
-    if (Config == $[])
+    list type_items		= basic_type_items;
+    list default_type_items	= basic_type_items;
+
+    string supported_images	= Kiwi::supported_boot_images;
+    if (supported_images != "" && supported_images != "template")
     {
+	type_items	= []; // will be read from template..., or:
+	foreach (string type, splitstring (supported_images,","),
+	{
+	    if (haskey (task2label, type))
+	    {
+		type_items	= add (type_items,
+			`item (`id (type), task2label[type]:type));
+	    }
+	});
+	default_type_items	= type_items;
     }
-    else if (Config["sources"]:[] != [] && repositories == $[])
+    if (!contains (["iso", "xen", "usb", "vmx"], kiwi_task))
+	type_items	= add (type_items,
+	    `item (`id (kiwi_task), task2label[kiwi_task]:kiwi_task, true));
+    list present_types	= maplist (
+	term it, (list<term>)type_items, ``(it[0,0]:""));
+
+    // on start, show the default YaST sources
+    if (Config["sources"]:[] != [] && repositories == $[])
     {
 	integer i	= 0;
 	foreach (string src, Config["sources"]:[], {
@@ -1509,6 +1538,10 @@ return ret;
 	    i	= i + 1;
 	});
     }
+    list system_repo_items	= maplist (integer id, map repo,
+	Kiwi::initial_repositories, {
+	    return `item (`id (id), repo["url"]:"");
+    });
 
     void update_repo_table () {
 	UI::ChangeWidget (`id (`repositories), `Items, maplist (
@@ -1540,18 +1573,22 @@ return ret;
 	if (Config["iso-directory"]:"" != "")
 	    UI::ChangeWidget(`id(`out_dir), `Value, Config["iso-directory"]:"");
 	update_repo_table ();
-	list type_items	= basic_type_items;
+	list type_its = supported_images != "template" ? default_type_items: [];
 	boolean primary	= false;
 	foreach (string type, map data, Config["type"]:$[], {
 	    if (!primary)
 		kiwi_task	= type;
 	    if (data["primary"]:"" == "true")
 		primary		= true;
-	    if (!contains (["iso", "xen", "usb", "vmx"], type))
-		type_items	= add (type_items,
+	    if ((supported_images == "" && !contains (present_types, type)) ||
+		supported_images == "template")
+	    {
+		type_its	= add (type_its,
 		    `item (`id (kiwi_task), task2label[kiwi_task]:kiwi_task));
+		present_types	= union (present_types, [type]);
+	    }
 	});
-	UI::ChangeWidget (`id (`type), `Items, type_items);
+	UI::ChangeWidget (`id (`type), `Items, type_its);
 	UI::ChangeWidget (`id (`type), `Value, kiwi_task);
     }
 
@@ -1562,10 +1599,6 @@ return ret;
 	);
     });
 
-    list type_items	= basic_type_items;
-    if (!contains (["iso", "xen", "usb", "vmx"], kiwi_task))
-	type_items	= add (type_items,
-	    `item (`id (kiwi_task), task2label[kiwi_task]:kiwi_task, true));
     term contents	= `VBox (
 	new_configuration ?
 	`VBox (
@@ -1582,6 +1615,7 @@ return ret;
 		    // radio button label
 		    _("Base on Template"))
 		),
+		template_items == [] ? `VSpacing (0) :
 		`HBox (
 		    `HSpacing (2.5),
 		    `ComboBox (`id (`template), `opt (`notify, `hstretch), "",
@@ -1601,7 +1635,7 @@ return ret;
 	) :
 	`Left (`Label (`id (`config), name)),
 	// combo box label
-	`ComboBox (`id (`type), `opt (`notify, `hstretch), _("Image Type"),
+	`ComboBox (`id (`type), `opt (`notify, `hstretch), _("I&mage Type"),
 	    type_items),
 	`HBox (
 	    // text entry label
@@ -1609,12 +1643,14 @@ return ret;
 	    `VBox (
 		`Label (""),
 		`PushButton (`id (`browse), Label::BrowseButton ())
-	    ),
+	    )
+	    /*
 	    `VBox (
 		`Label (""),
 		// checkbox label
 		`CheckBox (`id (`append), _("A&ppend Name"), append_name)
 	    )
+	    */
 	),
 	`VSpacing (0.2),
 	`Table (`id(`repositories), `header (
@@ -1623,6 +1659,9 @@ return ret;
 	),
 	`HBox (
 	    `PushButton (`id (`add), Label::AddButton ()),
+	    // menu butto label
+	    `MenuButton (`id (`addsystem), _("A&dd From System"),
+		system_repo_items),
 	    `PushButton (`id (`edit), Label::EditButton ()),
 	    `PushButton (`id (`delete), Label::DeleteButton ()),
 	    `HStretch ()
@@ -1644,8 +1683,10 @@ return ret;
     if (new_configuration)
     {
 	UI::SetFocus (`id (`config));
-	UI::ChangeWidget (`id (`template), `Enabled, false);
+	if (template_items != [])
+	    UI::ChangeWidget (`id (`template), `Enabled, false);
 	UI::ChangeWidget (`id (`import), `Enabled, false);
+	UI::ChangeWidget (`id (`config), `ValidChars, String::CAlnum ());
     }
     any ret = nil;
     while (true)
@@ -1658,7 +1699,8 @@ return ret;
 	}
 	else if (ret == "rb_dir")
 	{
-	    UI::ChangeWidget (`id (`template), `Enabled, false);
+	    if (template_items != [])
+		UI::ChangeWidget (`id (`template), `Enabled, false);
 	    UI::ChangeWidget (`id (`import), `Enabled, true);
 	    if (kiwi_configuration == "")
 		ret = `import;
@@ -1691,14 +1733,43 @@ return ret;
 	    string dir	= (string) UI::QueryWidget (`id (`template), `Value);
 	    update_config (dir, Kiwi::Templates[dir]:$[]);
 	}
+	else if (is (ret, integer)) // system repository selected
+	{
+	    map system_repo	= Kiwi::initial_repositories[(integer)ret]:$[];
+	    boolean present	= false;
+	    foreach (integer id, map repo, repositories, {
+		if (repo["url"]:"" == system_repo["url"]:"")
+		{
+		    present	= true;
+		    break;
+		}
+	    });
+	    if (present) continue;
+	    repositories[size (repositories)]	= system_repo;
+	    update_repo_table ();
+	}
 	else if (ret == `add)
 	{
 	    Wizard::CreateDialog ();
-	    string url	= "";
-	    if (SourceDialogs::TypeDialog () == `next &&
-		SourceDialogs::EditDialog () == `next)
+	    string url		= "";
+	    symbol type_ret	= SourceDialogs::TypeDialog ();
+
+	    if ((type_ret == `next || type_ret == `finish))
 	    {
-		url = SourceDialogs::GetURL ();
+		// FIXME SLP code for SLE10SP1 only, adapt for 10.3...
+		if (type_ret == `finish && SourceDialogs::GetURL () == "slp://")
+		{
+		    string service = SourceManager::AddSourceTypeSLP ();
+		    if (service != nil)
+		    {
+			url	= service;
+		    }
+		}
+		else
+		{
+		    if (SourceDialogs::EditDialog () == `next)
+			url = SourceDialogs::GetURL ();
+		}
 	    }
 	    Wizard::CloseDialog ();
 	    if (url != "")
@@ -1711,7 +1782,7 @@ return ret;
 			break;
 		    }
 		});
-		if (present) break;
+		if (present) continue;
 
 		map parsed = URL::Parse(url);
 		if (parsed["scheme"]:"" == "pkg")
@@ -1802,6 +1873,14 @@ Choose a different one."), name));
 		UI::SetFocus (`id (`out_dir));
 		continue;
 	    }
+	    if (repositories == $[])
+	    {
+		// error popup
+		Popup::Error(_("Specify at least one package repository."));
+		UI::SetFocus (`id (`repositories));
+		continue;
+	    }
+
 	    kiwi_task	= (string)  UI::QueryWidget (`id (`type), `Value);
 	    break;
 	}
@@ -1816,12 +1895,9 @@ Choose a different one."), name));
     {
 	Config["kiwi_configuration_" + kiwi_task]	= kiwi_configuration;
         Config["_imported"]	= true;
-        Config["iso-directory"]	= out_dir;
+        Config["iso-directory"]	= out_dir +
+	    (new_configuration ? "/" + name : "");
 	Config["name"]		= name;
-	/*
-	Config["sources"]	= maplist (
-	    integer id, string repo, repositories, ``(repo));
-	*/
 	Config["sources"]	= maplist (
 	    integer id, map repo, repositories, ``(repo["url"]:""));
 	if (Config["sources"]:[] != [])
@@ -1855,13 +1931,8 @@ Choose a different one."), name));
 	    });
 	    Pkg::SourceLoad();
 	}
-	else
-	{
-	    // reenable original sources
-	    Pkg::SourceRestore ();
-	    Pkg::SourceLoad();
-	}
 	ProductCreator::Config		= Config;
+	Kiwi::current_repositories	= repositories;
 	Kiwi::kiwi_task	= kiwi_task;
     }
     y2milestone("Returning %1", ret);
