@@ -30,6 +30,9 @@
   // directory for saving image configurations
   global string images_dir	= Directory::vardir + "/product-creator/images";
 
+  // bug 331733
+  global string supported_boot_images	= "";
+
   // directories with user-made templated
   global list<string> templates_dirs	= [];
 
@@ -39,6 +42,9 @@
 
   // repositories used for current configuration
   global map <integer,map> current_repositories	= $[];
+
+  // initial system repositories
+  global map <integer,map> initial_repositories	= $[];
 
   // where the kiwi configuration files are stored
   string config_dir	= "";
@@ -313,8 +319,11 @@
     tmp_dir		= Directory::tmpdir;
     chroot_dir		= tmp_dir + "/myphysical";
     if (KiwiConfig["defaultroot"]:"" != "")
-	chroot_dir	= KiwiConfig["defaultroot"]:"";
-
+    {
+	chroot_dir	=
+	    KiwiConfig["defaultroot"]:"" + "/" + KiwiConfig["name"]:"";
+	KiwiConfig["defaultroot"]	= chroot_dir;
+    }
 
     list packages_list	= [];
     list patterns_list	= [];
@@ -507,7 +516,7 @@
     }
 
     string write_string	= Map2XML (write_list[0]:$[], 0);
-    config_dir	= tmp_dir + "/" + get_config_dir (KiwiConfig["name"]:"", task);
+    config_dir	= tmp_dir + "/" + KiwiConfig["name"]:"";
     SCR::Execute (.target.mkdir, config_dir);
     SCR::Write (.target.string, config_dir + "/config.xml", write_string);
     foreach (string dir, ["root_dir", "config_dir"], {
@@ -613,6 +622,7 @@
 	    update_output ();
 
 	    integer status	= (integer) SCR::Read (.background.status);
+y2internal ("status: %1", status);
 	    if (status != 0)
 	    {
 		UI::ReplaceWidget (`id (`rp), `HBox (
@@ -670,7 +680,7 @@
     if (!FileUtils::Exists (images_dir))
 	SCR::Execute (.target.mkdir, images_dir);
     SCR::Execute (.target.bash, sformat ("cp -ar %1 %2/", config_dir, images_dir));
-    return (images_dir + get_config_dir (KiwiConfig["name"]:"", task));
+    return (images_dir + KiwiConfig["name"]:"");
   }
 
     /**
@@ -774,6 +784,10 @@
 	(string) SCR::Read (.sysconfig.product-creator.IMAGE_CONFIGURATIONS);
     if (dir != nil && dir != "")
 	images_dir	= dir;
+    supported_boot_images	=
+	(string) SCR::Read (.sysconfig.product-creator.SUPPORTED_BOOT_IMAGES);
+    if (supported_boot_images == nil)
+	supported_boot_images	= "";
     return ReadImageTemplates ();
   }
 

@@ -18,3 +18,15 @@ IMAGE_TEMPLATES="/var/lib/YaST2/product-creator/templates"
 #
 #
 IMAGE_CONFIGURATIONS="/var/lib/YaST2/product-creator/images"
+
+## Path:	System/Yast2/Product-creator
+## Description:	YaST2 Product Creator
+## Type:	string(template)
+## Default:	none
+#
+# Which boot images are offered for configuration. Use comma separated list
+# of image types (like "iso,xen,usb") or special value "template" for
+# supporting only image types found in imported configurations.
+#
+#
+SUPPORTED_BOOT_IMAGES=""
