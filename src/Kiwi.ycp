@@ -622,7 +622,6 @@
 	    update_output ();
 
 	    integer status	= (integer) SCR::Read (.background.status);
-y2internal ("status: %1", status);
 	    if (status != 0)
 	    {
 		UI::ReplaceWidget (`id (`rp), `HBox (
