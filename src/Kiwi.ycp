@@ -41,10 +41,10 @@
   list<map> all_sources		= [];
 
   // repositories used for current configuration
-  global map <integer,map> current_repositories	= $[];
+  global map <string,map> current_repositories	= $[];
 
   // initial system repositories
-  global map <integer,map> initial_repositories	= $[];
+  global map <string,map> initial_repositories	= $[];
 
   // where the kiwi configuration files are stored
   string config_dir	= "";
@@ -95,8 +95,8 @@
 
     map ret	= $[];
     // first check if we weren't importing this source:
-    foreach (integer id, map repo, current_repositories, {
-	if (repo["url"]:"" == source && repo["org"]:$[] != $[])
+    foreach (string url, map repo, current_repositories, {
+	if (url == source && repo["org"]:$[] != $[])
 	{
 	    ret = $[
 		"__key"	: "repository",
@@ -320,8 +320,9 @@
     chroot_dir		= tmp_dir + "/myphysical";
     if (KiwiConfig["defaultroot"]:"" != "")
     {
-	chroot_dir	=
-	    KiwiConfig["defaultroot"]:"" + "/" + KiwiConfig["name"]:"";
+	chroot_dir	= KiwiConfig["defaultroot"]:"";
+	if (KiwiConfig["new_configuration"]:false)
+	    chroot_dir	= chroot_dir + "/" + KiwiConfig["name"]:"";
 	KiwiConfig["defaultroot"]	= chroot_dir;
     }
 
@@ -687,10 +688,9 @@
      * @patam Config configuration map, as read from config.xml
      * @param dir path to directory containing this config.xml
      */
-    global map <integer,map> ImportImageRepositories (map Config, string dir) {
+    global map <string,map> ImportImageRepositories (map Config, string dir) {
 
 	current_repositories	= $[];
-	integer	i	= 0;
 	foreach (map repo, (list<map>) Config["repository"]:[], {
 	    string source	= repo["source",0,"path"]:"";
 	    if (source != "")
@@ -703,12 +703,12 @@
 		}
 		if (substring (source, 0, 1) == "/")
 		    url	= "dir://";
-		current_repositories	[i]	= $[
-		    "url"	: url + source,
+		url	= url + source;
+		current_repositories	[url]	= $[
+		    "url"	: url,
 		    "plaindir"	: repo["type"]:"" == "rpm-dir",
 		    "org"	: repo,
 		];
-		i	= i + 1;
 	    }
 	});
 	return current_repositories;
@@ -717,19 +717,17 @@
    /**
     * Initialize the list of current repositories
     */
-   global map <integer,map> InitCurrentRepositories () {
+   global map <string,map> InitCurrentRepositories () {
 
 	Pkg::SourceRestore ();
-	integer	i	= 0;
 	foreach (map source, Pkg::SourceEditGet (), {
 	    integer srcid       = source["SrcId"]:-1;
 	    map data = Pkg::SourceGeneralData (srcid);
 	    string url	= data["url"]:"";
-	    current_repositories[i]	= $[
+	    current_repositories[url]	= $[
 		"url"       : url,
 		"plaindir"  : data["type"]:"" == "Plaindir"
 	    ];
-	    i	= i + 1;
 	});
 	return current_repositories;
    }

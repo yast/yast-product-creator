@@ -663,7 +663,9 @@ sformat (_("Delete configutation %1 now?"), current)))
 	    {
 		string bootdir	= ProductCreator::Config["type",task,"boot"]:"";
 		if (bootdir == "" ||
-		    !FileUtils::Exists ("/usr/share/kiwi/image/" + bootdir))
+		    (!FileUtils::Exists ("/usr/share/kiwi/image/" + bootdir) &&
+		    !FileUtils::Exists (bootdir))
+		)
 		{
 		    to_install = add (to_install, sformat("kiwi-desc-%1boot", task));
 		}
