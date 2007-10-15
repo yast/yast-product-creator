@@ -810,7 +810,8 @@ directory."), out_dir));
 	y2milestone ("imported configuration...");
 	// ignore options already set earlier...
 	foreach (string key, any val, read_config, {
-	    if (!contains (["name", "iso-directory", "sources", "version"],key))
+	    if (!contains (["name", "iso-directory", "sources", "version",
+		"type"],key))
 	    {
 		KiwiConfig[key]	= val;
 	    }
@@ -1521,6 +1522,17 @@ return ret;
 	});
 	default_type_items	= type_items;
     }
+    else if (supported_images == "template" && !new_configuration)
+    {
+	list type_its	= [];
+	//solve `back here (=no import)
+	foreach (string type, map data, Config["type"]:$[], {
+	    type_its	= add (type_its,
+		`item (`id (type), task2label[type]:type));
+	});
+	if (type_its != [])
+	    type_items	= type_its;
+    }
     if (!contains (["iso", "xen", "usb", "vmx"], kiwi_task))
 	type_items	= add (type_items,
 	    `item (`id (kiwi_task), task2label[kiwi_task]:kiwi_task, true));
@@ -1584,7 +1596,7 @@ return ret;
 		supported_images == "template")
 	    {
 		type_its	= add (type_its,
-		    `item (`id (kiwi_task), task2label[kiwi_task]:kiwi_task));
+		    `item (`id (type), task2label[type]:type));
 		present_types	= union (present_types, [type]);
 	    }
 	});
