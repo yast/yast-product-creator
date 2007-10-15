@@ -1458,7 +1458,7 @@ return ret;
     string kiwi_configuration	= Config["kiwi_configuration_" + kiwi_task]:"";
     string name			= Config["name"]:"";
     string out_dir		= Config["iso-directory"]:"";
-    map <integer,map> repositories	= Kiwi::current_repositories;
+    map <string,map> repositories	= Kiwi::current_repositories;
     boolean new_configuration	= (Config == $[]);
     boolean append_name		= false;
 
@@ -1542,23 +1542,21 @@ return ret;
     // on start, show the default YaST sources
     if (Config["sources"]:[] != [] && repositories == $[])
     {
-	integer i	= 0;
 	foreach (string src, Config["sources"]:[], {
-	    repositories[i]	= $[
+	    repositories[src]	= $[
 		"url"		: src,
 	    ];
-	    i	= i + 1;
 	});
     }
-    list system_repo_items	= maplist (integer id, map repo,
+    list system_repo_items	= maplist (string url, map repo,
 	Kiwi::initial_repositories, {
-	    return `item (`id (id), repo["url"]:"");
+	    return `item (`id (url), url);
     });
 
     void update_repo_table () {
 	UI::ChangeWidget (`id (`repositories), `Items, maplist (
-	    integer id, map repo, repositories, ``(
-		`item (`id (id), repo["url"]:""))
+	    string url, map repo, repositories, ``(
+		`item (`id (url), url))
 	));
     }
 
@@ -1656,13 +1654,6 @@ return ret;
 		`Label (""),
 		`PushButton (`id (`browse), Label::BrowseButton ())
 	    )
-	    /*
-	    `VBox (
-		`Label (""),
-		// checkbox label
-		`CheckBox (`id (`append), _("A&ppend Name"), append_name)
-	    )
-	    */
 	),
 	`VSpacing (0.2),
 	`Table (`id(`repositories), `header (
@@ -1745,19 +1736,12 @@ return ret;
 	    string dir	= (string) UI::QueryWidget (`id (`template), `Value);
 	    update_config (dir, Kiwi::Templates[dir]:$[]);
 	}
-	else if (is (ret, integer)) // system repository selected
+	else if (is (ret, string)) // system repository selected
 	{
-	    map system_repo	= Kiwi::initial_repositories[(integer)ret]:$[];
-	    boolean present	= false;
-	    foreach (integer id, map repo, repositories, {
-		if (repo["url"]:"" == system_repo["url"]:"")
-		{
-		    present	= true;
-		    break;
-		}
-	    });
-	    if (present) continue;
-	    repositories[size (repositories)]	= system_repo;
+	    map system_repo	= Kiwi::initial_repositories[(string)ret]:$[];
+	    if (!haskey (repositories, (string)ret))
+		repositories[(string)ret]	= system_repo;
+
 	    update_repo_table ();
 	}
 	else if (ret == `add)
@@ -1786,15 +1770,8 @@ return ret;
 	    Wizard::CloseDialog ();
 	    if (url != "")
 	    {
-		boolean present	= false;
-		foreach (integer id, map repo, repositories, {
-		    if (repo["url"]:"" == url)
-		    {
-			present	= true;
-			break;
-		    }
-		});
-		if (present) continue;
+		if (haskey (repositories, url))
+		    continue;
 
 		map parsed = URL::Parse(url);
 		if (parsed["scheme"]:"" == "pkg")
@@ -1802,7 +1779,7 @@ return ret;
 		    parsed["scheme"] = "dir";
 		    url = URL::Build (parsed);
 		}
-		repositories[size (repositories)]	= $[
+		repositories[url]	= $[
 		    "url"		: url,
 		    "plaindir"	: parsed["scheme"]:"" == "dir"
 		];
@@ -1811,11 +1788,10 @@ return ret;
 	}
 	else if (ret == `edit)
 	{
-	    integer selected	= (integer)
+	    string url		= (string)
 		UI::QueryWidget (`id (`repositories), `CurrentItem);
-	    string url		= repositories[selected,"url"]:"";
 	    string selected_url	= url;
-	    boolean plaindir    = repositories[selected,"plaindir"]:false;
+	    boolean plaindir    = repositories[url,"plaindir"]:false;
 	    // change schema if the source type is plaindir
 	    // to show the right popup dialog
 	    if (plaindir)
@@ -1828,14 +1804,14 @@ return ret;
 	    if (url == "" || url == nil || url == selected_url);
 		continue;
 	    // remove current url + add new one
-	    repositories	= remove (repositories, selected);
+	    repositories	= remove (repositories, url);
 	    map parsed = URL::Parse(url);
 	    if (parsed["scheme"]:"" == "pkg")
 	    {
 		parsed["scheme"] = "dir";
 		url = URL::Build (parsed);
 	    }
-	    repositories[size (repositories)]	= $[
+	    repositories[url]	= $[
 		"url"		: url,
 		"plaindir"	: parsed["scheme"]:"" == "dir"
 	    ];
@@ -1843,7 +1819,7 @@ return ret;
 	}
 	else if (ret == `delete)
 	{
-	    integer selected	= (integer)
+	    string selected	= (string)
 		UI::QueryWidget (`id (`repositories), `CurrentItem);
 	    repositories	= remove (repositories, selected);
 	    update_repo_table ();
@@ -1911,7 +1887,8 @@ Choose a different one."), name));
 	    (new_configuration ? "/" + name : "");
 	Config["name"]		= name;
 	Config["sources"]	= maplist (
-	    integer id, map repo, repositories, ``(repo["url"]:""));
+	    string url, map repo, repositories, ``(url));
+	Config["new_configuration"]	= new_configuration;
 	if (Config["sources"]:[] != [])
 	{
 	    ProductCreator::enable_sources	= false;
@@ -1924,8 +1901,7 @@ Choose a different one."), name));
 		current_sources[url]	= srcid;
 	    });
 	    // initialize new repos now
-	    foreach (integer id, map repo, repositories, {
-		string url	= repo["url"]:"";
+	    foreach (string url, map repo, repositories, {
 		if (substring (url, 0, 1) == "/")
 		    url		= "dir://" + url;
 		if (haskey (current_sources, url))
