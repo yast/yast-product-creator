@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Tue Oct 16 23:37:05 CEST 2007 - jsuchome@suse.cz
+
+- fix modifying of repository (#334208)
+- check for duplicates in the list of boot images (#332581)
+- disable Delete button when there's nothing to delete (#334255)
+- 2.13.16 
+
+-------------------------------------------------------------------
 Mon Oct 15 16:41:48 CEST 2007 - jsuchome@suse.cz
 
 - update defaultroot only for new configurations (#327057)
