@@ -1533,11 +1533,15 @@ return ret;
 	if (type_its != [])
 	    type_items	= type_its;
     }
-    if (!contains (["iso", "xen", "usb", "vmx"], kiwi_task))
-	type_items	= add (type_items,
-	    `item (`id (kiwi_task), task2label[kiwi_task]:kiwi_task, true));
     list present_types	= maplist (
 	term it, (list<term>)type_items, ``(it[0,0]:""));
+    if (!contains (["iso", "xen", "usb", "vmx"], kiwi_task) &&
+	!contains (present_types, kiwi_task))
+    {
+	type_items	= add (type_items,
+	    `item (`id (kiwi_task), task2label[kiwi_task]:kiwi_task, true));
+	present_types	= add (present_types, kiwi_task);
+    }
 
     // on start, show the default YaST sources
     if (Config["sources"]:[] != [] && repositories == $[])
@@ -1558,6 +1562,7 @@ return ret;
 	    string url, map repo, repositories, ``(
 		`item (`id (url), url))
 	));
+	UI::ChangeWidget (`id (`delete), `Enabled, size (repositories) > 0);
     }
 
     // read the new configuration and update UI accordingly
@@ -1801,10 +1806,10 @@ return ret;
 		url = URL::Build (parsed);
 	    }
 	    url	= SourceDialogs::EditPopup (url);
-	    if (url == "" || url == nil || url == selected_url);
+	    if (url == "" || url == nil || url == selected_url)
 		continue;
 	    // remove current url + add new one
-	    repositories	= remove (repositories, url);
+	    repositories	= remove (repositories, selected_url);
 	    map parsed = URL::Parse(url);
 	    if (parsed["scheme"]:"" == "pkg")
 	    {
@@ -1821,6 +1826,8 @@ return ret;
 	{
 	    string selected	= (string)
 		UI::QueryWidget (`id (`repositories), `CurrentItem);
+	    if (selected == nil)
+		continue;
 	    repositories	= remove (repositories, selected);
 	    update_repo_table ();
 	}
