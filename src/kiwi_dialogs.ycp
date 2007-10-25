@@ -16,15 +16,17 @@
   import "FileUtils";
   import "Label";
   import "Kiwi";
+  import "PackageSystem";
   import "Popup";
   import "SourceDialogs";
+  import "SourceManager";
   import "Summary";
   import "URL";
   import "Wizard";
 
   include "product-creator/dialogs.ycp";
 
-  // map of current Live ISO configuration
+  // map of current image configuration
   map<string,any> KiwiConfig	= $[];
 
   // what are we configuring now ("iso"/"xen"/...)
@@ -39,7 +41,7 @@
   list<term> GetAvailableImages (string subdir) {
 
     list<term> ret	= [];
-    string dir          = "/usr/share/kiwi/image/";
+    string dir		= "/usr/share/kiwi/image/";
     map out = (map) SCR::Execute (.target.bash_output,
 	sformat ("ls %1/%2", dir, subdir));
     if (out["exit"]:0 != 0)
@@ -78,6 +80,23 @@
     return nil;
   }
 
+  /**
+   * Initialize the widget with packages intended for deletion
+   */
+  define void InitSWDelete (string id) {
+    UI::ChangeWidget (`id (id), `Value, mergestring (KiwiConfig["delete_packages"]:[], "\n"));
+  }
+
+  define void StoreSWDelete (string key, map event) {
+    string ignore_key	= "delete_packages";
+    KiwiConfig[ignore_key]	= filter (string p,
+	splitstring ((string) UI::QueryWidget(`id(key), `Value), "\n"), ``(p != ""));
+  }
+
+  define symbol HandleSWDelete (string key, map event) {
+    if (event["ID"]:nil == `next) StoreSWDelete (key, event);
+    return nil;
+  }
 
   /**
    * Initialize the contents of richtext with selected software
@@ -115,10 +134,10 @@
     {
 	string sw_selection	= KiwiConfig["sw_selection"]:"image";
 
-	integer mbytes  = (integer) UI::QueryWidget (`id ("size"), `Value);
-        if (UI::QueryWidget (`id ("sizeunit"), `Value) == "G")
-	    mbytes      = mbytes * 1024;
-	ProductCreator::max_size_mb     = mbytes;
+	integer mbytes	= (integer) UI::QueryWidget (`id ("size"), `Value);
+	if (UI::QueryWidget (`id ("sizeunit"), `Value) == "G")
+	    mbytes	= mbytes * 1024;
+	ProductCreator::max_size_mb	= mbytes;
 	if (sw_selection == "image" && packageSelector () != `cancel)
 	{
 	    KiwiConfig["addons"]	= ProductCreator::Config["addons"]:[];
@@ -218,7 +237,7 @@
    * initialize the value of compress checkbox
    */
   define void InitCompressCheckBox (string id) {
-    UI::ChangeWidget (`id (id), `Enabled, false);// FIXME squashfs not available?
+    UI::ChangeWidget (`id (id), `Enabled, false);
     UI::ChangeWidget (`id (id), `Value, KiwiConfig["compressed"]:false);
   }
 
@@ -661,7 +680,8 @@ directory."),
     ];
 
     Kiwi::WriteConfigXML (KiwiConfig, kiwi_task);
-    if (Popup::YesNo (question[kiwi_task]:""))
+    // default question
+    if (Popup::YesNo (question[kiwi_task]:_("Create image now?")))
     {
 	if (true)
 	{
@@ -679,7 +699,10 @@ Save the image to the stick now?")))
 		}
 		else
 		{
-		    Popup::Message (sformat (success[kiwi_task]:"", out_dir));
+		    // default popup message, %1 is a dir
+		    Popup::Message (sformat (success[kiwi_task]:_("Image successfully created in
+%1
+directory."), out_dir));
 		}
 	    }
 	    else
@@ -702,8 +725,8 @@ Save the image to the stick now?")))
    */
   define void InitImageConfiguration () {
 
-    kiwi_task	= ProductCreator::kiwi_task;
-    string kiwi_dir     = "/usr/share/kiwi/image/";
+    kiwi_task	= Kiwi::kiwi_task;
+    string kiwi_dir	= "/usr/share/kiwi/image/";
 
     // read the information from the base product
     integer src_id	= ProductCreator::checkProductDependency ();
@@ -711,7 +734,7 @@ Save the image to the stick now?")))
 
     KiwiConfig	= ProductCreator::Config;
     // busy popup
-    Popup::ShowFeedback (_("Reading current live image configuration..."), _("Please wait..."));
+    Popup::ShowFeedback (_("Reading current image configuration..."), _("Please wait..."));
 
     map default_dirmap	= $[
 	"iso"	: sformat ("%1/kwliveDVD-suse-10.3", kiwi_dir),
@@ -723,7 +746,6 @@ Save the image to the stick now?")))
     // path to current config directory
     string default_dir	= default_dirmap[kiwi_task]:"";
     string kiwi_configuration = KiwiConfig["kiwi_configuration_" + kiwi_task]:default_dir;
-
     if (!FileUtils::Exists (kiwi_configuration))
     {
 	// use local template if default dir does not exist (bug #289552)
@@ -760,20 +782,21 @@ Save the image to the stick now?")))
 	}
     });
     // take care of the rest in the input directory (#330052)
-    list import_files   = [];
+    list import_files	= [];
     map out = (map) SCR::Execute (.target.bash_output,
 	sformat ("ls -A1 -d %1/* 2>/dev/null", kiwi_configuration));
     foreach (string line, splitstring (out["stdout"]:"", "\n"), {
 	if (line == "") return;
-	string last     = substring (line, findlastof (line, "/") + 1);
+	string last	= substring (line, findlastof (line, "/") + 1);
 	if (contains (["images.sh", "config.sh", "config.xml", "root","config"],
 	    last))
 	    return;
-	import_files    = add (import_files, line);
+	import_files	= add (import_files, line);
     });
-    KiwiConfig["import_files"]  = import_files;
+    KiwiConfig["import_files"]	= import_files;
 
-    map<string,any> read_config = Kiwi::ReadConfigXML (kiwi_configuration);
+
+    map<string,any> read_config	= Kiwi::ReadConfigXML (kiwi_configuration);
     if (!KiwiConfig["_imported"]:false)
     {
 	KiwiConfig = (map<string,any>) union (KiwiConfig, read_config);
@@ -788,9 +811,10 @@ Save the image to the stick now?")))
 	y2milestone ("imported configuration...");
 	// ignore options already set earlier...
 	foreach (string key, any val, read_config, {
-	    if (!contains (["name", "iso-directory", "sources"], key))
+	    if (!contains (["name", "iso-directory", "sources", "version",
+		"type"],key))
 	    {
-		KiwiConfig[key] = val;
+		KiwiConfig[key]	= val;
 	    }
 	});
 	// "sources" are already there...
@@ -863,16 +887,6 @@ Save the image to the stick now?")))
 	"contents"	: `HBox (`HSpacing(1),
 	    `VBox (
 		`VSpacing (0.2),
-		/*
-		`HBox (
-		    `HWeight (1, `HBox (
-			boot_image_widget ()
-//			`VBox (`Label (""), "configure_boot")
-		    )),
-		    `HWeight (1, `VBox (`Label (""), `Left ("compressed")))
-		),
-		*/
-		`VSpacing (0.2),
 		`HBox (
 		    `HWeight (1, "version"),
 		    `HWeight (1, `HBox ("size", "sizeunit"))
@@ -882,7 +896,7 @@ Save the image to the stick now?")))
 		    `HWeight (1, `VBox (
 			`Left (`Label (_("Installed Software"))), "rt_sw", `Right ("configure_sw")
 		    )),
-		    `HWeight (1, "ignore")
+		    `HWeight (1, `VBox ("ignore", "delete_sw"))
 		),
 		`VSpacing (0.2)
 	    ), `HSpacing(1)),
@@ -891,7 +905,7 @@ Save the image to the stick now?")))
 	    "size", "sizeunit",
 	    "sw_selection",
 	    "rt_sw", "configure_sw",
-	    "ignore",
+	    "ignore", "delete_sw"
 	],
     ],
     "description" : $[
@@ -979,6 +993,73 @@ Save the image to the stick now?")))
 	"validate_function"	: CreateImage,
 	"no_help"	: true,
     ],
+    // widgets for config.xml tab
+    /*
+    "isoboot" : $[
+	"widget"	: `combobox,
+	"opt"		: [ `hstretch, `notify ],
+	// combo box label
+	"label"		: _("C&D Boot Image"),
+	// help text for "C&D Boot Image", %1/%2 is path (on extra line)
+	"help"		: sformat (_("<p>Choose one <b>CD Boot Image</b> from the<br>
+<tt>%1/%2</tt><br>
+directory.</p>
+"),
+	    Kiwi::kiwi_dir, boot_image_widget ()),
+	"items"		: [],
+	"init"		: InitBootCombo,
+	"store"		: StoreBootCombo,
+	"handle"	: HandleBootCombo,
+    ],
+    "xenboot" : $[
+	"widget"	: `combobox,
+	"opt"		: [ `hstretch, `notify ],
+	// combo box label
+	"label"		: _("&Xen Boot Image"),
+	// help text for "XEN Boot Image"
+	"help"		: sformat (_("<p>Choose one <b>Xen Boot Image</b> from the<br>
+<tt>%1/%2</tt><br>
+directory.</p>
+"),
+	    Kiwi::kiwi_dir, boot_image_widget ()),
+	"items"		: [],
+	"init"		: InitBootCombo,
+	"store"		: StoreBootCombo,
+	"handle"	: HandleBootCombo,
+    ],
+    "usbboot" : $[
+	"widget"	: `combobox,
+	"opt"		: [ `hstretch, `notify ],
+	// combo box label
+	"label"		: _("&USB Stick Boot Image"),
+	// help text for "XEN Boot Image"
+	"help"		: sformat (_("<p>Choose one <b>USB stick Boot Image</b> from the<br>
+<tt>%1/%2</tt><br>
+directory.</p>
+"),
+	    Kiwi::kiwi_dir, boot_image_widget ()),
+	"items"		: [],
+	"init"		: InitBootCombo,
+	"store"		: StoreBootCombo,
+	"handle"	: HandleBootCombo,
+    ],
+    "vmxboot" : $[
+	"widget"	: `combobox,
+	"opt"		: [ `hstretch, `notify ],
+	// combo box label
+	"label"		: _("&Virtual Disk Boot Image"),
+	// help text for "XEN Boot Image"
+	"help"		: sformat (_("<p>Choose one <b>Virtual Disk Boot Image</b> from the<br>
+<tt>%1/%2</tt><br>
+directory.</p>
+"),
+	    Kiwi::kiwi_dir, boot_image_widget ()),
+	"items"		: [],
+	"init"		: InitBootCombo,
+	"store"		: StoreBootCombo,
+	"handle"	: HandleBootCombo,
+    ],
+    */
     "configure_boot"	: $[
 	"widget"	: `push_button,
 	// pusbutton label
@@ -1032,6 +1113,16 @@ Save the image to the stick now?")))
 	"handle"	: HandleSWIgnore,
 	// help text for "&Ignored software"
 	"help"		: _("<p>For <b>ignored software</b>, enter each entry (like 'smtp_daemon') on new line</p>"),
+    ],
+    "delete_sw"	: $[
+	"widget"	: `multi_line_edit,
+	// label
+	"label"		: _("Packages to &Delete"),
+	"init"		: InitSWDelete,
+	"store"		: StoreSWDelete,
+	"handle"	: HandleSWDelete,
+	// help text for "&Ignored software"
+	"help"		: _("<p>Each entry of <b>Packages to Delete</b> is one package name to be uninstalled from the target image.</p>"),
     ],
     "output_dir" : $[
 	"widget"	: `textentry,
@@ -1297,77 +1388,88 @@ Save the image to the stick now?")))
   /**
    * Main dialog for Kiwi image configuration
    */
-  define symbol KiwiDialog () {
+define symbol KiwiDialog () {
 
-    InitImageConfiguration ();
+InitImageConfiguration ();
 
-    map<string, map> widget_descr	= get_widget_description ();
-    widget_descr["tab"] = CWMTab::CreateWidget($[
-        "tab_order"	: ["config.xml", "description", "users", "scripts", "directories"],
-	"tabs"		: tabs_descr (),
-	"widget_descr"	: widget_descr,
-	"initial_tab"	: "config.xml",
-    ]);
-    Wizard::SetContentsButtons("", `VBox (), "", Label::BackButton(), Label::NextButton());
+map<string, map> widget_descr	= get_widget_description ();
+widget_descr["tab"] = CWMTab::CreateWidget($[
+    "tab_order"	: [
+	"config.xml", "description", "users", "scripts", "directories"
+    ],
+    "tabs"		: tabs_descr (),
+    "widget_descr"	: widget_descr,
+    "initial_tab"	: "config.xml",
+]);
+Wizard::SetContentsButtons("", `VBox (), "", Label::BackButton(), Label::NextButton());
+term contents	= `VBox (
+    `Left (`Label (KiwiConfig["name"]:"")),
+    "tab",
+    `VSpacing (0.3),
+    "global"
+);
 
-    term contents	= `VBox (
-	`Left (`Label (KiwiConfig["name"]:"")),
-	"tab",
-	`VSpacing (0.3),
-	"global"
-    );
-
-    map caption		= $[
-	// dialog caption
-	"iso"	: _("Live CD Configuration"),
-	// dialog caption
-	"xen"	: _("Xen Image Configuration"),
-	// dialog caption
-	"usb"	: _("USB Stick Image Configuration"),
-	// button label
-	"vmx"	: _("Virtual Disk Image"),
-    ];
-    map next_button	= $[
-	// button label
-	"iso"	: _("&Create ISO"),
-	// button label
-	"xen"	: _("&Create Xen Image"),
-	// button label
-	"usb"	: _("&Create USB Stick Image"),
-	// button label
-	"vmx"	: _("&Create Virtual Disk Image"),
-    ];
-    symbol ret = CWM::ShowAndRun ($[
-	"widget_names"		: [ "global", "tab" ],
-	"widget_descr"		: widget_descr,
-	"contents"		: contents,
-	"caption"		: caption[kiwi_task]:"",
-	"back_button"		: Label::BackButton (),
+map caption		= $[
+    // dialog caption
+    "iso"	: _("Live CD Configuration"),
+    // dialog caption
+    "xen"	: _("Xen Image Configuration"),
+    // dialog caption
+    "usb"	: _("USB Stick Image Configuration"),
+    // button label
+    "vmx"	: _("Virtual Disk Image"),
+];
+map next_button	= $[
+    // button label
+    "iso"	: _("&Create ISO"),
+    // button label
+    "xen"	: _("&Create Xen Image"),
+    // button label
+    "usb"	: _("&Create USB Stick Image"),
+    // button label
+    "vmx"	: _("&Create Virtual Disk Image"),
+];
+symbol ret = CWM::ShowAndRun ($[
+    "widget_names"		: [ "global", "tab" ],
+    "widget_descr"		: widget_descr,
+    "contents"		: contents,
+    // default dialog caption
+    "caption"		: caption[kiwi_task]:_("Image Configuration"),
+    "back_button"		: Label::BackButton (),
 //	"next_button"		: next_button[kiwi_task]:Label::NextButton (),
-	"next_button"		: Label::FinishButton (),
-    ]);
-    y2milestone("Returning %1", ret);
-    return ret;
-  }
+    "next_button"		: Label::FinishButton (),
+    "fallback_functions"    : $[
+        `abort		: ProductCreator::ReallyAbort
+    ],
+]);
+y2milestone("Returning %1", ret);
+return ret;
+}
 
   /**
-   * Prepare dialog: define kiwi data without cd-creator
+   * Prepare dialog: define kiwi data without product-creator
    */
   define symbol PrepareDialog () {
 
+    kiwi_task			= Kiwi::kiwi_task;
     if (kiwi_task == "")
 	kiwi_task	= "iso";
 
-    map<string,any> Config	= KiwiConfig;
+    map<string,any> Config	= ProductCreator::Config;
     string kiwi_configuration	= Config["kiwi_configuration_" + kiwi_task]:"";
     string name			= Config["name"]:"";
     string out_dir		= Config["iso-directory"]:"";
-    map <integer,string> repositories	= $[];
-    // originally enabled list of sources
-    list<map> enabled_sources	= [];
+    map <string,map> repositories	= Kiwi::current_repositories;
+    boolean new_configuration	= (Config == $[]);
+    boolean append_name		= false;
+
+    string help	= (new_configuration ?
+	// help text for kiwi UI preparation
+	_("<p>Enter the name of your image configuration. Base new configuration on template from the list or on the directory with the existing configuration.</p>")
+	: "") +
 
     // help text for kiwi UI preparation
-    string help	= _("<p>Enter the name of your image configuration or <b>Import</b> the directory with the existing one.</p>") +
+    (new_configuration ? sformat (_("<p>Place custom configuration templates under <tt>%1</tt> directory.</p>"), Kiwi::templates_dirs[0]:"") : "") +
 
     // help text for kiwi UI preparation, cont.
     _("<p>Choose the <b>Image Type</b> which should be created.</p>") +
@@ -1376,120 +1478,181 @@ Save the image to the stick now?")))
     _("<p>Select <b>Output Directory</b> for the created image.</p>") +
 
     // help text for kiwi UI preparation, cont.
-    _("<p>Modify the list of <b>Package Repositories</b> that will be used for creating the image. If the list is empty, current system repositories will be used.</p>") +
+    _("<p>Modify the list of <b>Package Repositories</b> that will be used for creating the image. Use <b>Add From System</b> to add one of current system repository.</p>") +
 
     // help text for kiwi UI preparation, cont.
     _("<p>Use <b>Next</b> to continue with the configuration.</p>");
 
-    // on start, show the default YaST sources
-    if (Config == $[])
+    list basic_type_items	= [
+	    // combo box item
+	    `item (`id ("iso"), _("Live ISO Image"), kiwi_task == "iso"),
+	    // combo box item
+	    `item (`id ("xen"), _("Xen Image"), kiwi_task == "xen"),
+	    // combo box item
+	    `item (`id ("usb"), _("USB Stick Image"), kiwi_task == "usb"),
+	    // combo box item
+	    `item (`id ("vmx"), _("Virtual Disk Image"), kiwi_task == "vmx")
+    ];
+    map task2label	= $[
+	// combo box item
+	"pxe"	: _("Network Boot Image"),
+	// combo box item
+	"iso"	: _("Live ISO Image"),
+	// combo box item
+	"xen"	: _("Xen Image"),
+	// combo box item
+	"usb"	: _("USB Stick Image"),
+	// combo box item
+	"vmx"	: _("Virtual Disk Image")
+    ];
+
+    list type_items		= basic_type_items;
+    list default_type_items	= basic_type_items;
+
+    string supported_images	= Kiwi::supported_boot_images;
+    if (supported_images != "" && supported_images != "template")
     {
-	Pkg::SourceRestore ();
-	Pkg::SourceLoad();
-	Config["sources"]	= maplist (map source, Pkg::SourceEditGet (), {
-	    integer srcid       = source["SrcId"]:-1;
-	    map data = Pkg::SourceGeneralData (srcid);
-	    string url	= data["url"]:"";
-	    repositories[srcid]	= url;
-	    return url;
-	});
-    }
-    else if (Config["sources"]:[] != [])
-    {
-	list sources	= Config["sources"]:[];
-	list<map> all_sources = Pkg::SourceEditGet();
-	foreach (map source, all_sources, {
-	    integer srcid       = source["SrcId"]:-1;
-	    map data = Pkg::SourceGeneralData (srcid);
-	    string url	= data["url"]:"";
-	    string stripped	= url;
-	    if (substring (url, 0, 6) == "dir://")
-		stripped	= substring (url, 6);
-	    if (contains(sources, url) || contains (sources, stripped))
-		repositories[srcid]	= url;
-	});
-    }
-
-
-    // read the new configuration and update UI accordingly
-    void update_config (string dir) {
-
-	// 1. delete previous sources (were in repositories list)
-	foreach (map source, Pkg::SourceEditGet (), {
-	    integer srcid       = source["SrcId"]:-1;
-	    if (haskey (repositories, srcid))
-		Pkg::SourceDelete (srcid);
-	});
-
-	kiwi_configuration	= dir;
-	Config	= eval (Kiwi::ReadConfigXML (kiwi_configuration));
-	name	= Config["name"]:"";
-	if (Config["iso-directory"]:"" != "")
-	    UI::ChangeWidget (`id (`out_dir),`Value,Config["iso-directory"]:"");
-	repositories	= $[];
-	foreach (map repo, (list<map>) Config["repository"]:[], {
-	    string source	= repo["source",0,"path"]:"";
-	    if (source != "")
+	type_items	= []; // will be read from template..., or:
+	foreach (string type, splitstring (supported_images,","),
+	{
+	    if (haskey (task2label, type))
 	    {
-		integer id	= -1;
-		string url	= "";
-		if (substring (source, 0, 1) == "/")
-		    url	= "dir://";
-		if (repo["type"]:"" == "rpm-dir")
-		{
-		    id = Pkg::SourceCreateType (url + source, "", "Plaindir");
-		}
-		else
-		    id = Pkg::SourceCreate (url + source, "");
-		if (id != -1)
-		    repositories[id]	= url + source;
+		type_items	= add (type_items,
+			`item (`id (type), task2label[type]:type));
 	    }
 	});
-	UI::ChangeWidget (`id (`config), `Value, name);
-	UI::ChangeWidget (`id (`repositories), `Items,
-	    maplist (integer id, string repo, repositories, ``(
-		`item (`id (id), repo)))
-	);
-	foreach (string type, map data, Config["type"]:$[], {
-	    kiwi_task	= type;
-	    if (data["primary"]:"" == "true")
-		break;
-	});
-	UI::ChangeWidget (`id (`type), `Value, kiwi_task);
+	default_type_items	= type_items;
     }
+    else if (supported_images == "template" && !new_configuration)
+    {
+	list type_its	= [];
+	//solve `back here (=no import)
+	foreach (string type, map data, Config["type"]:$[], {
+	    type_its	= add (type_its,
+		`item (`id (type), task2label[type]:type));
+	});
+	if (type_its != [])
+	    type_items	= type_its;
+    }
+    list present_types	= maplist (
+	term it, (list<term>)type_items, ``(it[0,0]:""));
+    if (!contains (["iso", "xen", "usb", "vmx"], kiwi_task) &&
+	!contains (present_types, kiwi_task))
+    {
+	type_items	= add (type_items,
+	    `item (`id (kiwi_task), task2label[kiwi_task]:kiwi_task, true));
+	present_types	= add (present_types, kiwi_task);
+    }
+
+    // on start, show the default YaST sources
+    if (Config["sources"]:[] != [] && repositories == $[])
+    {
+	foreach (string src, Config["sources"]:[], {
+	    repositories[src]	= $[
+		"url"		: src,
+	    ];
+	});
+    }
+    list system_repo_items	= maplist (string url, map repo,
+	Kiwi::initial_repositories, {
+	    return `item (`id (url), url);
+    });
 
     void update_repo_table () {
 	UI::ChangeWidget (`id (`repositories), `Items, maplist (
-	    integer id, string repo, repositories, ``(`item (`id (id), repo))
+	    string url, map repo, repositories, ``(
+		`item (`id (url), url))
 	));
+	UI::ChangeWidget (`id (`delete), `Enabled, size (repositories) > 0);
     }
 
+    // read the new configuration and update UI accordingly
+    // (no need to read config if it is provided as argument)
+    void update_config (string dir, map config) {
+
+	kiwi_configuration	= dir;
+	Config			=
+	    (config == $[] ? Kiwi::ReadConfigXML (kiwi_configuration) : config);
+	// busy popup
+	Popup::ShowFeedback (_("Importing repositories..."), _("Please wait..."));
+	repositories		= Kiwi::ImportImageRepositories (Config, dir);
+	Popup::ClearFeedback ();
+	if (!new_configuration)
+	{
+	    name		= Config["name"]:"";
+	    UI::ChangeWidget (`id (`config), `Value, name);
+	}
+	else
+	{
+	    Config["version"]	= "1.0.0";
+	}
+	if (Config["iso-directory"]:"" != "")
+	    UI::ChangeWidget(`id(`out_dir), `Value, Config["iso-directory"]:"");
+	update_repo_table ();
+	list type_its = supported_images != "template" ? default_type_items: [];
+	boolean primary	= false;
+	foreach (string type, map data, Config["type"]:$[], {
+	    if (!primary)
+		kiwi_task	= type;
+	    if (data["primary"]:"" == "true")
+		primary		= true;
+	    if ((supported_images == "" && !contains (present_types, type)) ||
+		supported_images == "template")
+	    {
+		type_its	= add (type_its,
+		    `item (`id (type), task2label[type]:type));
+		present_types	= union (present_types, [type]);
+	    }
+	});
+	UI::ChangeWidget (`id (`type), `Items, type_its);
+	UI::ChangeWidget (`id (`type), `Value, kiwi_task);
+    }
+
+    list template_items	= maplist (string dir, map template, Kiwi::Templates, {
+	return `item (`id (dir), sformat (
+	    // combo box item, %1 is name, %2 version
+	    _("%1, version %2"), template["name"]:"", template["version"]:"")
+	);
+    });
+
     term contents	= `VBox (
-	`HBox (
+	new_configuration ?
+	`VBox (
 	    // text entry label
 	    `TextEntry (`id (`config), _("&Kiwi configuration"), name),
-	    // push button label
-	    `VBox (`Label (""), `PushButton (`id (`import), _("&Import")))
-	),
-	// frame label
-	`Frame (_("Image Type"),
-	  `RadioButtonGroup (`id (`type), `HBox (`HSpacing (), `VBox (
-	    `VSpacing (0.2),
-	    `Left (`RadioButton (`id ("iso"), `opt (`notify),
-		// radio button label
-		_("&Live ISO Image"), kiwi_task == "iso")),
-	    `Left (`RadioButton (`id ("xen"), `opt (`notify),
-		// radio button label
-		_("&Xen Image"), kiwi_task == "xen")),
-	    `Left (`RadioButton (`id ("usb"), `opt (`notify),
-		// radio button label
-		_("&USB Stick Image"), kiwi_task == "usb")),
-	    // radio button label
-	    `Left (`RadioButton (`id ("vmx"), `opt (`notify),
-		_("&Virtual Disk Image"), kiwi_task == "vmx")),
-	    `VSpacing (0.2)
-	  )))
-	),
+	    `RadioButtonGroup (`id (`imp), `HBox (`HSpacing (), `VBox (
+		`VSpacing (0.2),
+		`Left (`RadioButton (`id ("rb_new"), `opt (`notify),
+		    // radio button label
+		    _("Create from beginning"), true)
+		),
+		template_items == [] ? `VSpacing (0) :
+		`Left (`RadioButton (`id ("rb_template"), `opt (`notify),
+		    // radio button label
+		    _("Base on Template"))
+		),
+		template_items == [] ? `VSpacing (0) :
+		`HBox (
+		    `HSpacing (2.5),
+		    `ComboBox (`id (`template), `opt (`notify, `hstretch), "",
+			template_items)
+		),
+		`Left (`RadioButton (`id ("rb_dir"), `opt (`notify),
+		    // radio button label
+		    _("Base on Existing Configuration"))
+		),
+		`HBox (
+		    `HSpacing (2.5),
+		    `Label (`id (`import_dir),`opt (`outputField,`hstretch),""),
+		    // push button label
+		    `PushButton (`id (`import), _("&Choose..."))
+		)
+	    )))
+	) :
+	`Left (`Label (`id (`config), name)),
+	// combo box label
+	`ComboBox (`id (`type), `opt (`notify, `hstretch), _("I&mage Type"),
+	    type_items),
 	`HBox (
 	    // text entry label
 	    `TextEntry (`id (`out_dir), _("&Output directory"), out_dir),
@@ -1505,6 +1668,9 @@ Save the image to the stick now?")))
 	),
 	`HBox (
 	    `PushButton (`id (`add), Label::AddButton ()),
+	    // menu butto label
+	    `MenuButton (`id (`addsystem), _("A&dd From System"),
+		system_repo_items),
 	    `PushButton (`id (`edit), Label::EditButton ()),
 	    `PushButton (`id (`delete), Label::DeleteButton ()),
 	    `HStretch ()
@@ -1513,24 +1679,53 @@ Save the image to the stick now?")))
     // dialog caption
     Wizard::SetContentsButtons (_("Image preparation"), contents, help,
 	Label::BackButton(), Label::NextButton());
+    Wizard::RestoreBackButton();
+    Wizard::RestoreAbortButton();
 
-    if (Config == $[] && kiwi_configuration != "")
+    if (new_configuration && kiwi_configuration != "")
     {
-	update_config (kiwi_configuration);
+	update_config (kiwi_configuration, $[]);
     }
     else
 	update_repo_table ();
 
-    UI::SetFocus (`id (`config));
+    if (new_configuration)
+    {
+	UI::SetFocus (`id (`config));
+	if (template_items != [])
+	    UI::ChangeWidget (`id (`template), `Enabled, false);
+	UI::ChangeWidget (`id (`import), `Enabled, false);
+	UI::ChangeWidget (`id (`config), `ValidChars, String::CAlnum () + "-_");
+    }
     any ret = nil;
     while (true)
     {
 	ret = UI::UserInput();
 	if (ret == `abort || ret == `cancel || ret == `back)
 	{
-	    break;
+	    if(ProductCreator::ReallyAbort()) break;
+            else continue;
 	}
-	else if (ret == `import)
+	else if (ret == "rb_dir")
+	{
+	    if (template_items != [])
+		UI::ChangeWidget (`id (`template), `Enabled, false);
+	    UI::ChangeWidget (`id (`import), `Enabled, true);
+	    if (kiwi_configuration == "")
+		ret = `import;
+	}
+	else if (ret == "rb_template")
+	{
+	    UI::ChangeWidget (`id (`template), `Enabled, true);
+	    UI::ChangeWidget (`id (`import), `Enabled, false);
+	    ret	= `template;
+	}
+	else if (ret == "rb_new")
+	{
+	    UI::ChangeWidget (`id (`template), `Enabled, false);
+	    UI::ChangeWidget (`id (`import), `Enabled, false);
+	}
+	if (ret == `import)
 	{
 	    string dir	= UI::AskForExistingDirectory (
 		kiwi_configuration== "" ? Kiwi::images_dir : kiwi_configuration,
@@ -1538,54 +1733,87 @@ Save the image to the stick now?")))
 		_("Directory to Import"));
 	    if (dir!= nil)
 	    {
-		update_config (dir);
+		UI::ChangeWidget (`id (`import_dir), `Value, dir);
+		update_config (dir, $[]);
 	    }
+	}
+	else if (ret == `template)
+	{
+	    string dir	= (string) UI::QueryWidget (`id (`template), `Value);
+	    update_config (dir, Kiwi::Templates[dir]:$[]);
+	}
+	else if (is (ret, string)) // system repository selected
+	{
+	    map system_repo	= Kiwi::initial_repositories[(string)ret]:$[];
+	    if (!haskey (repositories, (string)ret))
+		repositories[(string)ret]	= system_repo;
+
+	    update_repo_table ();
 	}
 	else if (ret == `add)
 	{
 	    Wizard::CreateDialog ();
-	    string url	= "";
-	    if (SourceDialogs::TypeDialog () == `next &&
-		SourceDialogs::EditDialog () == `next)
+	    string url		= "";
+	    symbol type_ret	= SourceDialogs::TypeDialog ();
+
+	    if ((type_ret == `next || type_ret == `finish))
 	    {
-		url = SourceDialogs::GetURL ();
+		if (type_ret == `finish && SourceDialogs::GetURL () == "slp://")
+		{
+		    string required_package = "yast2-slp";
+		    boolean installed_before = PackageSystem::Installed (required_package);
+		    if (! installed_before)
+		    {
+			if (!PackageSystem::CheckAndInstallPackagesInteractive ([required_package]))
+			{
+			    Report::Error (sformat (
+				// popup error message, %1 is the package name
+				_("Cannot search for SLP repositories
+without having %1 package installed"),
+				required_package
+			    ));
+			    y2warning ("Not searching for SLP repositories");
+			}
+			else
+			{
+			    SCR::RegisterAgent(.slp, `ag_slp(`SlpAgent()));
+			}
+		    }
+		    string service = (string) WFM::call("select_slp_source");
+		    if (service != nil)
+			url = service;
+		}
+		else
+		{
+		    if (SourceDialogs::EditDialog () == `next)
+			url = SourceDialogs::GetURL ();
+		}
 	    }
 	    Wizard::CloseDialog ();
 	    if (url != "")
 	    {
-		boolean present	= false;
-		foreach (integer id, string repo, repositories, {
-		    if (repo == url)
-			present	= true;
-		});
-		if (present) break;
+		if (haskey (repositories, url))
+		    continue;
 
-		integer id	= -1;
 		map parsed = URL::Parse(url);
 		if (parsed["scheme"]:"" == "pkg")
 		{
 		    parsed["scheme"] = "dir";
 		    url = URL::Build (parsed);
-		    id = Pkg::SourceCreateType (url, "", "Plaindir");
 		}
-		else
-		    id = Pkg::SourceCreate (url, "");
-
-		if (id != -1)
-		{
-		    repositories[id]	= url;
-		    update_repo_table ();
-		}
+		repositories[url]	= $[
+		    "url"		: url,
+		    "plaindir"	: parsed["scheme"]:"" == "dir"
+		];
+		update_repo_table ();
 	    }
 	}
 	else if (ret == `edit)
 	{
-	    integer selected	= (integer)
+	    string url		= (string)
 		UI::QueryWidget (`id (`repositories), `CurrentItem);
-            map generalData	= Pkg::SourceGeneralData (selected);
-            string url		= generalData["url"]:"";
-	    string url_selected	= url;
-	    boolean plaindir	= generalData["type"]:"YaST" == "Plaindir";
+	    string selected_url	= url;
+	    boolean plaindir    = repositories[url,"plaindir"]:false;
 	    // change schema if the source type is plaindir
 	    // to show the right popup dialog
 	    if (plaindir)
@@ -1595,29 +1823,28 @@ Save the image to the stick now?")))
 		url = URL::Build (parsed);
 	    }
 	    url	= SourceDialogs::EditPopup (url);
-	    if (url == "" || url == nil || url == generalData["url"]:"")
+	    if (url == "" || url == nil || url == selected_url)
 		continue;
 	    // remove current url + add new one
-	    Pkg::SourceDelete (selected);
-	    repositories	= remove (repositories, selected);
-	    integer id	= -1;
+	    repositories	= remove (repositories, selected_url);
 	    map parsed = URL::Parse(url);
 	    if (parsed["scheme"]:"" == "pkg")
 	    {
 		parsed["scheme"] = "dir";
 		url = URL::Build (parsed);
-		id = Pkg::SourceCreateType (url, "", "Plaindir");
 	    }
-	    else
-		id = Pkg::SourceCreate (url, "");
-	    repositories[id]	= url;
+	    repositories[url]	= $[
+		"url"		: url,
+		"plaindir"	: parsed["scheme"]:"" == "dir"
+	    ];
 	    update_repo_table ();
 	}
 	else if (ret == `delete)
 	{
-	    integer selected	= (integer)
+	    string selected	= (string)
 		UI::QueryWidget (`id (`repositories), `CurrentItem);
-	    Pkg::SourceDelete (selected);
+	    if (selected == nil)
+		continue;
 	    repositories	= remove (repositories, selected);
 	    update_repo_table ();
 	}
@@ -1641,6 +1868,15 @@ Save the image to the stick now?")))
 		UI::SetFocus (`id (`config));
 		continue;
 	    }
+	    if (new_configuration &&
+		FileUtils::Exists (Kiwi::images_dir + "/" + name))
+	    {
+		// error popup
+		Popup::Error (sformat (_("Configuration with name \"%1\" already exists.
+Choose a different one."), name));
+		UI::SetFocus (`id (`config));
+		continue;
+	    }
 	    out_dir	= (string) UI::QueryWidget (`id (`out_dir), `Value);
 	    if (out_dir == "")
 	    {
@@ -1649,6 +1885,14 @@ Save the image to the stick now?")))
 		UI::SetFocus (`id (`out_dir));
 		continue;
 	    }
+	    if (repositories == $[])
+	    {
+		// error popup
+		Popup::Error(_("Specify at least one package repository."));
+		UI::SetFocus (`id (`repositories));
+		continue;
+	    }
+
 	    kiwi_task	= (string)  UI::QueryWidget (`id (`type), `Value);
 	    break;
 	}
@@ -1656,26 +1900,52 @@ Save the image to the stick now?")))
     string boot	= Config["type",kiwi_task,"boot"]:"";
     if (boot != "" && issubstring (boot, "/"))
     {
-	Config[kiwi_task + "boot"] = substring (boot, search (boot, "/") + 1);
+	string prefix	= kiwi_task == "pxe" ? "net" : kiwi_task;
+	Config[prefix + "boot"] = substring (boot, search (boot, "/") + 1);
     }
     if (ret == `next)
     {
-	Config["name"]		= name;
 	Config["kiwi_configuration_" + kiwi_task]	= kiwi_configuration;
         Config["_imported"]	= true;
-        Config["iso-directory"]	= out_dir;
+        Config["iso-directory"]	= out_dir +
+	    (new_configuration ? "/" + name : "");
+	Config["name"]		= name;
 	Config["sources"]	= maplist (
-	    integer id, string repo, repositories, ``(repo));
+	    string url, map repo, repositories, ``(url));
+	Config["new_configuration"]	= new_configuration;
 	if (Config["sources"]:[] != [])
-	    ProductCreator::enable_sources	= false;
-	else
 	{
-	    // reenable original sources
-	    Pkg::SourceRestore ();
+	    ProductCreator::enable_sources	= false;
+	    map<string,integer> current_sources	= $[];
+	    // delete current repos, that won't be used in config
+	    foreach (map source, Pkg::SourceEditGet (), {
+		integer srcid       = source["SrcId"]:-1;
+		map data = Pkg::SourceGeneralData (srcid);
+		string url	= data["url"]:"";
+		current_sources[url]	= srcid;
+	    });
+	    // initialize new repos now
+	    foreach (string url, map repo, repositories, {
+		if (substring (url, 0, 1) == "/")
+		    url		= "dir://" + url;
+		if (haskey (current_sources, url))
+		{
+		    current_sources	= remove (current_sources, url);
+		    return;
+		}
+		if (repo["plaindir"]:false)
+		    Pkg::SourceCreateType (url, "", "Plaindir");
+		else
+		    Pkg::SourceCreate (url, "");
+	    });
+	    foreach (string url, integer srcid, current_sources, {
+		Pkg::SourceDelete (srcid);
+	    });
 	    Pkg::SourceLoad();
 	}
 	ProductCreator::Config		= Config;
-	ProductCreator::kiwi_task	= kiwi_task;
+	Kiwi::current_repositories	= repositories;
+	Kiwi::kiwi_task	= kiwi_task;
     }
     y2milestone("Returning %1", ret);
     return (symbol) ret;

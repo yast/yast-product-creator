@@ -13,6 +13,7 @@
 textdomain "product-creator";
 
 include "product-creator/kiwi_dialogs.ycp";
+include "product-creator/wizards.ycp";
 
 import "CommandLine";
 import "Confirm";
@@ -23,7 +24,7 @@ import "Sequencer";
  * configuration workflow for kiwi
  * @return sequence result
  */
-define boolean KiwiSequence() {
+define boolean ShortKiwiSequence() {
 
     map aliases = $[
 	"prepare"	: ``( PrepareDialog() ),
@@ -60,6 +61,7 @@ failed."));
         return false;
     }
 
+    InitRepositories ();
     PackageCallbacksInit::InitPackageCallbacks();
 
     symbol ret = Sequencer::Run(aliases, sequence);
@@ -71,7 +73,7 @@ map cmdline_description = $[
     "id"	: "kiwi",
     // command line help text for the kiwi module
     "help"	: _("Configuration of Kiwi"),
-    "guihandler"        : KiwiSequence,
+    "guihandler"        : ShortKiwiSequence,
     "actions"           : $[],
 ];
 

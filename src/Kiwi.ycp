@@ -24,17 +24,39 @@
 
   string encryption_method	= nil;
 
+  // temporary directory, where kiwi is working
   global string tmp_dir	= "";
 
-  global string images_dir      = Directory::vardir + "/product-creator/images";
+  // directory for saving image configurations
+  global string images_dir	= Directory::vardir + "/product-creator/images";
+
+  // bug 331733
+  global string supported_boot_images	= "";
+
+  // directories with user-made templated
+  global list<string> templates_dirs	= [];
 
   global string default_packagemanager	= "smart";
 
-  // all repositories of current configuration
   list<map> all_sources		= [];
+
+  // repositories used for current configuration
+  global map <string,map> current_repositories	= $[];
+
+  // initial system repositories
+  global map <string,map> initial_repositories	= $[];
 
   // where the kiwi configuration files are stored
   string config_dir	= "";
+
+  // chroot directory for creating the physical extend
+  string chroot_dir	= "";
+
+  // What we want to create with kiwi
+  global string kiwi_task	= "iso";
+
+  // map with image templates (to base new projects on)
+  global map<string,map> Templates		= $[];
 
   /**
    * crypt given user password with current encryption algorithm
@@ -71,6 +93,32 @@
    */
   map get_source_value (string source, map config) {
 
+    map ret	= $[];
+    // first check if we weren't importing this source:
+    foreach (string url, map repo, current_repositories, {
+	if (url == source && repo["org"]:$[] != $[])
+	{
+	    ret = $[
+		"__key"	: "repository",
+		"type"	: repo["org","type"]:"",
+		"__children": [
+		    $[
+			"__key"	: "source",
+			"path"	: repo["org","source",0,"path"]:"",
+		    ]
+		]
+	    ];
+	    if (repo["org","status"]:"" != "")
+		ret["status"]	= repo["org","status"]:"";
+	}
+    });
+    if (ret != $[])
+    {
+	y2milestone ("imported source: %1", source);
+	return ret;
+    }
+
+    // ... otherwise, we must ask zypp:
     string type		= "yast2";
     string source_path	= adapt_source_path (source);
 
@@ -86,7 +134,7 @@
 		type	= "rpm-md";
 	}
     });
-    map ret = $[
+    ret = $[
 	"__key"	: "repository",
 	"type"	: type,
 	"__children": [
@@ -96,7 +144,7 @@
 	    ]
 	]
     ];
-    return ret; // FIXME add status?
+    return ret;
   }
 
   /**
@@ -111,9 +159,9 @@
    */
   map get_type_value (map config, string task) {
 
-    string boot_image   = sformat ("%1boot/%2", task, config[task + "boot"]:"suse-10.2");
+    string boot_image	= sformat ("%1boot/%2", task, config[task + "boot"]:"suse-10.2");
     if (config["type",task,"boot"]:"" != "")
-	boot_image      = config["type",task,"boot"]:"";
+	boot_image	= config["type",task,"boot"]:"";
     map ret	= $[
 	"__key"		: "type",
 	"__value"	: task,
@@ -123,7 +171,7 @@
     if (task != "iso")
 	ret["filesystem"]	= config["type",task,"filesystem"]:"ext3";
     if (config["type",task,"flags"]:"" != "")
-	ret["flags"]		= config["type",task,"flags"]:"";
+	ret["flags"]            = config["type",task,"flags"]:"";
     return ret;
   }
 
@@ -224,6 +272,12 @@
     ret["packages"] = maplist (map p,
 	(list<map>)packages["image","package"]:[], ``(p["name"]:""));
 
+    if (haskey (packages, "delete"))
+    {
+	ret["delete_packages"]	= maplist (map p,
+	    (list<map>)packages["delete", "package"]:[], ``(p["name"]:""));
+    }
+
     if (packages["image","patternType"]:"" != "")
 	ret["image_patternType"]	= packages["image","patternType"]:"";
     if (packages["xen","disk"]:"" != "")
@@ -232,8 +286,8 @@
 	ret["xen_memory"]	= tointeger (packages["xen","memory"]:"512");
     foreach (string key, [ "author", "contact", "specification",
 	"packagemanager", "version", "rpm-check-signatures", "rpm-force",
-	"sizeunit", "type", "name", "repository",  "defaultdestination",
-	"schemeversion"],
+	"sizeunit", "type", "name", "repository", "defaultdestination",
+	"schemeversion", "defaultroot", "inherit"],
     {
 	if (config[key]:nil != nil)
 	    ret[key]	= config[key]:nil;
@@ -241,7 +295,7 @@
     if (haskey (config, "size"))
 	ret["size"]	= tointeger (config["size"]:"2700");
     if (haskey (config, "defaultdestination"))
-	ret["iso-directory"]    = config["defaultdestination"]:"";
+	ret["iso-directory"]	= config["defaultdestination"]:"";
     foreach (string user, map usermap, (map<string,map>) config["users"]:$[], {
 	if (!haskey (ret, "users"))
 	    ret["users"]     = $[];
@@ -258,11 +312,19 @@
   /**
    * Write currect configuration to new config.xml
    */
-  global boolean WriteConfigXML (map KiwiConfig, string kiwi_task) {
+  global boolean WriteConfigXML (map KiwiConfig, string task) {
 
     all_sources		= Pkg::SourceEditGet();
 
     tmp_dir		= Directory::tmpdir;
+    chroot_dir		= tmp_dir + "/myphysical";
+    if (KiwiConfig["defaultroot"]:"" != "")
+    {
+	chroot_dir	= KiwiConfig["defaultroot"]:"";
+	if (KiwiConfig["new_configuration"]:false)
+	    chroot_dir	= chroot_dir + "/" + KiwiConfig["name"]:"";
+	KiwiConfig["defaultroot"]	= chroot_dir;
+    }
 
     list packages_list	= [];
     list patterns_list	= [];
@@ -328,33 +390,17 @@
 	]);
     });
 
-    list write_list	= [ $[
-      "__key"	: "image",
-      "name"	: KiwiConfig["name"]:"",
-      "schemeversion"   : KiwiConfig["schemeversion"]:"1.4",
-      "__children"	: [
-	$[
-	    "__key"	: "description",
-	    "type"	: "system",
-	    "__children"	: [
-		$[
-		    "__key"	: "author",
-		    "__value"	: KiwiConfig["author"]:"",
-		],
-		$[
-		    "__key"	: "contact",
-		    "__value"	: KiwiConfig["contact"]:"",
-		],
-		$[
-		    "__key"	: "specification",
-		    "__value"	: KiwiConfig["specification"]:"",
-		],
-	    ],
-	],
-	$[
+    list packages_delete_list	= maplist (string package,
+	KiwiConfig["delete_packages"]:[], ``($[
+	    "__key"		: "package",
+	    "name"		: package,
+	])
+    );
+
+    map preferences	= $[
 	    "__key"	: "preferences",
 	    "__children"	: [
-		get_type_value (KiwiConfig, kiwi_task),
+		get_type_value (KiwiConfig, task),
 		$[
 		    "__key"	: "version",
 		    "__value"	: KiwiConfig["version"]:"1",
@@ -381,9 +427,44 @@
 		    "__value"	: KiwiConfig["iso-directory"]:"",
 		],
 	    ],
+    ];
+    if (KiwiConfig["defaultroot"]:"" != "")
+    {
+	preferences["__children"]	= add (preferences["__children"]:[], $[
+		    "__key"	: "defaultroot",
+		    "__value"	: KiwiConfig["defaultroot"]:"",
+	]);
+    }
+
+
+    list write_list	= [ $[
+      "__key"		: "image",
+      "name"		: KiwiConfig["name"]:"",
+      "schemeversion"	: KiwiConfig["schemeversion"]:"1.4",
+      "__children"	: [
+	$[
+	    "__key"	: "description",
+	    "type"	: "system",
+	    "__children"	: [
+		$[
+		    "__key"	: "author",
+		    "__value"	: KiwiConfig["author"]:"",
+		],
+		$[
+		    "__key"	: "contact",
+		    "__value"	: KiwiConfig["contact"]:"",
+		],
+		$[
+		    "__key"	: "specification",
+		    "__value"	: KiwiConfig["specification"]:"",
+		],
+	    ],
 	],
+	preferences,
       ],
     ]];
+    if (KiwiConfig["inherit"]:"" != "")
+	write_list[0,"inherit"]	= KiwiConfig["inherit"]:"";
     if (haskey (KiwiConfig, "users"))
     {
 	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
@@ -414,7 +495,7 @@
 	    "__children": union (union (packages_boot_list, patterns_boot_list), ignored_boot_list)
 	],
     ]);
-    if (kiwi_task == "xen")
+    if (task == "xen")
     {
 	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
 	    "__key"	: "packages",
@@ -426,14 +507,22 @@
 	]);
     }
 
+    if (packages_delete_list != [])
+    {
+	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
+	    "__key"	: "packages",
+	    "type"	: "delete",
+	    "__children": packages_delete_list
+	]);
+    }
+
     string write_string	= Map2XML (write_list[0]:$[], 0);
-    config_dir	= tmp_dir + "/" +
-	get_config_dir (KiwiConfig["name"]:"", kiwi_task);
+    config_dir	= tmp_dir + "/" + KiwiConfig["name"]:"";
     SCR::Execute (.target.mkdir, config_dir);
     SCR::Write (.target.string, config_dir + "/config.xml", write_string);
     foreach (string dir, ["root_dir", "config_dir"], {
 	foreach (string val, KiwiConfig[dir]:[], {
-	    string realdir	= config_dir + "/" + substring (dir, 0, find (dir, "_"));
+	    string realdir	= config_dir + "/" + substring (dir, 0, search (dir, "_"));
 	    boolean created	= false;
 	    if (val != "" && FileUtils::Exists (val))
 	    {
@@ -471,9 +560,10 @@
 	return false;
     }
 
-    if (FileUtils::Exists (tmp_dir + "/myphysical"))
+    if (FileUtils::Exists (chroot_dir))
     {
-	SCR::Execute (.target.bash, sformat ("rm -rf %1/myphysical", tmp_dir));
+	y2milestone ("%1 directory is present, removing...", chroot_dir);
+	SCR::Execute (.target.bash, sformat ("rm -rf %1", chroot_dir));
     }
 
     // construct the dialog
@@ -500,13 +590,10 @@
     void update_output () {
         // read the output line from irw:
 	list<string> out	= (list<string>)SCR::Read(.background.newout);
-	/*
 	foreach (string line, out, {
 	    line	= String::Replace (line, "\r", "\n");
 	    UI::ChangeWidget (`id(`log), `LastLine, line + "\n");
 	});
-	*/
-	UI::ChangeWidget (`id(`log), `LastLine, mergestring (out, "\n") + "\n");
 
 	list<string> err = (list<string>) SCR::Read(.background.newerr);
 	foreach (string line, err, {
@@ -515,7 +602,7 @@
 	});
     }
 
-    string cmd	= sformat ("kiwi --root %1/myphysical --prepare %2 --logfile terminal", tmp_dir, config_dir);
+    string cmd	= sformat ("ZYPP_READONLY_HACK=1 kiwi --root %1 --prepare %2 --logfile terminal", chroot_dir, config_dir);
 
     y2milestone ("calling '%1'", cmd);
 
@@ -523,26 +610,17 @@
 
     symbol ret		= nil;
     boolean creating	= false;
-    boolean first_lines	= false;
-    integer lines_show	= 0;
-    integer times_read	= 0;
     do
     {
 	ret = (symbol) UI::PollInput();
         if ((boolean) SCR::Read(.background.output_open) &&
-	    (integer) SCR::Read(.background.newlines) > lines_show)
+	    (integer) SCR::Read(.background.newlines)>0)
         {
-	    if (times_read > 10)
-		lines_show	= 50;
-	    else
-		times_read	= times_read + 1;
 	    update_output ();
         }
 	else if (!(boolean)SCR::Read(.background.isrunning))
 	{
 	    update_output ();
-	    lines_show	= 0;
-	    times_read	= 0;
 
 	    integer status	= (integer) SCR::Read (.background.status);
 	    if (status != 0)
@@ -562,8 +640,7 @@
 
 		// now continue with creating
 		UI::ChangeWidget (`id(`log), `LastLine, "\n");
-		cmd	= sformat ("kiwi --create %1/myphysical -d %2 --logfile terminal",
-		    tmp_dir, out_dir);
+		cmd	= sformat ("ZYPP_READONLY_HACK=1 kiwi --create %1 -d %2 --logfile terminal", chroot_dir, out_dir);
 		y2milestone ("calling '%1'", cmd);
 		// label
 		UI::ReplaceWidget (`id (`rpl), `Left (`Label (_("Creating Image"))));
@@ -597,13 +674,118 @@
   /**
    * save the image configuration to the kiwi images directory
    */
-  global string SaveConfiguration (map KiwiConfig, string kiwi_task) {
+  global string SaveConfiguration (map KiwiConfig, string task) {
     if (config_dir == "" || !FileUtils::Exists (config_dir))
 	return nil;
     if (!FileUtils::Exists (images_dir))
 	SCR::Execute (.target.mkdir, images_dir);
     SCR::Execute (.target.bash, sformat ("cp -ar %1 %2/", config_dir, images_dir));
-    return (images_dir + get_config_dir (KiwiConfig["name"]:"", kiwi_task));
+    return (images_dir + KiwiConfig["name"]:"");
+  }
+
+    /**
+     * Import repositories from given kiwi image configuration
+     * @patam Config configuration map, as read from config.xml
+     * @param dir path to directory containing this config.xml
+     */
+    global map <string,map> ImportImageRepositories (map Config, string dir) {
+
+	current_repositories	= $[];
+	foreach (map repo, (list<map>) Config["repository"]:[], {
+	    string source	= repo["source",0,"path"]:"";
+	    if (source != "")
+	    {
+		string url	= "";
+		if (substring (source, 0, 7) == "this://")
+		{
+		    string source_path = substring (source, 7);
+		    source	= dir + "/" + source_path;
+		}
+		if (substring (source, 0, 1) == "/")
+		    url	= "dir://";
+		url	= url + source;
+		current_repositories	[url]	= $[
+		    "url"	: url,
+		    "plaindir"	: repo["type"]:"" == "rpm-dir",
+		    "org"	: repo,
+		];
+	    }
+	});
+	return current_repositories;
+    }
+
+   /**
+    * Initialize the list of current repositories
+    */
+   global map <string,map> InitCurrentRepositories () {
+
+	Pkg::SourceRestore ();
+	foreach (map source, Pkg::SourceEditGet (), {
+	    integer srcid       = source["SrcId"]:-1;
+	    map data = Pkg::SourceGeneralData (srcid);
+	    string url	= data["url"]:"";
+	    current_repositories[url]	= $[
+		"url"       : url,
+		"plaindir"  : data["type"]:"" == "Plaindir"
+	    ];
+	});
+	return current_repositories;
+   }
+
+  /**
+   * Read the templates on which the images can be based
+   */
+  global boolean ReadImageTemplates () {
+
+    string dirs = (string)SCR::Read(.sysconfig.product-creator.IMAGE_TEMPLATES);
+    map name_version	= $[];
+    foreach (string line, splitstring (dirs, "\t "), {
+	if (line == "" || substring (line, 0, 1) == "#")
+	    return;
+	templates_dirs	= add (templates_dirs, line);
+	if (!FileUtils::IsDirectory (line))
+	{
+	    y2warning ("%1 is not a directory", line);
+	    return;
+	}
+	map out = (map) SCR::Execute (.target.bash_output,
+	    sformat ("ls -A1 %1", line));
+	foreach (string d, splitstring(out["stdout"]:"", "\n"), {
+	    if (d == "") return;
+	    map config	= Kiwi::ReadConfigXML (line + "/" + d);
+	    // index by full path, there may be same names
+	    // (templates could be provided by different vendors)
+	    if (config != nil && config != $[])
+	    {
+		string name	= config["name"]:"";
+		string ver	= config["version"]:"";
+		if (name_version[name]:"" == ver)
+		    y2warning ("template %1,%2 already imported", name, ver);
+		else
+		{
+		    name_version[name]	= ver;
+		    Templates[line + "/" + d]	= config;
+		}
+	    }
+	});
+    });
+    return true;
+  }
+
+  /**
+   * REad the confgiuration stuff for image creator
+   */
+  global boolean Read () {
+
+    string dir =
+	(string) SCR::Read (.sysconfig.product-creator.IMAGE_CONFIGURATIONS);
+    if (dir != nil && dir != "")
+	images_dir	= dir;
+    supported_boot_images	=
+	(string) SCR::Read (.sysconfig.product-creator.SUPPORTED_BOOT_IMAGES);
+    if (supported_boot_images == nil)
+	supported_boot_images	= "";
+    return ReadImageTemplates ();
   }
 
 }

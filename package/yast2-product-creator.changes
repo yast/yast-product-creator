@@ -1,4 +1,34 @@
 -------------------------------------------------------------------
+Thu Oct 25 15:12:09 CEST 2007 - jsuchome@suse.cz
+
+- adapted for the API change of StorageDevices.ycp
+- merged features done in SLE10SP version 2.13.17, mostly the
+  SLEPOS requirements (F302370, F302371) and related bugfixes:
+    - allow more characters in the image name
+    - fix modifying of repository (#334208)
+    - check for duplicates in the list of boot images (#332581)
+    - disable Delete button when there's nothing to delete (#334255)
+    - update defaultroot only for new configurations (#327057)
+    - check for absolute paths in boot image entry
+    - fix initializing when going Back (#332581)
+    - fix adding CD/DVD/SLP repositories (#333106) 
+    - show correct list of repositories when going back (#332253)
+    - use system repositories when none is specified (#332253) 
+    - menubutton for adding system repositories (#332253)
+    - added SUPPORTED_BOOT_IMAGES to /etc/sysconfig/product-creator:
+      possibility to limit list of offered boot images (#331733)
+    - append image name to defaultdestination and defaultroot (#327057)
+    - copy whole content of imported kiwi config directory (#330052)
+    - save defaultroot value to config.xml (#330059)
+    - don't ignore 'inherit' tag (#330079)
+    - added support for "this://" in repository paths (#330095)
+    - destination directory specified in sysconfig file (#327055)
+    - tell zypper to ignore zypp lock (#310581)
+    - remove 'prepare' directory before calling kiwi (#325664)
+    - added /etc/sysconfig/product-creator config file
+- 2.16.1
+
+-------------------------------------------------------------------
 Thu Oct  4 09:50:06 CEST 2007 - jsuchome@suse.cz
 
 - add a default user to the iso template (#328145)

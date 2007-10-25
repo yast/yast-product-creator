@@ -19,13 +19,13 @@
     import "StorageDevices";
     import "Arch";
     import "Label";
-    import "Package";
     import "Popup";
     import "URL";
     import "GPG";
     import "GPGWidgets";
     import "CWM";
     import "String";
+    import "Package";
 
     include "product-creator/helps.ycp";
 
@@ -495,8 +495,8 @@
             ret = UI::UserInput();
 	    if (ret == `table)
 	    {
-                integer ID = (integer)UI::QueryWidget(`id(`table),`CurrentItem);
-                ret = contains (selected_items, ID) ? `remove : `select;
+		integer ID = (integer)UI::QueryWidget(`id(`table),`CurrentItem);
+		ret = contains (selected_items, ID) ? `remove : `select;
 	    }
             /* abort? */
             if(ret == `abort || ret == `cancel) {
@@ -509,6 +509,9 @@
 		map general_info = Pkg::SourceGeneralData(SrcID);
 		boolean found_architecture = false;
 
+		string arch = Arch::architecture ();
+		if (arch == "s390_64") arch = "s390x";
+
 		// architecture check is possible only for YaST sources
 		if (general_info["type"]:"" == "YaST")
 		{
@@ -518,7 +521,7 @@
 
 		    foreach(string key, string value, read_content,
 			{
-			    if (key == "ARCH." + Arch::architecture())
+			    if (key == "ARCH." + arch)
 			    {
 				found_architecture = true;
 				break;
@@ -532,7 +535,7 @@
 		    found_architecture = true;
 		}
 
-		y2milestone("Architecture %1 is supported: %2", Arch::architecture(), found_architecture);
+		y2milestone("Architecture %1 is supported: %2", arch, found_architecture);
 
 		if (true)
 		{
@@ -547,7 +550,7 @@
 		{
 		    Report::Error(sformat(_("The source does not support the architecture of this machine (%1).
 Select another source.
-"), Arch::architecture()));
+"), arch));
 		}
             }
             else if (ret == `remove)
@@ -785,8 +788,8 @@ The created medium will not be bootable.\n"))
 	// while the package manager is initialized
 	UI::ReplaceWidget(`rep,
 			  mode == nil ?
-			  `PackageSelector(`id(`packages ), StorageDevices::FloppyDevice ) :
-			  `PackageSelector(`id(`packages ), `opt(mode), StorageDevices::FloppyDevice )
+			  `PackageSelector(`id(`packages ), StorageDevices::FloppyDevice ()) :
+			  `PackageSelector(`id(`packages ), `opt(mode), StorageDevices::FloppyDevice ())
 			  );
 
 	symbol result = (symbol) UI::RunPkgSelection(`id(`packages ) );
