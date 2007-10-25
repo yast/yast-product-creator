@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Oct 25 14:05:48 CEST 2007 - jsuchome@suse.cz
+
+- allow more characters in the image name
+- 2.13.17 
+
+-------------------------------------------------------------------
 Tue Oct 16 23:37:05 CEST 2007 - jsuchome@suse.cz
 
 - fix modifying of repository (#334208)

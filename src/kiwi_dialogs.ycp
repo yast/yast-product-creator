@@ -1694,7 +1694,7 @@ return ret;
 	if (template_items != [])
 	    UI::ChangeWidget (`id (`template), `Enabled, false);
 	UI::ChangeWidget (`id (`import), `Enabled, false);
-	UI::ChangeWidget (`id (`config), `ValidChars, String::CAlnum ());
+	UI::ChangeWidget (`id (`config), `ValidChars, String::CAlnum () + "-_");
     }
     any ret = nil;
     while (true)
