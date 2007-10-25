@@ -6,7 +6,7 @@ X-KDE-ModuleType=Library
 X-KDE-RootOnly=true
 X-KDE-HasReadOnlyMode=true
 X-KDE-Library=yast2
-X-SuSE-YaST-Call=kiwi
+X-SuSE-YaST-Call=image-creator
 
 X-SuSE-YaST-Group=Misc
 X-SuSE-YaST-Argument=
@@ -16,7 +16,7 @@ X-SuSE-YaST-Geometry=
 X-SuSE-YaST-SortKey=
 
 Icon=yast-kiwi
-Exec=/sbin/yast2 kiwi
+Exec=/sbin/yast2 image-creator
 
 Name=Image Creator
 GenericName=Create the Live CD, USB or XEN image

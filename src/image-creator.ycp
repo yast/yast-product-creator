@@ -1,0 +1,65 @@
+/**
+ * $Id$
+ *
+ */
+
+{
+
+textdomain "product-creator";
+
+import "CommandLine";
+import "Confirm";
+import "FileUtils";
+import "Kiwi";
+import "Label";
+import "ProductCreator";
+import "Sequencer";
+import "Wizard";
+import "Wizard_hw";
+
+include "product-creator/wizards.ycp";
+
+
+
+// TODO merge with main product-creator sequence?
+define boolean ICSequence() {
+
+    Wizard::CreateDialog();
+    Wizard::SetDesktopIcon("cd-creator");
+
+    if (!Confirm::MustBeRoot ())
+    {
+	UI::CloseDialog ();
+	return false;
+    }
+
+    if (!Package::InstallAll (["kiwi", "yast2-instserver"]))
+    {
+        Popup::Error(_("Installation of required packages
+failed."));
+	UI::CloseDialog ();
+        return false;
+    }
+
+    symbol ret = ImageCreatorSequence ();
+
+    UI::CloseDialog();
+    return ret == `next;
+}
+
+map cmdline_description = $[
+    "id"	: "image-creator",
+    // transltors: command line help text for the Xproduct-creator module
+    "help"	: _("Configuration of Image creator"),
+    "guihandler"        : ICSequence,
+];
+
+
+/* start the module */
+any ret = CommandLine::Run(cmdline_description);
+y2debug("ret=%1", ret);
+
+return ret;
+
+/* EOF */
+}

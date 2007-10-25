@@ -9,6 +9,7 @@ YCPCFLAGS = -I ./include
 
 client_DATA =			\
 	product-creator.ycp	\
+	image-creator.ycp	\
 	kiwi.ycp
 
 ynclude_DATA =			\
@@ -22,7 +23,7 @@ ynclude_DATA =			\
 
 desktop_DATA =			\
 	product-creator.desktop	\
-	kiwi.desktop
+	image-creator.desktop
 
 module_DATA =			\
 	ProductCreator.ycp	\
