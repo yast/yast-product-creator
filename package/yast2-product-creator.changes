@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Oct 26 10:25:49 CEST 2007 - jsuchome@suse.cz
+
+- fix the sequence for going to kiwi image from main summary
+- do not read the template name when going from main summary
+- 2.13.18 
+
+-------------------------------------------------------------------
 Thu Oct 25 14:05:48 CEST 2007 - jsuchome@suse.cz
 
 - allow more characters in the image name

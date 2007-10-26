@@ -798,12 +798,15 @@ directory."), out_dir));
     map<string,any> read_config	= Kiwi::ReadConfigXML (kiwi_configuration);
     if (!KiwiConfig["_imported"]:false)
     {
-	KiwiConfig = (map<string,any>) union (KiwiConfig, read_config);
+	KiwiConfig = (map<string,any>) union (
+	    // "type" had different meaning in ProductCreator::Config...
+	    remove (KiwiConfig, "type"), read_config);
 	// for new configuration, do not read all from the template
 	y2milestone ("product-creator based configuration...");
 	foreach (string key, ["addons", "packages", "sources"], {
 	    KiwiConfig[key]	= ProductCreator::Config[key]:[];
 	});
+	KiwiConfig["name"]      = ProductCreator::Config["name"]:"";
     }
     else
     {
