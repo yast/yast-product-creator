@@ -164,7 +164,6 @@ define symbol KiwiSequence() ``{
 	"ws_start"	: "init_sources",
 	"init_sources"	: $[
 	    `next	: "kiwi",
-	    `prepare	: "prepare"
 	],
 	"kiwi": $[
 	    `abort	: `abort,
