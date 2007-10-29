@@ -11,6 +11,9 @@ Requires:	yast2-packager autoyast2-installation yast2-security
 Requires:	yast2 >= 2.15.2
 BuildRequires: 	yast2 >= 2.15.2
 
+# New API of StorageDevices.ycp
+Conflicts:      yast2-storage < 2.16.1
+
 BuildArchitectures:	noarch
 
 Summary:	Create a new product

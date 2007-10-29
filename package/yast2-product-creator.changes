@@ -1,7 +1,9 @@
 -------------------------------------------------------------------
-Mon Oct 29 09:23:40 CET 2007 - jsuchome@suse.cz
+Mon Oct 29 11:13:16 CET 2007 - jsuchome@suse.cz
 
 - package kernel-bigsmp has been renamed to kernel-pae 
+- make a conflict with old yast2-storage
+- 2.16.3
 
 -------------------------------------------------------------------
 Fri Oct 26 10:25:01 CEST 2007 - jsuchome@suse.cz
