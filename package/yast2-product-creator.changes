@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Mon Oct 29 09:23:40 CET 2007 - jsuchome@suse.cz
+
+- package kernel-bigsmp has been renamed to kernel-pae 
+
+-------------------------------------------------------------------
 Fri Oct 26 10:25:01 CEST 2007 - jsuchome@suse.cz
 
 - fix the sequence for going to kiwi image from main summary

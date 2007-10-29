@@ -1958,7 +1958,7 @@ global define boolean setPackages() ``{
     if (kernel == "") {
         kernels = [
                    "kernel-64k-pagesize",
-                   "kernel-bigsmp",
+                   "kernel-pae",
                    "kernel-debug",
                    "kernel-default",
                    "kernel-iseries64",
