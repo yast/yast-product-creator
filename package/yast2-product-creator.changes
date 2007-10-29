@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Oct 26 12:52:54 CEST 2007 - jsuchome@suse.cz
+
+- do not read the template name when going from main summary (#337444)
+- 2.15.10
+
+-------------------------------------------------------------------
 Thu Oct  4 09:50:06 CEST 2007 - jsuchome@suse.cz
 
 - add a default user to the iso template (#328145)
