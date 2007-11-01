@@ -1505,7 +1505,9 @@ return ret;
 	// combo box item
 	"usb"	: _("USB Stick Image"),
 	// combo box item
-	"vmx"	: _("Virtual Disk Image")
+	"vmx"	: _("Virtual Disk Image"),
+	// combo box item
+	"oem"	: _("OEM Image")
     ];
 
     list type_items		= basic_type_items;
@@ -1520,7 +1522,7 @@ return ret;
 	    if (haskey (task2label, type))
 	    {
 		type_items	= add (type_items,
-			`item (`id (type), task2label[type]:type));
+		    `item (`id (type),task2label[type]:type,type == kiwi_task));
 	    }
 	});
 	default_type_items	= type_items;
@@ -1531,7 +1533,7 @@ return ret;
 	//solve `back here (=no import)
 	foreach (string type, map data, Config["type"]:$[], {
 	    type_its	= add (type_its,
-		`item (`id (type), task2label[type]:type));
+		`item (`id (type), task2label[type]:type, type == kiwi_task));
 	});
 	if (type_its != [])
 	    type_items	= type_its;
@@ -1782,14 +1784,16 @@ return ret;
 		    continue;
 
 		map parsed = URL::Parse(url);
+		boolean plaindir	= false;
 		if (parsed["scheme"]:"" == "pkg")
 		{
 		    parsed["scheme"] = "dir";
+		    plaindir            = true;
 		    url = URL::Build (parsed);
 		}
 		repositories[url]	= $[
 		    "url"		: url,
-		    "plaindir"	: parsed["scheme"]:"" == "dir"
+		    "plaindir"		: plaindir
 		];
 		update_repo_table ();
 	    }
@@ -1814,14 +1818,16 @@ return ret;
 	    // remove current url + add new one
 	    repositories	= remove (repositories, selected_url);
 	    map parsed = URL::Parse(url);
+	    plaindir		= false;
 	    if (parsed["scheme"]:"" == "pkg")
 	    {
 		parsed["scheme"] = "dir";
+		plaindir         = true;
 		url = URL::Build (parsed);
 	    }
 	    repositories[url]	= $[
 		"url"		: url,
-		"plaindir"	: parsed["scheme"]:"" == "dir"
+		"plaindir"	: plaindir
 	    ];
 	    update_repo_table ();
 	}
@@ -1880,6 +1886,56 @@ Choose a different one."), name));
 	    }
 
 	    kiwi_task	= (string)  UI::QueryWidget (`id (`type), `Value);
+
+	    list<string> failed_repositories	= [];
+	    if (size (repositories) > 0)
+	    {
+		map<string,integer> current_sources	= $[];
+		// delete current repos, that won't be used in config
+		foreach (map source, Pkg::SourceEditGet (), {
+		    integer srcid       = source["SrcId"]:-1;
+		    map data = Pkg::SourceGeneralData (srcid);
+		    string url	= data["url"]:"";
+		    current_sources[url]	= srcid;
+		});
+		// initialize new repos now
+		repositories = filter (string url, map repo, repositories, {
+		    if (substring (url, 0, 1) == "/")
+			url		= "dir://" + url;
+		    if (haskey (current_sources, url))
+		    {
+			current_sources	= remove (current_sources, url);
+			return true;
+		    }
+		    integer source_ret	= -1;
+		    if (repo["plaindir"]:false)
+			source_ret = Pkg::SourceCreateType (url, "", "Plaindir");
+		    else
+			source_ret	= Pkg::SourceCreate (url, "");
+		    if (source_ret == -1)
+		    {
+			failed_repositories = add (failed_repositories, url);
+			return false;
+		    }
+		    else return true;
+		});
+		foreach (string url, integer srcid, current_sources, {
+		    Pkg::SourceDelete (srcid);
+		});
+	    }
+	    if (failed_repositories != [])
+	    {
+		// continue/cancel popup %1 is a \n separated list
+		if (!Popup::ContinueCancel (sformat (_("Failed to add these repositories:
+
+%1.
+
+Continue anyway?"), mergestring (failed_repositories, "\n"))))
+		{
+		    update_repo_table ();
+		    continue;
+		}
+	    }
 	    break;
 	}
     }
@@ -1891,44 +1947,19 @@ Choose a different one."), name));
     }
     if (ret == `next)
     {
+	if (size (repositories) > 0)
+	{
+	    ProductCreator::enable_sources	= false;
+	    Pkg::SourceLoad();
+	}
 	Config["kiwi_configuration_" + kiwi_task]	= kiwi_configuration;
         Config["_imported"]	= true;
         Config["iso-directory"]	= out_dir +
 	    (new_configuration ? "/" + name : "");
 	Config["name"]		= name;
+	Config["new_configuration"]	= new_configuration;
 	Config["sources"]	= maplist (
 	    string url, map repo, repositories, ``(url));
-	Config["new_configuration"]	= new_configuration;
-	if (Config["sources"]:[] != [])
-	{
-	    ProductCreator::enable_sources	= false;
-	    map<string,integer> current_sources	= $[];
-	    // delete current repos, that won't be used in config
-	    foreach (map source, Pkg::SourceEditGet (), {
-		integer srcid       = source["SrcId"]:-1;
-		map data = Pkg::SourceGeneralData (srcid);
-		string url	= data["url"]:"";
-		current_sources[url]	= srcid;
-	    });
-	    // initialize new repos now
-	    foreach (string url, map repo, repositories, {
-		if (substring (url, 0, 1) == "/")
-		    url		= "dir://" + url;
-		if (haskey (current_sources, url))
-		{
-		    current_sources	= remove (current_sources, url);
-		    return;
-		}
-		if (repo["plaindir"]:false)
-		    Pkg::SourceCreateType (url, "", "Plaindir");
-		else
-		    Pkg::SourceCreate (url, "");
-	    });
-	    foreach (string url, integer srcid, current_sources, {
-		Pkg::SourceDelete (srcid);
-	    });
-	    Pkg::SourceLoad();
-	}
 	ProductCreator::Config		= Config;
 	Kiwi::current_repositories	= repositories;
 	Kiwi::kiwi_task	= kiwi_task;

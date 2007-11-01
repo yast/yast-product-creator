@@ -1,4 +1,15 @@
 -------------------------------------------------------------------
+Thu Nov  1 10:57:39 CET 2007 - jsuchome@suse.cz
+
+- save all types from the template to target config.xml
+- show correct list of repositories when going back (#337862)
+- fixed checking if repository has 'plaindir' format (#338115)
+- show which repositories YaST failed to add (#337618)
+- added support for "format" and "locale" tags in config.xml
+- added support for OEM image type
+- 2.13.19
+
+-------------------------------------------------------------------
 Fri Oct 26 10:25:49 CEST 2007 - jsuchome@suse.cz
 
 - fix the sequence for going to kiwi image from main summary

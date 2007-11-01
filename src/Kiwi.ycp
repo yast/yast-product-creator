@@ -154,25 +154,47 @@
     return deletechars (name, " \t");
   }
 
+
   /**
-   * generate the value for image type
+   * generate the values for image type
    */
-  map get_type_value (map config, string task) {
+  list<map> get_type_values (map config, string task) {
 
     string boot_image	= sformat ("%1boot/%2", task, config[task + "boot"]:"suse-10.2");
-    if (config["type",task,"boot"]:"" != "")
-	boot_image	= config["type",task,"boot"]:"";
-    map ret	= $[
-	"__key"		: "type",
-	"__value"	: task,
-	"primary"	: "true",
-	"boot"		: boot_image,
-    ];
-    if (task != "iso")
-	ret["filesystem"]	= config["type",task,"filesystem"]:"ext3";
-    if (config["type",task,"flags"]:"" != "")
-	ret["flags"]            = config["type",task,"flags"]:"";
-    return ret;
+    list<map> retlist = maplist (
+	string type, map typemap, (map<string,map>)config["type"]:$[], {
+
+	if (typemap["boot"]:"" != "")
+	    boot_image	= typemap["boot"]:"";
+
+	map ret	= $[
+	    "__key"		: "type",
+	    "__value"		: type,
+	    "boot"		: boot_image,
+	];
+	if (type != "iso")
+	    ret["filesystem"]	= typemap["filesystem"]:"ext3";
+	if (typemap["flags"]:"" != "")
+	    ret["flags"]            = typemap["flags"]:"";
+	if (typemap["format"]:"" != "")
+	    ret["format"]           = typemap["format"]:"";
+	if (type == task)
+	    ret["primary"]	= "true";
+	return ret;
+    });
+    if (retlist == [])
+    {
+	map ret	= $[
+	    "__key"		: "type",
+	    "__value"		: task,
+	    "boot"		: boot_image,
+	    "primary"		: "true"
+	];
+	if (task != "iso")
+	    ret["filesystem"]	= "ext3";
+	retlist	= [ ret ];
+    }
+    return retlist;
   }
 
   /**
@@ -287,7 +309,7 @@
     foreach (string key, [ "author", "contact", "specification",
 	"packagemanager", "version", "rpm-check-signatures", "rpm-force",
 	"sizeunit", "type", "name", "repository", "defaultdestination",
-	"schemeversion", "defaultroot", "inherit"],
+	"schemeversion", "defaultroot", "inherit", "locale"],
     {
 	if (config[key]:nil != nil)
 	    ret[key]	= config[key]:nil;
@@ -400,7 +422,6 @@
     map preferences	= $[
 	    "__key"	: "preferences",
 	    "__children"	: [
-		get_type_value (KiwiConfig, task),
 		$[
 		    "__key"	: "version",
 		    "__value"	: KiwiConfig["version"]:"1",
@@ -428,11 +449,22 @@
 		],
 	    ],
     ];
+    foreach (map typemap, get_type_values (KiwiConfig, task), {
+	preferences["__children"]	= prepend (preferences["__children"]:[],
+	    typemap);
+    });
     if (KiwiConfig["defaultroot"]:"" != "")
     {
 	preferences["__children"]	= add (preferences["__children"]:[], $[
 		    "__key"	: "defaultroot",
 		    "__value"	: KiwiConfig["defaultroot"]:"",
+	]);
+    }
+    if (KiwiConfig["locale"]:"" != "")
+    {
+	preferences["__children"]	= add (preferences["__children"]:[], $[
+		    "__key"	: "locale",
+		    "__value"	: KiwiConfig["locale"]:"",
 	]);
     }
 
