@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Thu Nov  1 11:01:12 CET 2007 - jsuchome@suse.cz
+
+- fixed checking if repository has 'plaindir' format (#338115)
+- show which repositories YaST failed to add (#337618)
+- added support for "format" and "locale" tags in config.xml
+- added support for OEM image type
+- call kiwi with --nocolor to shorten the output
+- 2.16.4
+
+-------------------------------------------------------------------
 Mon Oct 29 11:13:16 CET 2007 - jsuchome@suse.cz
 
 - package kernel-bigsmp has been renamed to kernel-pae 
