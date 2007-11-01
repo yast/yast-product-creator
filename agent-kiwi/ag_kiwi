@@ -70,12 +70,9 @@ while (<STDIN>)
 	#	   <type boot="vmxboot/suse-10.3" filesystem="ext3">vmx</type>
 	my @ntag  = $prefs -> getElementsByTagName ("type") -> get_nodelist();
 	foreach my $element (@ntag) {
-	    my $primary = $element -> getAttribute ("primary");
-	    my $boot 	= $element -> getAttribute ("boot");
-	    my $flags	= $element -> getAttribute ("flags");
 	    my $type	= $element -> textContent ();
 	    my %typemap	= ();
-	    foreach my $attr ("primary", "boot", "flags", "filesystem") {
+	    foreach my $attr ("primary", "boot", "flags", "filesystem", "format") {
 		my $val	= $element -> getAttribute ($attr);
 		$typemap{$attr}	= $val if defined $val;
 	    }
