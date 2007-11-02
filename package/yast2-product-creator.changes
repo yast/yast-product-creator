@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Nov  2 11:02:42 CET 2007 - jsuchome@suse.cz
+
+- correctly escape strings which should be written to config.xml
+  (seen in #338090)
+- 2.13.20
+
+-------------------------------------------------------------------
 Thu Nov  1 10:57:39 CET 2007 - jsuchome@suse.cz
 
 - save all types from the template to target config.xml
