@@ -21,6 +21,7 @@
   import "Report";
   import "Security";
   import "String";
+  import "URL";
 
   string encryption_method	= nil;
 
@@ -57,6 +58,11 @@
 
   // map with image templates (to base new projects on)
   global map<string,map> Templates		= $[];
+
+  // repository schemes unsupported by kiwi
+  // (= not to be offered as new sources, to be deleted
+  // from current system sources)
+  global list<string> unsupported_schemes = [ "iso", "cd", "dvd", "nfs", "smb" ];
 
   /**
    * crypt given user password with current encryption algorithm
@@ -759,10 +765,14 @@
 	    integer srcid       = source["SrcId"]:-1;
 	    map data = Pkg::SourceGeneralData (srcid);
 	    string url	= data["url"]:"";
-	    current_repositories[url]	= $[
-		"url"       : url,
-		"plaindir"  : data["type"]:"" == "Plaindir"
-	    ];
+	    map parsed = URL::Parse(url);
+	    if (! contains (unsupported_schemes, parsed["scheme"]:""))
+	    {
+		current_repositories[url]	= $[
+		    "url"       : url,
+		    "plaindir"  : data["type"]:"" == "Plaindir"
+		];
+	    }
 	});
 	return current_repositories;
    }

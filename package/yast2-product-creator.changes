@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Nov  5 21:56:21 CET 2007 - jsuchome@suse.cz
+
+- do not allow source types not supported by kiwi (#339110)
+- 2.13.21 
+
+-------------------------------------------------------------------
 Fri Nov  2 11:02:42 CET 2007 - jsuchome@suse.cz
 
 - correctly escape strings which should be written to config.xml

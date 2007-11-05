@@ -17,7 +17,7 @@
   import "Label";
   import "Kiwi";
   import "Popup";
-  import "SourceDialogs";
+  import "SourceDialogsLite";
   import "SourceManager";
   import "Summary";
   import "URL";
@@ -1758,12 +1758,12 @@ return ret;
 	{
 	    Wizard::CreateDialog ();
 	    string url		= "";
-	    symbol type_ret	= SourceDialogs::TypeDialog ();
+	    symbol type_ret	= SourceDialogsLite::TypeDialog ();
 
 	    if ((type_ret == `next || type_ret == `finish))
 	    {
 		// FIXME SLP code for SLE10SP1 only, adapt for 10.3...
-		if (type_ret == `finish && SourceDialogs::GetURL () == "slp://")
+		if (type_ret == `finish && SourceDialogsLite::GetURL () == "slp://")
 		{
 		    string service = SourceManager::AddSourceTypeSLP ();
 		    if (service != nil)
@@ -1773,8 +1773,8 @@ return ret;
 		}
 		else
 		{
-		    if (SourceDialogs::EditDialog () == `next)
-			url = SourceDialogs::GetURL ();
+		    if (SourceDialogsLite::EditDialog () == `next)
+			url = SourceDialogsLite::GetURL ();
 		}
 	    }
 	    Wizard::CloseDialog ();
@@ -1812,7 +1812,7 @@ return ret;
 		parsed["scheme"] = "pkg";
 		url = URL::Build (parsed);
 	    }
-	    url	= SourceDialogs::EditPopup (url);
+	    url	= SourceDialogsLite::EditPopup (url);
 	    if (url == "" || url == nil || url == selected_url)
 		continue;
 	    // remove current url + add new one

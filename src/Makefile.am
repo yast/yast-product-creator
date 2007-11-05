@@ -26,7 +26,8 @@ desktop_DATA =			\
 
 module_DATA =			\
 	ProductCreator.ycp	\
-	Kiwi.ycp
+	Kiwi.ycp		\
+	SourceDialogsLite.ycp
 
 EXTRA_DIST = $(client_DATA) $(ynclude_DATA) $(module_DATA) $(desktop_DATA)
 
