@@ -247,9 +247,10 @@
 		children	= children + "\n" + Map2XML (chmap, level + 1);
 	    });
 	else if (subkey == "__value")
-	    value = sformat ("%1", val);
+	    value = String::EscapeTags (sformat ("%1", val));
 	else if (is (val, string))
-	    ret	= sformat ("%1 %2=\"%3\"", ret, subkey, val);
+	    ret	= sformat ("%1 %2=\"%3\"",
+		ret, subkey, String::EscapeTags (tostring (val)));
     });
     if (non_unique_key[key]:false)
 	return sformat ("%1/>", ret);
@@ -275,6 +276,8 @@
 	return ret;
 
     map config	= (map) SCR::Read (.kiwi, base_path + "/config.xml");
+    if (config == nil)
+	return ret;
     map<string,map> packages	= config["packages"]:$[];
     // rest parts of "packages" are saved in product-creator map
     ret["ignore"] = maplist (map p,

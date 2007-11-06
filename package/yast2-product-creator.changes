@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Nov  2 11:13:58 CET 2007 - jsuchome@suse.cz
+
+- correctly escape strings which should be written to config.xml
+  (seen in #338090) 
+
+-------------------------------------------------------------------
 Thu Nov  1 11:01:12 CET 2007 - jsuchome@suse.cz
 
 - fixed checking if repository has 'plaindir' format (#338115)
