@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Nov  6 12:25:59 CET 2007 - jsuchome@suse.cz
+
+- correctly escape strings which should be written to config.xml
+  (seen in #338090)
+
+-------------------------------------------------------------------
 Fri Oct 26 12:52:54 CEST 2007 - jsuchome@suse.cz
 
 - do not read the template name when going from main summary (#337444)
