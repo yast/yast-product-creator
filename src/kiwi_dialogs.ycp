@@ -1926,7 +1926,7 @@ Choose a different one."), name));
 	    if (failed_repositories != [])
 	    {
 		// continue/cancel popup %1 is a \n separated list
-		if (!Popup::ContinueCancel (sformat (_("Failed to add these repositories:
+		if (!Popup::ContinueCancel (sformat (_("Failed to add these installation sources:
 
 %1.
 

@@ -17,6 +17,7 @@ import "Popup";
 import "Package";
 import "PackageCallbacksInit";
 import "Sequencer";
+import "URL";
 
 include "product-creator/complex.ycp";
 include "product-creator/dialogs.ycp";
@@ -133,6 +134,27 @@ symbol CommitConfig () {
 symbol InitSources () {
 
     ProductCreator::EnableSource();
+
+    // remove the source types unsupported by kiwi (#339110)
+    list<string> sources	= [];
+    list<string> removed	= [];
+    foreach (string url, ProductCreator::Config["sources"]:[], {
+	map parsed = URL::Parse(url);
+	if (contains (Kiwi::unsupported_schemes, parsed["scheme"]:""))
+	    removed	= add (removed, url);
+	else
+	    sources	= add (sources, url);
+    });
+    ProductCreator::Config["sources"]	= sources;
+    if (removed != [])
+    {
+	// message popup, %1 is a \n separated list
+	Popup::Message (sformat (_("These installation sources are not supported by kiwi:
+
+%1.
+
+They were removed from current configuration."), mergestring (removed, "\n")));
+    }
     return `next;
 }
 
