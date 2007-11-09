@@ -288,9 +288,12 @@
            if (ProductCreator::Config["bootconfig"]:"" != "")
             {
                 y2debug("bootconfig available");
-                SCR::Write(.target.string,
-                        sformat("%1/boot/loader/isolinux.cfg", ProductCreator::skel_root),
-                        ProductCreator::Config["bootconfig"]:"" );
+
+		string fname = (ProductCreator::Config["code10"]:false)
+		    ? sformat("%1/boot/%2/loader/isolinux.cfg", ProductCreator::skel_root, Arch::architecture())
+		    : sformat("%1/boot/loader/isolinux.cfg", ProductCreator::skel_root);
+
+		SCR::Write(.target.string, fname, ProductCreator::Config["bootconfig"]:"" );
             }
 
         }
