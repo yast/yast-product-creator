@@ -1790,6 +1790,37 @@ boolean InsertKeyToInitrd(string gpg_key, string initrd_file)
     return ret;
 }
 
+string DumpKernelFromObjectFile(string object)
+{
+    y2milestone("Extracting kernel from file %1", object);
+    string tmpdir = (string)SCR::Read(.target.tmpdir);
+    string target = tmpdir + "/tmp_kernel.gz";
+
+    string command = sformat("objcopy -O binary -j .kernel:vmlinux.strip '%1' '%2'", String::Quote(object), String::Quote(target));
+    string ret = (Exec(command)) ? target : "";
+
+    y2milestone("Kernel extracted to %1", ret);
+
+    return ret;
+}
+
+string GunzipKernel(string kernel_gz)
+{
+    string command = sformat("gunzip -f %1", kernel_gz);
+    boolean success = Exec(command);
+    string ret = "";
+
+    // remove .gz suffix from the file name
+    if (success)
+    {
+	ret = regexpsub (kernel_gz, "^(.*)\\.gz$", "\\1");
+    }
+
+    y2milestone("Kernel unpacked to %1", ret);
+
+    return ret;
+}
+
 global boolean InsertKeyToInitrds(string gpg_key, string base_dir)
 {
     // get initrd list
@@ -1805,12 +1836,54 @@ global boolean InsertKeyToInitrds(string gpg_key, string base_dir)
 	find_output = out["stdout"]:"";
     }
 
+    map<string,string> inst_mapping = $[];
+
     if (SCR::Read(.target.size, base_dir + "/suseboot") >= 0)
     {
 	y2milestone("Searching for 'initrd*' in %1/suseboot...", base_dir);
 	command = sformat("cd '%1' && find suseboot -type f -name 'initrd*'", String::Quote(base_dir));
 	out = (map)SCR::Execute(.target.bash_output, command);
 	find_output = find_output + out["stdout"]:"";
+
+	if (size(out["stdout"]:"") == 0)
+	{
+	    y2milestone("initrd not found, searching for inst*");
+
+	    command = sformat("cd '%1' && find suseboot -type f -name 'inst32'; find suseboot -type f -name 'inst64'", String::Quote(base_dir));
+	    out = (map)SCR::Execute(.target.bash_output, command);
+
+	    list<string> inst_files = splitstring(out["stdout"]:"", "\n");
+	    // remove empty strings
+	    inst_files = filter(string inst, inst_files, {return inst != "";});
+
+	    if (size(inst_files) > 0)
+	    {
+		y2milestone("Found inst* files: %1", inst_files);
+
+		integer index = 0;
+		// unpack the initrd from the inst* object
+		foreach(string inst, inst_files,
+		    {
+			string tmp_initrd = sformat("suseboot/.tmp_yast_initrd%1.gz", index);
+
+			command = sformat("cd '%1' && objcopy -O binary -j .kernel:initrd '%2' '%3'", String::Quote(base_dir), String::Quote(inst), tmp_initrd);
+
+			out = (map)SCR::Execute(.target.bash_output, command);
+
+			if (out["exit"]:-1 == 0)
+			{
+			    y2milestone("Extracted %1 from %2", tmp_initrd, inst);
+			    find_output = find_output + tmp_initrd + "\n";
+
+			    inst_mapping = add(inst_mapping, inst, tmp_initrd);
+			}
+
+			index = index + 1;
+		    }
+		);
+
+	    }
+	}
     }
 
     list<string> initrds = splitstring(find_output, "\n");
@@ -1829,6 +1902,50 @@ global boolean InsertKeyToInitrds(string gpg_key, string base_dir)
 %2.
 "), gpg_key, initrd));
 		ret = false;
+	    }
+	}
+    );
+
+    // put the initrd back to the inst file
+    foreach(string orig_inst, string tmp_initrd, inst_mapping,
+	{
+	    y2milestone("%1 -> %2", tmp_initrd, orig_inst);
+
+	    if (orig_inst == "suseboot/inst32" || orig_inst == "suseboot/inst64")
+	    {
+		// extract kernel
+		string gzkernel = DumpKernelFromObjectFile(base_dir + "/" + orig_inst);
+
+		if (gzkernel != "")
+		{
+		    // unpack the kernel image - required by mkzimage
+		    string kernel = GunzipKernel(gzkernel);
+		    string tmp_dir = (string)SCR::Read( .target.tmpdir );
+
+		    string initrd_copy = sformat("%1/tmp_initrd", tmp_dir);
+
+		    // copy the initrd to a temp dir - mkzimage doesn't work properly
+		    // when there is a space in path
+		    ret = ret && Exec(sformat("mv '%1/%2' '%3'", String::Quote(base_dir), tmp_initrd, initrd_copy));
+
+		    // create new inst file
+		    // see mk_ppc_installation-images_bootbinaries.sh (installation-images)
+		    command = sformat("/bin/mkzimage --board chrp --vmlinux '%1' --initrd '%2' --output '%3/new_inst' --tmp '%3'",
+			kernel, initrd_copy, tmp_dir);
+		    ret = ret && Exec(command);
+
+		    // remove the temporary files
+		    command = sformat("rm -f '%1' '%2'", kernel, initrd_copy);
+		    ret = ret && Exec(command);
+
+		    // move the new file to the target directory
+		    command = sformat("mv '%1/new_inst' '%2/%3'", tmp_dir, String::Quote(base_dir), orig_inst);
+		    ret = ret && Exec(command);
+		}
+	    }
+	    else
+	    {
+		y2warning("Unsupported inst file: %1", orig_inst);
 	    }
 	}
     );

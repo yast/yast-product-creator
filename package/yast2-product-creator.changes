@@ -6,6 +6,7 @@ Fri Nov  9 10:36:55 CET 2007 - lslezak@suse.cz
   compressed patter files, generate packages.DU only up to
   the 3rd directory level (#335183)
 - copy PPC boot files in /suseboot, /ppc and /PS3 (#335177)
+- add GPG key to installation initrd on PPC architecture (#339449)
 - install required package createrepo (#331530), install additional
   packages on PPC
 - fixed ISO image creation on PPC when the path contained spaces
