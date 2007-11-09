@@ -2,6 +2,9 @@
 Fri Nov  9 10:36:55 CET 2007 - lslezak@suse.cz
 
 - properly download /boot, /docu and slideshow files (#338625)
+- compress metadata if needed, replace the old one, support
+  compressed patter files, generate packages.DU only up to
+  the 3rd directory level (#335183)
 - copy PPC boot files in /suseboot, /ppc and /PS3 (#335177)
 - install required package createrepo (#331530), install additional
   packages on PPC
