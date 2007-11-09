@@ -896,9 +896,86 @@ boolean CopyDocu(integer srcid, string target)
 
 boolean CopyPPCBoot(integer srcid, string target)
 {
-    return CopyDirectoryRec(srcid, 1, "/ppc", target)
-        && CopyDirectoryRec(srcid, 1, "/etc", target)
-	&& CopyDirectoryRec(srcid, 1, "/suseboot", target);
+    y2milestone("Copying PPC boot files");
+
+    list<string> lst = GetList(srcid, 1, "");
+    if (lst == nil)
+    {
+	lst = [];
+    }
+
+    boolean ret = true;
+
+    if (contains(lst, "ppc/"))
+    {
+	y2internal("Copying /ppc subdirectory");
+	boolean r = CopyDirectoryRecOpt(srcid, 1, "/ppc", target);
+
+	if (!r)
+	{
+	    y2internal("Directory listing may be missing, copying /ppc/bootinfo.txt");
+	    CopyFile(srcid, 1, "/ppc/bootinfo.txt", target + "/ppc");
+	}
+
+	ret = ret && r;
+    }
+
+    if (contains(lst, "PS3/"))
+    {
+	y2internal("Copying /ppc subdirectory");
+	boolean r = CopyDirectoryRecOpt(srcid, 1, "/PS3", target);
+
+	if (!r)
+	{
+	    y2internal("Directory listing may be missing, copying /ppc/bootinfo.txt");
+	    Exec(sformat("/bin/mkdir -p '%1/PS3/otheros'", String::Quote(target)));
+	    CopyFile(srcid, 1, "/PS3/otheros/otheros.bld", target + "/PS3/otheros");
+	}
+
+	ret = ret && r;
+    }
+
+    if (contains(lst, "suseboot/"))
+    {
+	y2internal("Copying /suseboot subdirectory");
+	boolean r = CopyDirectoryRecOpt(srcid, 1, "/suseboot", target);
+	y2internal("Result: %1", r);
+
+	if (!r)
+	{
+	    list<string> files = [
+		"/suseboot/inst32", "/suseboot/inst64", "/suseboot/os-chooser",
+		"/suseboot/yaboot", "/suseboot/yaboot.cnf", "/suseboot/yaboot.ibm",
+		"/suseboot/yaboot.txt"
+	    ];
+
+	    y2internal("Directory listing may be missing using fixed list: %1", files);
+
+	    foreach(string f, files,
+		{
+		    CopyFile(srcid, 1, f, target + f);
+		}
+	    );
+	}
+
+	ret = ret && r;
+    }
+
+    if (contains(lst, "etc/"))
+    {
+	y2internal("Copying /etc subdirectory");
+	boolean r = CopyDirectoryRecOpt(srcid, 1, "/etc", target);
+
+	if (!r)
+	{
+	    y2internal("Directory listing may be missing, copying /etc/yaboot.conf");
+	    CopyFile(srcid, 1, "/etc/yaboot.conf", target + "/etc");
+	}
+
+	ret = ret && r;
+    }
+
+    return ret;
 }
 
 string UpDir(string input)
@@ -1122,9 +1199,12 @@ global define boolean  CreateSkeleton () ``{
     integer base_source = checkProductDependency();
     boolean bootable_product = isBootSource(base_source);
 
-    if (bootable_product)
+    // ppc64 has /boot/ppc
+    string boot_architecture = (arch == "ppc64") ? "ppc" : arch;
+
+    if (bootable_product && Config["code10"]:false)
     {
-	Exec(sformat("/bin/mkdir -p '%1/boot/%2'", String::Quote(skel_root), String::Quote(arch)));
+	Exec(sformat("/bin/mkdir -p '%1/boot/%2'", String::Quote(skel_root), String::Quote(boot_architecture)));
     }
 
     list<integer> enabled = Pkg::SourceGetCurrent(true);
@@ -1150,7 +1230,7 @@ global define boolean  CreateSkeleton () ``{
 	}
 	else if (Arch::ppc() || Arch::ppc64())
 	{
-	    Exec(sformat("/bin/mkdir -p '%1/etc'", String::Quote(skel_root)));
+	    Exec(sformat("/bin/mkdir -p '%1/PS3'", String::Quote(skel_root)));
 	    Exec(sformat("/bin/mkdir -p '%1/ppc'", String::Quote(skel_root)));
 	    Exec(sformat("/bin/mkdir -p '%1/suseboot'", String::Quote(skel_root)));
 	}
@@ -1406,6 +1486,13 @@ global define boolean  CreateSkeleton () ``{
 			CopyDirectoryRec(base_source, 1, "boot/loader", sformat("%1/boot", skel_root));
 		    }
 		}
+		else if (Arch::ppc() || Arch::ppc64())
+		{
+		    CopyPPCBoot(base_source, skel_root);
+
+		    // recursive copy of /boot
+		    CopyDirectoryRec(base_source, 1, "boot", skel_root);
+		}
 		else
 		{
 		    // recursive copy of /boot/loader/*
@@ -1414,7 +1501,12 @@ global define boolean  CreateSkeleton () ``{
 	    }
 	    else
 	    {
-		CopyDirectoryRec(base_source, 1, "/boot", skel_root);
+		CopyDirectoryRec(base_source, 1, "boot", skel_root);
+
+		if (Arch::ppc() || Arch::ppc64())
+		{
+		    CopyPPCBoot(base_source, skel_root);
+		}
 	    }
 	}
     }
