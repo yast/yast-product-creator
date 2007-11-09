@@ -28,6 +28,8 @@ SOURCE=$1
 DEST=$2
 BOOT_ARCH=$3
 
+HFS_BLESS=
+
 function usage()
 {
 echo "This script creates an ISO image from an existing directory containing a SuSE source."
@@ -212,7 +214,8 @@ if [ -d "$SOURCE/$BOOT_BASE_DIR" -o -d "$SOURCE/$ROOT_ON_CD" -o ! -z "$TMP_LS" ]
 			# use netatalk and macbinary filename translation
 			# bless a directory named suseboot, mark it bootable
 			echo using suseboot for hfs boot
-			PARAMS="$PARAMS -part --netatalk --macbin -hfs-bless $SOURCE/suseboot"
+			PARAMS="$PARAMS -part --netatalk --macbin"
+			HFS_BLESS="suseboot"
 			FILE_MAPPING="/usr/share/YaST2/data/product-creator/HFS_mapping"
 			if [ -f $FILE_MAPPING ] ; then
 			    echo using $FILE_MAPPING for hfs mapping
@@ -246,7 +249,8 @@ if [ -d "$SOURCE/$BOOT_BASE_DIR" -o -d "$SOURCE/$ROOT_ON_CD" -o ! -z "$TMP_LS" ]
 			# use netatalk and macbinary filename translation
 			# bless a directory named suseboot, mark it bootable
 			echo using suseboot for hfs boot
-			PARAMS="$PARAMS -part --netatalk --macbin -hfs-bless $SOURCE/suseboot"
+			PARAMS="$PARAMS -part --netatalk --macbin"
+			HFS_BLESS="suseboot"
 			FILE_MAPPING="/usr/share/YaST2/data/product-creator/HFS_mapping"
 			if [ -f $FILE_MAPPING ] ; then
 			echo using $FILE_MAPPING for hfs mapping
@@ -340,13 +344,22 @@ if [ -d "$SOURCE/$BOOT_BASE_DIR" -o -d "$SOURCE/$ROOT_ON_CD" -o ! -z "$TMP_LS" ]
     fi
 fi
 
-set -x
-mkisofs \
-    -p "$CD_PREPARER" \
-    $PUB_OPT "$CD_PUBLISHER" \
-    $PARAMS -o "$DEST" $XPARAMS "$SOURCE"
-set +x
-
+if [ -z "$HFS_BLESS" ] ; then
+    set -x
+    mkisofs \
+	-p "$CD_PREPARER" \
+	$PUB_OPT "$CD_PUBLISHER" \
+	$PARAMS -o "$DEST" $XPARAMS "$SOURCE"
+    set +x
+else
+    set -x
+    mkisofs \
+	-p "$CD_PREPARER" \
+	$PUB_OPT "$CD_PUBLISHER" \
+	-hfs-bless "$SOURCE/$HFS_BLESS" \
+	$PARAMS -o "$DEST" $XPARAMS "$SOURCE"
+    set +x
+fi
 
 if [ -d "$SOURCE2" ] ; then
     echo removing $SOURCE2
