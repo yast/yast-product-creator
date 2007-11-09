@@ -1958,18 +1958,22 @@ global define boolean setPackages() ``{
     if (kernel == "") {
         kernels = [
                    "kernel-64k-pagesize",
+                   "kernel-bigsmp",
                    "kernel-pae",
                    "kernel-debug",
                    "kernel-default",
                    "kernel-iseries64",
                    "kernel-pmac64",
                    "kernel-pseries64",
+                   "kernel-ppc64",
                    "kernel-s390",
                    "kernel-s390x",
                    "kernel-smp",
                    "kernel-sn2",
 		   "kernel-xen",
-                   "kernel-um"
+		   "kernel-xenpae",
+                   "kernel-um",
+                   "kernel-vanilla"
 		   ];
     } else {
         kernels = add(kernels, kernel);
