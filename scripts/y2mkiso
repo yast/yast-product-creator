@@ -32,16 +32,24 @@ HFS_BLESS=
 
 function usage()
 {
-echo "This script creates an ISO image from an existing directory containing a SuSE source."
-echo "The directory has to have files according to the SuSE media specification. This script"
-echo "will also search for the needed files to make a bootable CD and will create one if "
-echo "all files are available"
+echo "This script creates an ISO image from an existing directory containing"
+echo "a SUSE source. The directory has to have files according to the SUSE"
+echo "media specification. This script will also search for the needed files"
+echo "to make a bootable CD and will create one if all files are available."
 echo
-echo "$0 <directory> <iso file name>"
+echo "$0 <directory> <iso_file_name> [<boot_architecture>]"
+echo
+echo "  directory         - path to the source directory"
+echo "  iso_file_name     - output file name (e.g. /tmp/product.iso)"
+echo "  boot_architecture - name of the target architecture, set to"
+echo "     the directory name in /boot, e.g. i386, x86_64, ppc..."
+echo "     If it's missing the old layout (plain /boot directory)"
+echo "     is used."
 
 }
 if [ -z "$SOURCE" -o -z "$DEST" ]; then
-    echo "Missing parameters."
+    echo "ERROR: Missing parameters."
+    echo
     usage
     exit 1
 fi
