@@ -12,6 +12,8 @@ Fri Nov  9 10:36:55 CET 2007 - lslezak@suse.cz
   (#335164)
 - skip isolinux configuration when the architecture is not i386
   or x86_64 (#335167)
+- display download callbacks in the main window, no flashing popups
+  (#338626)
 
 -------------------------------------------------------------------
 Fri Nov  2 11:13:58 CET 2007 - jsuchome@suse.cz
