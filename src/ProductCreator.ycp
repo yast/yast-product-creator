@@ -2313,6 +2313,68 @@ global void CallbackSourceReportEnd(integer numeric_id, string url, string task,
     y2debug("source_id: %1, url: %2, task: %3, error: %4, reason: %5", numeric_id, url, task, error, reason);
 }
 
+global void InitDownload(string task)
+{
+    y2debug("InitDownload: %1", task);
+}
+
+global void DestDownload()
+{
+    y2debug("DestDownload");
+}
+
+global void StartDownload (string url, string localfile)
+{
+    // reformat the URL
+    string url_report = URL::FormatURL(URL::Parse(url), 60);
+
+    if (Mode::commandline()) {
+	CommandLine::PrintVerbose(url_report);
+    }
+    else
+    {
+	// change the label
+	UI::ChangeWidget(`id(`pb), `Label, sformat(_("Copying %1"), url_report));
+    }
+}
+
+
+global void StartDownloadEmpty (string url, string localfile)
+{
+    y2debug("StartDownload: %1", url);
+}
+
+global boolean ProgressDownload (integer percent, integer expected_size)
+{
+    return UI::PollInput() != `abort;
+}
+
+global void RedirectCallbacks()
+{
+    Pkg::CallbackSourceReportStart("ProductCreator::CallbackSourceReportStart");
+    Pkg::CallbackSourceReportProgress("ProductCreator::CallbackSourceReportProgress");
+    Pkg::CallbackSourceReportEnd("ProductCreator::CallbackSourceReportEnd");
+
+    Pkg::CallbackInitDownload ("ProductCreator::InitDownload");
+    Pkg::CallbackStartDownload ("ProductCreator::StartDownload");
+    Pkg::CallbackProgressDownload ("ProductCreator::ProgressDownload");
+    // use the standard callback handler
+    Pkg::CallbackDoneDownload ("PackageCallbacks::DoneDownload");
+    Pkg::CallbackDestDownload ("ProductCreator::DestDownload");
+}
+
+global void ResetCallbacks()
+{
+    Pkg::CallbackSourceReportStart("PackageCallbacks::CallbackSourceReportStart");
+    Pkg::CallbackSourceReportProgress("PackageCallbacks::CallbackSourceReportProgress");
+    Pkg::CallbackSourceReportEnd("PackageCallbacks::CallbackSourceReportEnd");
+
+    Pkg::CallbackInitDownload ("PackageCallbacks::InitDownload");
+    Pkg::CallbackStartDownload ("PackageCallbacks::StartDownload");
+    Pkg::CallbackProgressDownload ("PackageCallbacks::ProgressDownload");
+    Pkg::CallbackDoneDownload ("PackageCallbacks::DoneDownload");
+    Pkg::CallbackDestDownload ("PackageCallbacks::DestDownload");
+}
 
 /**
  * CopyPackages()
@@ -2328,12 +2390,9 @@ global boolean CopyPackages()
 
     boolean ret = true;
 
-    // disable source report callbacks - there is a progress dialog
-    Pkg::CallbackSourceReportStart("ProductCreator::CallbackSourceReportStart");
-    Pkg::CallbackSourceReportProgress("ProductCreator::CallbackSourceReportProgress");
-    Pkg::CallbackSourceReportEnd("ProductCreator::CallbackSourceReportEnd");
-
     y2milestone("Package summary: %1", toCopy);
+
+    Pkg::CallbackStartDownload ("ProductCreator::StartDownloadEmpty");
 
     // copy the packages
     foreach(integer source, map<integer, list<map> > srcmapping, toCopy,
@@ -2420,10 +2479,7 @@ global boolean CopyPackages()
 	}
     );
 
-    // restore the source report callbacks
-    Pkg::CallbackSourceReportStart("PackageCallbacks::SourceReportStart");
-    Pkg::CallbackSourceReportProgress("PackageCallbacks::SourceReportProgress");
-    Pkg::CallbackSourceReportEnd("PackageCallbacks::SourceReportEnd");
+    Pkg::CallbackStartDownload ("ProductCreator::StartDownload");
 
     return ret;
 }

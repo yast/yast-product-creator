@@ -267,17 +267,29 @@
                 help );
 
 
-        if(ProductCreator::Abort()) return `abort;
+        if(ProductCreator::Abort())
+	{
+	    ProductCreator::ResetCallbacks();
+	    return `abort;
+	}
         Progress::NextStage();
+
+	// redirect the download callbacks
+	ProductCreator::RedirectCallbacks();
 
         if (!ProductCreator::CreateSkeleton())
         {
             Report::Error(_("Error while creating skeleton."));
+	    ProductCreator::ResetCallbacks();
             return `overview;
         }
 
 
-        if(ProductCreator::Abort()) return `abort;
+        if(ProductCreator::Abort())
+	{
+	    ProductCreator::ResetCallbacks();
+	    return `abort;
+	}
         Progress::NextStage();
         if (ProductCreator::Config["pkgtype"]:"" == "autoyast")
         {
@@ -301,6 +313,7 @@
         Progress::NextStage();
         if (!ProductCreator::CopyPackages())
         {
+	    ProductCreator::ResetCallbacks();
             return `overview;
         }
 
@@ -309,6 +322,7 @@
 	    Progress::NextStage();
 	    if (!ProductCreator::SignSourceStep())
 	    {
+		ProductCreator::ResetCallbacks();
 		return `overview;
 	    }
 	}
@@ -363,6 +377,9 @@
             }
 
         } until (ret == `next || ret == `back || ret == `abort);
+
+	ProductCreator::ResetCallbacks();
+
         return (symbol)ret;
     }
 
