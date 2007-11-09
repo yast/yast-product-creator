@@ -32,6 +32,7 @@ import "GPG";
 import "GPGWidgets";
 import "Mode";
 import "CommandLine";
+import "FileUtils";
 
 
 global define void enableSources();
@@ -1685,12 +1686,14 @@ foreach(integer source_id, enabled, ``{
 	    files = [];
 	}
 
-	files = filter(string f, files, {return regexpmatch(f, "\\.pat$");});
+	files = filter(string f, files, {return regexpmatch(f, "\\.pat$") || regexpmatch(f, "\\.pat.gz$");});
 
 	y2milestone("found pattern files: %1", files);
 
-	list<string> used_files_regexps = maplist(string p, used_patterns, {return sformat("^%1-.*\\.pat$", p);});
-	y2debug("used_files_regexps: %1", used_files_regexps);
+	list<string> used_files_regexps = (list<string>)union(maplist(string p, used_patterns, {return sformat("^%1-.*\\.pat$", p);}),
+	    maplist(string p, used_patterns, {return sformat("^%1-.*\\.pat.gz$", p);}));
+
+	y2internal("used_files_regexps: %1", used_files_regexps);
 
 	boolean refresh_diryast = false;
 	foreach(string f, files,
@@ -1726,9 +1729,8 @@ foreach(integer source_id, enabled, ``{
 	    success = success && Exec(cmd);
 	    y2debug("success: %1", success);
 
-	    cmd =  sformat("cd '%1/%2'; ls *.pat > '%1/%2/patterns'", String::Quote(skel_root), String::Quote(descrDir));
-	    success = success && Exec(cmd);
-	    y2debug("success: %1", success);
+	    cmd =  sformat("cd '%1/%2'; ls *.pat *.pat.gz > '%1/%2/patterns'", String::Quote(skel_root), String::Quote(descrDir));
+	    Exec(cmd);
 	}
     }
 
@@ -2402,8 +2404,18 @@ global boolean CopyPackages()
 	    else
 	    {
 		// TODO FIXME get datadir from the source
-		ret = ret && Exec(sformat("cd '%1/%2/%3' && /usr/bin/create_package_descr -x setup/descr/EXTRA_PROV",
+		ret = ret && Exec(sformat("cd '%1/%2/%3' && /usr/bin/create_package_descr -x setup/descr/EXTRA_PROV -M 3",
 		    String::Quote(basedir), String::Quote(subdir), String::Quote(datadir)));
+
+		// check if the metadata are gzipped
+		boolean compressed_meta = FileUtils::Exists(sformat("%1/%2/%3/setup/descr/packages.DU.gz", basedir, subdir, datadir));
+		y2internal("Compressed metadata: %1", compressed_meta);
+
+		if (compressed_meta)
+		{
+		    ret = ret && Exec(sformat("cd '%1/%2/%3/setup/descr/' && gzip -9 -f packages packages.DU packages.en",
+			String::Quote(basedir), String::Quote(subdir), String::Quote(datadir)));
+		}
 	    }
 	}
     );
