@@ -5,6 +5,8 @@ Fri Nov  9 10:36:55 CET 2007 - lslezak@suse.cz
   packages on PPC
 - fixed ISO image creation on PPC when the path contained spaces
   (#335164)
+- skip isolinux configuration when the architecture is not i386
+  or x86_64 (#335167)
 
 -------------------------------------------------------------------
 Fri Nov  2 11:13:58 CET 2007 - jsuchome@suse.cz

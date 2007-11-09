@@ -527,6 +527,13 @@ Fix the problem and try again.</p>
 	    return `skip_isolinux;
 	}
 
+	// skip isolinux configuration if the architecture
+	// is not i386 or x86_64 - there is no isolinux
+	if (Arch::architecture() != "i386" && Arch::architecture() != "x86_64")
+	{
+	    return `skip_isolinux;
+	}
+
 	return `next;
     }
 
