@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Fri Nov  9 17:04:59 CET 2007 - lslezak@suse.cz
+
+- y2mkiso - updated and enhanced help text (#336821)
+
+-------------------------------------------------------------------
 Fri Nov  9 10:36:55 CET 2007 - lslezak@suse.cz
 
 - properly download /boot, /docu and slideshow files (#338625)
