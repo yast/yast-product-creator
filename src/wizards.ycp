@@ -296,7 +296,17 @@ define boolean ProductCreatorSequence() ``{
     Wizard::CreateDialog();
     Wizard::SetDesktopIcon("cd-creator");
     // .content_file agent is in yast2-instserver package - TODO: move it to yast2.rpm
-    if (!Package::InstallAll(["inst-source-utils", "mkisofs", "yast2-instserver"]))
+    list<string> required_packages = ["inst-source-utils", "mkisofs", "yast2-instserver", "createrepo"];
+
+    // add PPC specific packages
+    if (Arch::architecture() == "ppc" || Arch::architecture() == "ppc64")
+    {
+	// /bin/objcopy - binutils
+	// /bin/mkzimage - lilo
+	required_packages = (list<string>)union(required_packages, ["binutils", "lilo"]);
+    }
+
+    if (!Package::InstallAll(required_packages))
     {
         Popup::Error(_("Installation of required packages
 failed."));

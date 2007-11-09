@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Nov  9 10:36:55 CET 2007 - lslezak@suse.cz
+
+- install required package createrepo (#331530), install additional
+  packages on PPC
+
+-------------------------------------------------------------------
 Fri Nov  2 11:13:58 CET 2007 - jsuchome@suse.cz
 
 - correctly escape strings which should be written to config.xml
