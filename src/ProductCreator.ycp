@@ -785,37 +785,63 @@ boolean CopyOptionalFile(integer srcid, integer mid, string src, string target)
     return true;
 }
 
-boolean CopyDirectoryRec(integer srcid, integer mid, string src, string target)
+boolean CopyDirectoryR(integer srcid, integer mid, string src, string target, boolean optional)
 {
     y2milestone("CopyDirectoryRec: srcid: %1, mid: %2, src: %3, target: %4", srcid, mid, src, target);
 
-    string local_dir = Pkg::SourceProvideDir(srcid, mid, src);
+    string local_dir = Pkg::SourceProvideDirectory(srcid, mid, src, optional, true);
     y2milestone("local_dir: %1", local_dir);
 
     if (local_dir == nil || local_dir == "")
     {
-	// an error message, %1 is the directory, %2 is URL of the source
-	Report::Error(sformat(_("Cannot read directory %1\nfrom source %2."), src, Pkg::SourceGeneralData(srcid)["url"]:""));
+	if (!optional)
+	{
+	    // an error message, %1 is the directory, %2 is URL of the source
+	    Report::Error(sformat(_("Cannot read directory %1\nfrom source %2."), src, Pkg::SourceGeneralData(srcid)["url"]:""));
+	}
+
 	return false;
     }
 
     return Exec(sformat("/bin/cp -a -f -- '%1' '%2'", String::Quote(local_dir), String::Quote(target)));
 }
 
-boolean CopyDirectoryNonRec(integer srcid, integer mid, string src, string target)
+boolean CopyDirectoryRec(integer srcid, integer mid, string src, string target)
+{
+    return CopyDirectoryR(srcid, mid, src, target, false);
+}
+
+boolean CopyDirectoryRecOpt(integer srcid, integer mid, string src, string target)
+{
+    return CopyDirectoryR(srcid, mid, src, target, true);
+}
+
+list<string> GetList(integer srcid, integer mid, string dir)
 {
     // get file list from directory.yast
-    string file_list = Pkg::SourceProvideOptionalFile(srcid, 1, "directory.yast");
+    string file_list = Pkg::SourceProvideOptionalFile(srcid, mid, sformat("%1/directory.yast", dir));
 
     if (file_list == nil || file_list == "")
     {
 	y2error("directory.yast was not found, a YUM source?");
-	return false;
+	return nil;
     }
 
     string f = (string)SCR::Read(.target.string, file_list);
     list<string> files = splitstring(f, "\n");
     y2milestone("Remote objects: %1", files);
+
+    return files;
+}
+
+boolean CopyDirectoryNonRec(integer srcid, integer mid, string src, string target)
+{
+    // get file list from directory.yast
+    list<string> files = GetList(srcid, mid, "");
+    if (files == nil)
+    {
+	files = [];
+    }
 
     files = filter(string file, files, {return !regexpmatch(file, "/$") && file != "";});
     y2milestone("Remote files: %1", files);
@@ -828,6 +854,44 @@ boolean CopyDirectoryNonRec(integer srcid, integer mid, string src, string targe
     );
 
     return true;
+}
+
+boolean CopyDocu(integer srcid, string target)
+{
+    list<string> lst = GetList(srcid, 1, "");
+    if (lst == nil)
+    {
+	lst = [];
+    }
+
+    boolean ret = true;
+
+    if (contains(lst, "docu/"))
+    {
+	y2milestone("Copying /docu subdirectory");
+	Exec(sformat("/bin/mkdir -p '%1/docu'", String::Quote(target)));
+
+	boolean r = CopyDirectoryRecOpt(srcid, 1, "/docu", target);
+
+	if (!r)
+	{
+	    list<string> files = [
+		"docu/RELEASE-NOTES.en.html", "docu/RELEASE-NOTES.en.rtf"
+	    ];
+
+	    y2internal("Directory listing may be missing using fixed list: %1", files);
+
+	    foreach(string f, files,
+		{
+		    CopyFile(srcid, 1, f, target + f);
+		}
+	    );
+	}
+
+	ret = ret && r;
+    }
+
+    return ret;
 }
 
 boolean CopyPPCBoot(integer srcid, string target)
@@ -1124,6 +1188,9 @@ global define boolean  CreateSkeleton () ``{
 	if (source == "")
 	    return false;
 
+	// copy /docu (release notes) when present
+	CopyDocu(id, skel_root);
+
 	y2milestone("source: %1", source);
 	descr_dir = this_source["productData","descrdir"]:"suse/setup/descr";
 
@@ -1384,13 +1451,13 @@ foreach(integer source_id, enabled, ``{
 	string l_dirlist = Pkg::SourceProvideOptionalFile(source_id, 1, slidedir + "directory.yast");
 	if (l_dirlist != nil)
 	{
-	    string l_slidedir = Pkg::SourceProvideDir(source_id, 1, slidedir);
+	    string l_slidedir = Pkg::SourceProvideDirectory(source_id, 1, slidedir, true, true);
 
 	    if (l_slidedir != nil && l_slidedir != "")
 	    {
 		// copy slide show
 		Exec(sformat("/bin/mkdir -p '%1/%2'", String::Quote(skel_root), String::Quote(slidedir)));
-		Exec(sformat("/bin/cp -a -- '%1/*' '%2/%3'", String::Quote(l_slidedir), String::Quote(skel_root), String::Quote(slidedir)));
+		Exec(sformat("/bin/cp -a -- '%1' '%2/%3'", String::Quote(l_slidedir), String::Quote(skel_root), String::Quote(datadir + "/setup/")));
 	    }
 	}
 	else
