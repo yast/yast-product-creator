@@ -2219,7 +2219,20 @@ global define void enableSources()``{
     return;
 }
 
-
+/**
+ * Check if there is a language selected in the package manager,
+ * if not then select the language used in the UI. Htis prevents the solver
+ * from allocating too many resources (see bug #339756)
+ */
+global void CheckLanguage()
+{
+    if (Pkg::GetPackageLocale() == "" && Pkg::GetAdditionalLocales() == [])
+    {
+	y2warning("No language selected, preselecting the current UI language: %1", UI::GetLanguage(true));
+	// if there is nothing selected yet then preset the language
+	Pkg::SetPackageLocale(UI::GetLanguage(true));
+    }
+}
 
 /**
  * Set packages to be copied to iso image tree
@@ -2296,6 +2309,8 @@ global define boolean setPackages() ``{
     y2milestone("Selected packages: %1", packages);
 
     Pkg::DoProvide(packages);
+
+    CheckLanguage();
 
     boolean ret = Pkg::PkgSolve(false);
 
