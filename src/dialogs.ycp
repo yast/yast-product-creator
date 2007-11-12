@@ -925,6 +925,9 @@ more <b>add-on</b> selections and packages.
 
 	    list<string> addons = patterns;
 
+	    // ensure that a langugage is selected
+	    ProductCreator::CheckLanguage();
+
 	    if (size(addons) > 0 || ProductCreator::Config["base"]:"" != "")
 	    {
 		y2milestone("base pattern: %1, addons: %2", base_pattern, addons);
