@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Nov 12 12:30:16 CET 2007 - jsuchome@suse.cz
+
+- do not allow importing non-system configurations (#340495)
+- 2.13.23 
+
+-------------------------------------------------------------------
 Tue Nov  6 13:09:09 CET 2007 - jsuchome@suse.cz
 
 - remove unsupported source types also for product-creator-> kiwi 

@@ -1572,11 +1572,20 @@ return ret;
 
     // read the new configuration and update UI accordingly
     // (no need to read config if it is provided as argument)
-    void update_config (string dir, map config) {
+    boolean update_config (string dir, map config) {
 
 	kiwi_configuration	= dir;
 	Config			=
 	    (config == $[] ? Kiwi::ReadConfigXML (kiwi_configuration) : config);
+
+	if (Config["image_type"]:"" != "system")
+	{
+	    y2warning ("%1 does not have 'system' image type, skipping", dir);
+	    // error popup
+	    Popup::Error (_("Selected directory does not contain valid description of system configuration"));
+	    return false;
+	}
+
 	// busy popup
 	Popup::ShowFeedback (_("Importing repositories..."), _("Please wait..."));
 	repositories		= Kiwi::ImportImageRepositories (Config, dir);
@@ -1610,6 +1619,7 @@ return ret;
 	});
 	UI::ChangeWidget (`id (`type), `Items, type_its);
 	UI::ChangeWidget (`id (`type), `Value, kiwi_task);
+	return true;
     }
 
     list template_items	= maplist (string dir, map template, Kiwi::Templates, {
@@ -1735,10 +1745,9 @@ return ret;
 		kiwi_configuration== "" ? Kiwi::images_dir : kiwi_configuration,
 		// popup for file selection dialog
 		_("Directory to Import"));
-	    if (dir!= nil)
+	    if (dir!= nil && update_config (dir, $[]))
 	    {
 		UI::ChangeWidget (`id (`import_dir), `Value, dir);
-		update_config (dir, $[]);
 	    }
 	}
 	else if (ret == `template)
@@ -1746,7 +1755,8 @@ return ret;
 	    string dir	= (string) UI::QueryWidget (`id (`template), `Value);
 	    update_config (dir, Kiwi::Templates[dir]:$[]);
 	}
-	else if (is (ret, string)) // system repository selected
+	else if (is (ret, string) && // system repository selected
+	    ret != "rb_dir" && ret != "rb_new")
 	{
 	    map system_repo	= Kiwi::initial_repositories[(string)ret]:$[];
 	    if (!haskey (repositories, (string)ret))
