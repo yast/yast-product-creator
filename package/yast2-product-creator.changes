@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Nov 12 13:11:58 CET 2007 - jsuchome@suse.cz
+
+- image-creator:
+  do not allow importing non-system configurations (#340495)
+
+-------------------------------------------------------------------
 Fri Nov  9 17:04:59 CET 2007 - lslezak@suse.cz
 
 - y2mkiso - updated and enhanced help text (#336821)
