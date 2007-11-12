@@ -578,6 +578,11 @@ define symbol ImagesOverviewDialog() {
 	    if (FileUtils::Exists (images_dir + "/" + d + "/config.xml"))
 	    {
 		map config	= Kiwi::ReadConfigXML (images_dir + "/" + d);
+		if (config["image_type"]:"" != "system")
+		{
+		    y2warning ("%1 not a 'system' image type, skipping", d);
+		    return;
+		}
 		string task	= "iso";
 		// FIXME duplicated in kiwi_dialogs
 		foreach (string type, map data, config["type"]:$[], {

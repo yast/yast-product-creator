@@ -309,7 +309,7 @@
 	ret["xen_disk"]	= packages["xen","disk"]:"";
     if (packages["xen","memory"]:"" != "")
 	ret["xen_memory"]	= tointeger (packages["xen","memory"]:"512");
-    foreach (string key, [ "author", "contact", "specification",
+    foreach (string key, [ "author", "contact", "image_type", "specification",
 	"packagemanager", "version", "rpm-check-signatures", "rpm-force",
 	"sizeunit", "type", "name", "repository", "defaultdestination",
 	"schemeversion", "defaultroot", "inherit", "locale"],
@@ -795,7 +795,9 @@
 	    {
 		string name	= config["name"]:"";
 		string ver	= config["version"]:"";
-		if (name_version[name]:"" == ver)
+		if (config["image_type"]:"" != "system")
+		    y2warning ("%1 not a 'system' image type, skipping", name);
+		else if (name_version[name]:"" == ver)
 		    y2warning ("template %1,%2 already imported", name, ver);
 		else
 		{
