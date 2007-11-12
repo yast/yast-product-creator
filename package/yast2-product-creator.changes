@@ -3,6 +3,7 @@ Mon Nov 12 15:35:42 CET 2007 - lslezak@suse.cz
 
 - select the current language if there is no language selected,
   prevent the solver from allocating too much resources (#339756)
+- 2.16.5
 
 -------------------------------------------------------------------
 Mon Nov 12 13:11:58 CET 2007 - jsuchome@suse.cz
