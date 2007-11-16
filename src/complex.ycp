@@ -612,6 +612,7 @@ define symbol ImagesOverviewDialog() {
     Wizard::HideAbortButton();
 
     UI::ChangeWidget (`id (`edit), `Enabled, size (overview) > 0);
+    UI::ChangeWidget (`id (`delete), `Enabled, size (overview) > 0);
     if (size (overview) > 0)
     {
 	string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
@@ -657,6 +658,8 @@ sformat (_("Delete configutation %1 now?"), current)))
 		overview = filter (term it, (list<term>) overview,
 		    ``(it[0,0]:"" != current));
 		UI::ChangeWidget (`id (`table), `Items, overview);
+		UI::ChangeWidget (`id (`edit), `Enabled, size (overview) > 0);
+	        UI::ChangeWidget (`id (`delete), `Enabled, size (overview) > 0);
 	    }
         }
         else if (ret == `edit)

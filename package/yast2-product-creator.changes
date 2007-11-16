@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Fri Nov 16 12:59:17 CET 2007 - jsuchome@suse.cz
+
+- do not mention CD source in help texts (#341615)
+- disable Delete button when there's nothing to delete (#341932)
+- make the progress window smaller with small resolutions (#342046)
+- do not automatically remove broken sources from the table (#341634)
+- bigger timout before killing kiwi with SIGKILL (#341635)
+- 2.13.24
+
+-------------------------------------------------------------------
 Mon Nov 12 12:30:16 CET 2007 - jsuchome@suse.cz
 
 - do not allow importing non-system configurations (#340495)

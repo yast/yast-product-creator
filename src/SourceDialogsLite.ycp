@@ -770,7 +770,7 @@ term SelectRadioWidget () {
 string SelectWidgetHelp () {
     // help text
     string help_text = _("<p><big><b>Catalog Media</b></big><br>
-The software catalog can be located on CD, on a network server,
+The software catalog can be located on a network server,
 or on the hard disk.</p>");
 
     // help, continued
