@@ -1898,6 +1898,7 @@ Choose a different one."), name));
 	    kiwi_task	= (string)  UI::QueryWidget (`id (`type), `Value);
 
 	    list<string> failed_repositories	= [];
+	    map<string,map> new_repositories	= $[];
 	    if (size (repositories) > 0)
 	    {
 		map<string,integer> current_sources	= $[];
@@ -1909,7 +1910,7 @@ Choose a different one."), name));
 		    current_sources[url]	= srcid;
 		});
 		// initialize new repos now
-		repositories = filter (string url, map repo, repositories, {
+		new_repositories = filter (string url, map repo, repositories, {
 		    if (substring (url, 0, 1) == "/")
 			url		= "dir://" + url;
 		    if (haskey (current_sources, url))
@@ -1942,8 +1943,11 @@ Choose a different one."), name));
 
 Continue anyway?"), mergestring (failed_repositories, "\n"))))
 		{
-		    update_repo_table ();
 		    continue;
+		}
+		else
+		{
+		    repositories	= new_repositories;
 		}
 	    }
 	    break;

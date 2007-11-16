@@ -607,6 +607,11 @@
 	SCR::Execute (.target.bash, sformat ("rm -rf %1", chroot_dir));
     }
 
+    integer height	= 8;
+    map display_info	= UI::GetDisplayInfo ();
+    // reduce the height with small resolutions (#342046)
+    if (display_info["TextMode"]:false || display_info["Height"]:0 < 600)
+	height		= 6;
     // construct the dialog
     UI::OpenDialog(`opt(`decorated), `HBox(`HSpacing(1.5),
     `VBox(
@@ -616,11 +621,11 @@
 	    // label
 	    `ReplacePoint (`id (`rpl), `Left (`Label(_("Preparing for Image Creation")))),
 	    `VSpacing(0.5),
-	    `LogView (`id (`log), "", 8, 0)
+	    `LogView (`id (`log), "", height, 0)
 	)),
 	`VWeight (1, `VBox (
 	    `VSpacing(0.5),
-	    `LogView (`id (`errlog), "", 8, 0),
+	    `LogView (`id (`errlog), "", height / 2, 0),
 	    `VSpacing(0.5),
 	    `ReplacePoint (`id (`rp), `PushButton (`id(`cancel),`opt(`key_F9), Label::CancelButton ())),
 	    `VSpacing(0.5)
@@ -702,12 +707,27 @@
 	}
 	if (ret == `cancel)
 	{
-	    SCR::Execute(.background.kill);
+	    integer pid =  (integer)SCR::Read (.background.pid);
+	    if (pid != -1)
+	    {
+		// first, send a sigterm
+		SCR::Execute (.target.bash, sformat ("kill %1", pid));
+		// busy popup message
+		Popup::ShowFeedback (_("Closing kiwi..."),
+		    // busy popup message
+		    _("This will take a while..."));
+		sleep (5000);
+		if ((boolean)SCR::Read(.background.isrunning))
+		    // .background.kill sends a sigkill after another second
+		    SCR::Execute(.background.kill);
+		Popup::ClearFeedback ();
+	    }
 	}
 	sleep (100);
     } while (ret == nil);
 
-    SCR::Execute(.background.kill);
+    if ((boolean)SCR::Read(.background.isrunning))
+	SCR::Execute(.background.kill);
     UI::CloseDialog ();
     return ret == `ok;
   }
