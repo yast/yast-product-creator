@@ -1036,7 +1036,7 @@ directory.</p>
 	// combo box label
 	"label"		: _("&USB Stick Boot Image"),
 	// help text for "XEN Boot Image"
-	"help"		: sformat (_("<p>Choose one <b>USB stick Boot Image</b> from the<br>
+	"help"		: sformat (_("<p>Choose one <b>USB Stick Boot Image</b> from the<br>
 <tt>%1/%2</tt><br>
 directory.</p>
 "),

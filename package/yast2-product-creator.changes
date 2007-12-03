@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Dec  3 15:12:11 CET 2007 - jsuchome@suse.cz
+
+- perl-XML-LibXML required for ag_kiwi
+- merged texts from proofread 
+
+-------------------------------------------------------------------
 Mon Nov 12 15:35:42 CET 2007 - lslezak@suse.cz
 
 - select the current language if there is no language selected,
