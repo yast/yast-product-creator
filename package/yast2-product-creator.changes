@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Dec  5 12:33:16 CET 2007 - jsuchome@suse.cz
+
+- fixed generating configuration path name (#346152)
+- 2.13.25
+
+-------------------------------------------------------------------
 Fri Nov 16 12:59:17 CET 2007 - jsuchome@suse.cz
 
 - do not mention CD source in help texts (#341615)
