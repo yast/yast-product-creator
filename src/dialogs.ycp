@@ -99,7 +99,6 @@
         string caption = _("CD Creator Configuration");
 
 
-        string source = ProductCreator::Config["source"]:"";
         string name = ProductCreator::Config["name"]:"";
         string pkgtype = ProductCreator::Config["pkgtype"]:"package-manager";
 
@@ -268,7 +267,6 @@
         string publisher = ProductCreator::Config["publisher"]:"";
         string preparer = ProductCreator::Config["preparer"]:"";
         string result = ProductCreator::Config["result"]:"iso";
-        string db = ProductCreator::Config["database"]:"original";
         string isofile_path = ProductCreator::Config["isofile"]:"";
         boolean savespace = ProductCreator::Config["savespace"]:false;
 
@@ -1349,10 +1347,24 @@ This key is checked when the product is added as a repository.</p>")
         // summary caption
         summary = Summary::AddHeader(summary,_("Output Directory"));
 
-        // summary line
-        summary = Summary::AddLine(summary,sformat(_("Creating directory tree in <b> %1/%2 </b>"),
+	if (ProductCreator::Config["result"]:"tree" == "iso")
+	{
+	    summary = Summary::AddLine (summary,
+		// summary line (%1/%2 is file path)
+		sformat (_("Creating ISO image %1/%2"),
+		    ProductCreator::Config["iso-directory"]:"",
+		    ProductCreator::Config["isofile"]:"")
+	    );
+	}
+	else
+	{
+	    summary = Summary::AddLine (summary,
+		// summary line (%1/%2 is file path)
+		sformat(_("Creating directory tree in <b> %1/%2 </b>"),
                     ProductCreator::Config["iso-directory"]:"",
-                    ProductCreator::Config["name"]:"") );
+                    ProductCreator::Config["name"]:"")
+	    );
+	}
 
 
 	// header in the summary dialog

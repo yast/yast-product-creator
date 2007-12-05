@@ -716,7 +716,7 @@
     if (!FileUtils::Exists (images_dir))
 	SCR::Execute (.target.mkdir, images_dir);
     SCR::Execute (.target.bash, sformat ("cp -ar %1 %2/", config_dir, images_dir));
-    return (images_dir + KiwiConfig["name"]:"");
+    return (images_dir + "/" + KiwiConfig["name"]:"");
   }
 
     /**

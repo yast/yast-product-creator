@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Dec  5 09:57:45 CET 2007 - jsuchome@suse.cz
+
+- added command line support (F302395)
+- fixed generating configuration path name (#346152)
+- 2.16.6 
+
+-------------------------------------------------------------------
 Mon Dec  3 15:12:11 CET 2007 - jsuchome@suse.cz
 
 - perl-XML-LibXML required for ag_kiwi
