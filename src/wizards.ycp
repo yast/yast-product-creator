@@ -11,14 +11,17 @@
 
 textdomain "product-creator";
 
+import "Kiwi";
 import "Wizard";
 import "Popup";
 import "Package";
+import "PackageCallbacksInit";
 import "Sequencer";
+import "URL";
 
 include "product-creator/complex.ycp";
 include "product-creator/dialogs.ycp";
-include "product-creator/kiwi.ycp";
+include "product-creator/kiwi_dialogs.ycp";
 
 
 /**
@@ -32,7 +35,7 @@ define symbol AddSequence() ``{
 	"source"	: ``( sourceDialog() ),
 	"config1"	: ``( Configure1Dialog() ),
 	"config2"	: ``( Configure2Dialog() ),
-	"isolinuxcheck" : ``( CheckBootableSrc() ),
+	"isolinuxcheck" : [ ``( CheckBootableSrc() ), true],
 	"isolinux"	: ``( isolinuxDialog() ),
 	"packagemanager": ``( packageSelector() ),
 	"gpgkey"	: ``( gpgKeyDialog() ),
@@ -58,7 +61,6 @@ define symbol AddSequence() ``{
 	"isolinuxcheck" : $[
 	    `next	: "isolinux",
 	    `skip_isolinux : "packagemanager",
-	    `autoyast	: "gpgkey"
 	],
 	"isolinux": $[
 	   `abort	: `abort,
@@ -69,7 +71,8 @@ define symbol AddSequence() ``{
 	   `abort	: `abort,
 	    `next	: "gpgkey",
 	    `accept	: "gpgkey",
-	    `failed	: "summary"
+	    `failed	: "summary",
+	    `cancel	: "isolinuxcheck",
 	],
 	"gpgkey"	: $[
 	   `abort	: `abort,
@@ -131,6 +134,39 @@ symbol CommitConfig () {
 symbol InitSources () {
 
     ProductCreator::EnableSource();
+
+    // remove the source types unsupported by kiwi (#339110)
+    list<string> sources	= [];
+    list<string> removed	= [];
+    foreach (string url, ProductCreator::Config["sources"]:[], {
+	map parsed = URL::Parse(url);
+	if (contains (Kiwi::unsupported_schemes, parsed["scheme"]:""))
+	    removed	= add (removed, url);
+	else
+	    sources	= add (sources, url);
+    });
+    ProductCreator::Config["sources"]	= sources;
+    if (removed != [])
+    {
+	// message popup, %1 is a \n separated list
+	Popup::Message (sformat (_("These installation sources are not supported by kiwi:
+
+%1.
+
+They were removed from current configuration."), mergestring (removed, "\n")));
+    }
+    return `next;
+}
+
+/**
+ * Initialize the list of current repositories (before any other handling):
+ * we need to know their id's so it is possible to delete them when new
+ * kiwi config is imported (and its repos should be added)
+ */
+symbol InitRepositories () {
+
+    Kiwi::initial_repositories	= Kiwi::InitCurrentRepositories ();
+    Kiwi::Read ();
     return `next;
 }
 
@@ -141,6 +177,8 @@ define symbol KiwiSequence() ``{
 	"init_sources"	: [ ``( InitSources () ), true ],
 	"kiwi"		: ``( KiwiDialog () ),
 	"summary"	: ``( CommitConfig() ),
+
+	// FIXME check if it was only kiwi config...
 	"write"		: ``( WriteDialog() ),
     ];
 
@@ -162,6 +200,40 @@ define symbol KiwiSequence() ``{
 	],
     ];
     return Sequencer::Run( aliases, sequence );
+}
+
+define symbol ImageCreatorSequence() {
+
+    map aliases = $[
+	"init_repositories"	: [ ``( InitRepositories () ), true ],
+	"images_overview"	: ``( ImagesOverviewDialog() ),
+	"kiwi_prepare"		: ``( PrepareDialog() ),
+	"kiwi"			: ``( KiwiDialog () ),
+    ];
+    map sequence = $[
+	"ws_start"	: "init_repositories",
+	"init_repositories" : $[
+	    `next	: "images_overview"
+	],
+	"images_overview" : $[
+	    `abort	: `abort,
+	    `kiwi	: "kiwi_prepare",
+	    `next	: `next,
+	],
+	"kiwi_prepare" : $[
+	    `abort	: `abort,
+	    `next	: "kiwi"
+	],
+	"kiwi": $[
+	    `abort	: `abort,
+	    `next	: "images_overview",
+	],
+    ];
+
+    PackageCallbacksInit::InitPackageCallbacks();
+
+    symbol ret = Sequencer::Run(aliases, sequence);
+    return ret;
 }
 
 /**

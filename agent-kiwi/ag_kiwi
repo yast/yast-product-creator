@@ -29,15 +29,17 @@ while (<STDIN>)
 	my $optionsNodeList = $systemTree -> getElementsByTagName ("preferences");
 	my $usrdataNodeList = $systemTree -> getElementsByTagName ("users");
 	my $packageNodeList = $systemTree -> getElementsByTagName ("packages");
-	my $imgnameNodeList = $systemTree -> getElementsByTagName ("image");
+#	my $imgnameNodeList = $systemTree -> getElementsByTagName ("image");
 
 	my $key		= "packages";
 	$retmap{$key}	= {};
 	for (my $i=1;$i<= $packageNodeList->size();$i++) {
 	    my $node = $packageNodeList -> get_node($i);
 	    my $type = $node -> getAttribute ("type");
-	    y2milestone ("package list type: $type");
+	    y2debug ("package list type: $type");
 	    $retmap{$key}{$type}	= {};
+	    my $patterntype = $node -> getAttribute ("patternType");
+	    $retmap{$key}{$type}{"patternType"} = $patterntype if $patterntype;
 	    foreach my $tag ("package", "opensusePattern", "ignore") {
 		my @sw_list		= ();
 		foreach my $element ($node -> getElementsByTagName ($tag)) {
@@ -57,22 +59,20 @@ while (<STDIN>)
 	    }
 	}
 	my $prefs	= $optionsNodeList -> get_node(1);
-	foreach my $tag ("packagemanager", "version", "rpm-check-signatures", "rpm-force",
-	    "size") {
+	foreach my $tag ("packagemanager", "version", "rpm-check-signatures",
+	    "rpm-force", "size", "defaultdestination", "defaultroot", "locale")
+	{
 	    my $element	= $prefs -> getElementsByTagName ($tag);
-	    $retmap{$tag} = $element-> get_node(1)->textContent () if ($element);
+	    $retmap{$tag} = $element->get_node(1)->textContent () if ($element);
 	}
 	# now get the 'type' attributes
 	# example: <type primary="true" boot="isoboot/suse-10.3" flags="compressed">iso</type>
 	#	   <type boot="vmxboot/suse-10.3" filesystem="ext3">vmx</type>
 	my @ntag  = $prefs -> getElementsByTagName ("type") -> get_nodelist();
 	foreach my $element (@ntag) {
-	    my $primary = $element -> getAttribute ("primary");
-	    my $boot 	= $element -> getAttribute ("boot");
-	    my $flags	= $element -> getAttribute ("flags");
 	    my $type	= $element -> textContent ();
 	    my %typemap	= ();
-	    foreach my $attr ("primary", "boot", "flags", "filesystem") {
+	    foreach my $attr ("primary", "boot", "flags", "filesystem", "format") {
 		my $val	= $element -> getAttribute ($attr);
 		$typemap{$attr}	= $val if defined $val;
 	    }
@@ -91,6 +91,19 @@ while (<STDIN>)
 	    my $element	= $descr -> getElementsByTagName ($tag);
 	    $retmap{$tag} = $element-> get_node(1)->textContent () if ($element);
 	}
+
+	my $image	= $systemTree -> getElementsByTagName ("image")->get_node (1);
+	my $image_name	= $image -> getAttribute ("name");
+	if ($image_name) {
+	    $retmap{"name"}	= $image_name;
+	    y2milestone ("image name: $image_name");
+	}
+
+	my $scheme_ver	= $image -> getAttribute ("schemeversion");
+	$retmap{"schemeversion"}	= $scheme_ver if $scheme_ver;
+
+	my $inherit	= $image -> getAttribute ("inherit");
+	$retmap{"inherit"}	= $inherit if $inherit;
 
 	$retmap{"users"}	= {};
 	foreach my $usernode ($usrdataNodeList -> get_nodelist()) {
@@ -114,7 +127,7 @@ while (<STDIN>)
 	for (my $i=1;$i<= $driversNodeList->size();$i++) {
 	    my $node = $driversNodeList -> get_node($i);
 	    my $type = $node -> getAttribute ("type");
-	    y2milestone ("driver list type: $type");
+	    y2debug ("driver list type: $type");
 	    $retmap{$key}{$type}	= {};
 	    foreach my $tag ("file") {
 		my @list		= ();
@@ -128,26 +141,25 @@ while (<STDIN>)
 	    }
 	}
 	$key			= "repository";
-	$retmap{$key}	= {};
+	my @repolist	= ();
 	for (my $i=1;$i<= $repositNodeList->size();$i++) {
 	    my $node = $repositNodeList -> get_node($i);
-	    my $type = $node -> getAttribute ("type");
-	    y2milestone ("repo type: $type");
-	    my $status = $node -> getAttribute ("status");
-	    $retmap{$key}{$type}	= {};
-	    $retmap{$key}{$type}{"status"}	= $status if $status;
-	    foreach my $tag ("source") {
-		# maybe it doesn't have sense to have list of sources in one repo...
-		my @list		= ();
-		foreach my $element ($node -> getElementsByTagName ($tag)) {
-		    my %item	= ();
-		    my $path	= $element -> getAttribute ("path");
-		    $item{"path"}	= $path if $path;
-		    push @list, \%item if %item;
-		}
-		$retmap{$key}{$type}{$tag}	= \@list if @list;
+	    my %repo	= ();
+	    foreach my $tag ("type", "status") {
+		my $val	= $node -> getAttribute ($tag);
+		$repo{$tag}	= $val if $val;
 	    }
+	    my @list		= (); # maybe list is not needed here...
+	    foreach my $element ($node -> getElementsByTagName ("source")) {
+		my %item	= ();
+		my $path	= $element -> getAttribute ("path");
+		$item{"path"}	= $path if $path;
+		push @list, \%item if %item;
+	    }
+	    $repo{"source"}	= \@list if @list;
+	    push @repolist, \%repo if %repo;
 	}
+	$retmap{$key}	= \@repolist if @repolist;
 	ycp::Return (\%retmap, 1);
     }
     elsif ($command eq "result")

@@ -62,6 +62,7 @@ global string skel_root = "";
 
 global boolean profile_parsed = false;
 
+global integer max_size_mb	= 999 * 1024;
 
 /* Configuration Map */
 global map<string, any> Config = $[];
@@ -90,8 +91,8 @@ global boolean modified = false;
 
 global boolean proposal_valid = false;
 
-// What we want to create with kiwi
-global string kiwi_task	= "iso";
+// if the YaST sources should be enabled when opening package selector
+global boolean enable_sources	= true;
 
 // original source configuration, needed to reset the package manager
 list<map<string,any> > original_config = nil;
@@ -125,6 +126,8 @@ global void MarkTaboo(list<string> packages_taboo)
 global boolean isCode10Source()
 {
     boolean code10 = false;
+    string arch	= Arch::architecture ();
+    if (arch == "s390_64") arch = "s390x";
     foreach (string url , ProductCreator::Config["sources"]:[],
     {
 	integer i = SourceManager::getSourceId(url);
@@ -141,7 +144,7 @@ global boolean isCode10Source()
 	    {
 		list<string> items = splitstring(dir_listing, "\n");
 
-		code10 = code10 || contains(items, Arch::architecture() + "/");
+		code10 = code10 || contains(items, arch + "/");
 	    }
 	}
     });
@@ -558,7 +561,9 @@ global define string Readisolinux() ``{
     }
     else
     {
-	bootconfig_path = sformat("boot/%1/loader/isolinux.cfg", Arch::architecture());
+	string arch = Arch::architecture();
+	if (arch == "s390_64") arch = "s390x";
+	bootconfig_path = sformat("boot/%1/loader/isolinux.cfg", arch);
 
 	list<integer> srcids = [checkProductDependency()];
 
@@ -1041,6 +1046,7 @@ global define boolean  CreateSkeleton () ``{
     integer sles_src = 0;
     string descr_dir = "";
     string arch = Arch::architecture();
+    if (arch == "s390_64") arch = "s390x";
 
     y2milestone("Config: %1", Config);
 
@@ -1655,7 +1661,9 @@ global boolean InsertKeyToInitrds(string gpg_key, string base_dir)
 
 	    if (!inserted)
 	    {
-		Report::Error(sformat(_("Could not add GPG key %1 to initrd\n%2"), gpg_key, initrd));
+		Report::Error(sformat(_("Could not add GPG key %1 to initrd
+%2.
+"), gpg_key, initrd));
 		ret = false;
 	    }
 	}
@@ -1734,7 +1742,9 @@ global boolean SignSourceStep()
 			// yes/no popup: error message
 			if (!signed)
 			{
-			    if (Popup::YesNo(_("Error: Could not digitally sign the source.\nTry it again?")))
+			    if (Popup::YesNo(_("Error: Could not digitally sign the source.
+Try again?
+")))
 			    {
 				passphrase = (Mode::commandline()) ? gpg_passphrase : GPGWidgets::AskPassphrasePopup(gpg_key);
 			    }
@@ -1772,6 +1782,7 @@ global define boolean CopyMiscFiles() ``{
 
     string cpCmd = "";
     string arch = Arch::architecture();
+    if (arch == "s390_64") arch = "s390x";
     y2debug("isolinux.cfg: %1", Config["bootconfig"]:"" );
     if (Config["bootconfig"]:"" != "") 
     {
@@ -1884,6 +1895,10 @@ global define list<term> GetDirSources(string source) ``{
 
 
 global define void enableSources()``{
+
+    // used by standalone kiwi UI, which does onw sources handling...
+    if (!enable_sources)
+	return;
 
     // TODO FIXME: use better way to reset the source config in the package manager
     if (original_config != nil)
@@ -2183,7 +2198,9 @@ global boolean CopyPackages()
 
 			    if (l_packge == nil || l_packge == "")
 			    {
-				Report::Error(sformat(_("Cannot download package %1\n from source %2"), package["path"]:"", source));
+				Report::Error(sformat(_("Cannot download package %1
+ from source %2.
+"), package["path"]:"", source));
 				ret = false;
 				break;
 			    }
@@ -2276,6 +2293,18 @@ global define boolean readControlFile(string filename) ``{
 
     PackageAI::toinstall = software["packages"]:[];
     Config["packages"] = AutoinstSoftware::autoinstPackages();
+
+    // add "post-packages"
+    list post_packages = software["post-packages"]:[];
+    if (size(post_packages) > 0)
+    {
+	y2milestone("Adding \"post-packages\": %1", post_packages);
+	Config["packages"] = union(Config["packages"]:[], post_packages);
+    }
+
+    // TODO: remove also "remove-packages" from the list?
+    // Is it safe to remove them due to possible dependencies??
+
     y2milestone("Config: %1", Config );
     profile_parsed = true;
     return true;

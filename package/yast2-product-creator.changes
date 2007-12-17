@@ -1,4 +1,191 @@
 -------------------------------------------------------------------
+Wed Dec  5 12:33:16 CET 2007 - jsuchome@suse.cz
+
+- fixed generating configuration path name (#346152)
+- 2.13.25
+
+-------------------------------------------------------------------
+Fri Nov 16 12:59:17 CET 2007 - jsuchome@suse.cz
+
+- do not mention CD source in help texts (#341615)
+- disable Delete button when there's nothing to delete (#341932)
+- make the progress window smaller with small resolutions (#342046)
+- do not automatically remove broken sources from the table (#341634)
+- bigger timout before killing kiwi with SIGKILL (#341635)
+- 2.13.24
+
+-------------------------------------------------------------------
+Mon Nov 12 12:30:16 CET 2007 - jsuchome@suse.cz
+
+- do not allow importing non-system configurations (#340495)
+- 2.13.23 
+
+-------------------------------------------------------------------
+Tue Nov  6 13:09:09 CET 2007 - jsuchome@suse.cz
+
+- remove unsupported source types also for product-creator-> kiwi 
+  workflow (#339110)
+- 2.13.22
+
+-------------------------------------------------------------------
+Mon Nov  5 21:56:21 CET 2007 - jsuchome@suse.cz
+
+- do not allow source types not supported by kiwi (#339110)
+- 2.13.21 
+
+-------------------------------------------------------------------
+Fri Nov  2 11:02:42 CET 2007 - jsuchome@suse.cz
+
+- correctly escape strings which should be written to config.xml
+  (seen in #338090)
+- 2.13.20
+
+-------------------------------------------------------------------
+Thu Nov  1 10:57:39 CET 2007 - jsuchome@suse.cz
+
+- save all types from the template to target config.xml
+- show correct list of repositories when going back (#337862)
+- fixed checking if repository has 'plaindir' format (#338115)
+- show which repositories YaST failed to add (#337618)
+- added support for "format" and "locale" tags in config.xml
+- added support for OEM image type
+- 2.13.19
+
+-------------------------------------------------------------------
+Fri Oct 26 10:25:49 CEST 2007 - jsuchome@suse.cz
+
+- fix the sequence for going to kiwi image from main summary
+- do not read the template name when going from main summary
+- 2.13.18 
+
+-------------------------------------------------------------------
+Thu Oct 25 14:05:48 CEST 2007 - jsuchome@suse.cz
+
+- allow more characters in the image name
+- 2.13.17 
+
+-------------------------------------------------------------------
+Tue Oct 16 23:37:05 CEST 2007 - jsuchome@suse.cz
+
+- fix modifying of repository (#334208)
+- check for duplicates in the list of boot images (#332581)
+- disable Delete button when there's nothing to delete (#334255)
+- 2.13.16 
+
+-------------------------------------------------------------------
+Mon Oct 15 16:41:48 CEST 2007 - jsuchome@suse.cz
+
+- update defaultroot only for new configurations (#327057)
+- check for absolute paths in boot image entry
+- index repositories by url, not by order
+- 2.13.15
+
+-------------------------------------------------------------------
+Mon Oct 15 13:27:11 CEST 2007 - jsuchome@suse.cz
+
+- fix initializing when going Back (#332581)
+- 2.13.14 
+
+-------------------------------------------------------------------
+Fri Oct 12 11:15:01 CEST 2007 - jsuchome@suse.cz
+
+- fix adding CD/DVD/SLP repositories (#333106) 
+- show correct list of repositories when going back (#332253)
+- use system repositories when none is specified (#332253) 
+- menubutton for adding system repositories (#332253)
+- added SUPPORTED_BOOT_IMAGES to /etc/sysconfig/product-creator:
+  possibility to limit list of offered boot images (#331733)
+- append image name to defaultdestination and defaultroot (#327057)
+- 2.13.13
+
+-------------------------------------------------------------------
+Tue Oct  2 11:49:14 CEST 2007 - jsuchome@suse.cz
+
+- copy whole content of imported kiwi config directory (#330052)
+- save defaultroot value to config.xml (#330059)
+- don't ignore 'inherit' tag (#330079)
+- added support for "this://" in repository paths (#330095)
+- 2.13.12 
+
+-------------------------------------------------------------------
+Mon Oct  1 14:43:47 CEST 2007 - jsuchome@suse.cz
+
+- do not close module after kiwi failure (#327593)
+- check stderr and stdout after kiwi finish/failure (#327610)
+- do not allow configuration without name (#328003)
+- destination directory specified in sysconfig file (#327055)
+- support for kiwi images templates (F302371)
+- support project control for images (F302370)
+- use zypper instead of smart
+- write schemeversion to config.xml
+- directories with templates are specified in
+  /etc/sysconfig/product-creator
+- enable modifications of configurations without creating images
+- do not import already imported and modified configuration
+- enable support for unlisted boot images (e.g. netboot)
+- show the maximum available space
+- use lazy initialization of installation sources
+- tell zypper to ignore zypp lock (#310581)
+- remove 'prepare' directory before calling kiwi (#325664)
+- use defaultroot value from config.xml for 'prepare' directory (F302371)
+
+-------------------------------------------------------------------
+Mon Sep 17 15:27:43 CEST 2007 - jsuchome@suse.cz
+
+- support installation sources of s390x (#301362)
+
+-------------------------------------------------------------------
+Tue Aug 28 10:58:22 CEST 2007 - jsuchome@suse.cz
+
+- include the package from "post-packages" section of autoyast
+  profile (#291776)
+- 2.13.11 
+
+-------------------------------------------------------------------
+Fri Aug 24 14:57:50 CEST 2007 - jsuchome@suse.cz
+
+- do not require packages with image descriptions, include required
+  files (originally created by ms@suse.de for kiwi-desc-buildservice
+  and kiwi-desc-livesystem) as templates (#289552)
+- show kiwi error output in separate window
+- mark plaindir installation types as rpm-dir in config.xml
+- 2.13.10
+
+-------------------------------------------------------------------
+Fri Aug 10 14:48:44 CEST 2007 - jsuchome@suse.cz
+
+- CLI option for gpg passphrase (daniel.rahn and lslezak, #287477)
+- 2.13.9
+
+-------------------------------------------------------------------
+Wed Aug  8 15:19:45 CEST 2007 - jsuchome@suse.cz
+
+- yet another fix for "Back" button behavior (#289524)
+- enable editing of isolinux.cfg in case of autoYaST usage (#287443) 
+- kiwi config: fixed path to directory with XEN template 
+- 2.13.8
+
+-------------------------------------------------------------------
+Wed Jul 25 09:41:05 CEST 2007 - lslezak@suse.cz
+
+- fixed "Back" button behavior in the Isolinux configuration
+  dialog (#289524)
+
+-------------------------------------------------------------------
+Mon Jun 18 11:17:42 CEST 2007 - jsuchome@suse.cz
+
+- changed "Create ISO image" button label, added missing help text
+  (#284276) 
+- 2.13.7
+
+-------------------------------------------------------------------
+Wed Jun 13 14:44:47 CEST 2007 - jsuchome@suse.cz
+
+- merged texts from proofreading 
+- fixed the help text for signing (#283235)
+- 2.13.6
+
+-------------------------------------------------------------------
 Tue Jun  5 15:35:29 CEST 2007 - jsuchome@suse.cz
 
 - kiwi UI: create output directly in output directory to prevent
