@@ -1,6 +1,7 @@
 #
 # Makefile.am for devtools/devtools/skeletons/config/agents
 #
+SUBDIRS	= kiwi_templates
 
 ydatadir = @ydatadir@/product-creator
 
@@ -10,5 +11,8 @@ ydata_DATA = \
 	message \
 	options.msg
 
+fillup_DATA = sysconfig.product-creator
 
-EXTRA_DIST = $(ydata_DATA) 
+fillupdir = /var/adm/fillup-templates
+
+EXTRA_DIST = $(ydata_DATA) $(fillup_DATA)

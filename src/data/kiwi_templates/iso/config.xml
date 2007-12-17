@@ -1,0 +1,35 @@
+<image name="kiwi-image-template">
+	<description type="system">
+		<author></author>
+		<contact></contact>
+		<specification>Template for system image configuration</specification>
+	</description>
+	<preferences>
+		<version>1</version>
+		<size unit="M">2700</size>
+		<rpm-check-signatures>False</rpm-check-signatures>
+		<rpm-force>True</rpm-force>
+	</preferences>
+	<users group="users">
+	    <user home="/home/linux" name="linux"/>
+	    <user home="/root" name="root"/>
+	</users>
+	<packages type="image" patternType="plusRecommended">
+		<package name="xkeyboard-config"/>
+		<package name="sax2"/>
+		<opensusePattern name="default"/>
+		<opensusePattern name="base"/>
+		<opensusePattern name="x11"/>
+		<opensusePattern name="kde"/>
+	</packages>
+	<packages type="xen" memory="512" disk="/dev/sda">
+		<package name="kernel-xen"/>
+		<package name="xen"/>
+	</packages>
+	<packages type="boot">
+		<package name="filesystem"/> 
+		<package name="glibc-locale"/>
+		<package name="kernel-default"/>
+        <package name="devs"/>
+	</packages>
+</image>

@@ -11,18 +11,19 @@
 
     textdomain "product-creator";
 
-    import "Wizard";
-    import "Popup";
-    import "Wizard_hw";
-    import "Report";
     import "Arch";
-    import "String";
-
-    import "ProductCreator";
-
+    import "CommandLine";
+    import "Directory";
+    import "FileUtils";
+    import "Kiwi";
     import "Label";
     import "Mode";
-    import "CommandLine";
+    import "Popup";
+    import "ProductCreator";
+    import "Report";
+    import "String";
+    import "Wizard";
+    import "Wizard_hw";
 
     include "product-creator/helps.ycp";
     include "product-creator/dialogs.ycp";
@@ -90,17 +91,17 @@
             contents,
 	    `HBox (
 		// push button label
-		`PushButton(`id(`create_button), _("&Create ISO Image")),
+		`PushButton(`id(`create_button), _("&Create Image")),
 		// menu button label
-		`MenuButton (`id (`kiwi), _("Cre&ate Image with Kiwi..."), [
+		`MenuButton (`id (`kiwi), _("Cre&ate Image with KIWI..."), [
 		    // push button label
 		    `item(`id(`iso_button), _("Live ISO Image")),
 		    // push button label
-		    `item(`id(`xen_button), _("XEN Image")),
+		    `item(`id(`xen_button), _("Xen Image")),
 		    // push button label
-		    `item(`id(`usb_button), _("USB stick Image")),
+		    `item(`id(`usb_button), _("USB Stick Image")),
 		    // push button label
-		    `item(`id(`vmx_button), _("Virtual disk Image")),
+		    `item(`id(`vmx_button), _("Virtual Disk Image")),
 		])
 	    )
         );
@@ -136,7 +137,7 @@
                 break;
             }
             /* edit */
-            else if(ret == `edit_button) {
+            else if(ret == `edit_button || ret == `table) {
                 ProductCreator::LoadConfig(current);
                 ret = `edit;
                 break;
@@ -169,34 +170,34 @@
                 break;
             }
             else if(ret == `iso_button &&
-		Package::InstallAll (["kiwi", "kiwi-desc-isoboot", "kiwi-desc-livesystem"])) {
+		Package::InstallAll (["kiwi", "kiwi-desc-isoboot"])) {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
-		ProductCreator::kiwi_task	= "iso";
+		Kiwi::kiwi_task	= "iso";
                 ret = `kiwi;
                 break;
             }
 	    else if (ret == `xen_button &&
-		Package::InstallAll (["kiwi", "kiwi-desc-xenboot", "kiwi-desc-buildservice"])) {
+		Package::InstallAll (["kiwi", "kiwi-desc-xenboot"])) {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
-		ProductCreator::kiwi_task	= "xen";
+		Kiwi::kiwi_task	= "xen";
                 ret = `kiwi;
 		break;
 	    }
 	    else if (ret == `usb_button &&
-		Package::InstallAll (["kiwi", "kiwi-desc-usbboot", "kiwi-desc-livesystem"])) {
+		Package::InstallAll (["kiwi", "kiwi-desc-usbboot"])) {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
-		ProductCreator::kiwi_task	= "usb";
+		Kiwi::kiwi_task	= "usb";
                 ret = `kiwi;
 		break;
 	    }
 	    else if (ret == `vmx_button &&
-		Package::InstallAll (["kiwi", "kiwi-desc-vmxboot", "kiwi-desc-livesystem"])) {
+		Package::InstallAll (["kiwi", "kiwi-desc-vmxboot"])) {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
-		ProductCreator::kiwi_task	= "vmx";
+		Kiwi::kiwi_task	= "vmx";
                 ret = `kiwi;
 		break;
 	    }
@@ -252,9 +253,9 @@
 	if (gpg_key != "")
 	{
 	    // label
-	    progress_stages = add(progress_stages, _("Sign the Source With a GPG Key"));
+	    progress_stages = add(progress_stages, _("Sign the source with a GPG key"));
 	    // progressbar label
-	    progress_descriptions = add(progress_descriptions, _("Signing the Source With a GPG Key..."));
+	    progress_descriptions = add(progress_descriptions, _("Signing the source with a GPG key..."));
 	}
 
         Progress::New(
@@ -524,14 +525,187 @@ Fix the problem and try again.</p>
 	    return `skip_isolinux;
 	}
 
-        if (ProductCreator::Config["profile"]:""!="")
-	{
-            return `autoyast;
-	}
-
 	return `next;
     }
 
+/**
+ * overview dialog with image configurations
+ */
+define symbol ImagesOverviewDialog() {
+
+    list overview	= [];
+    map Configurations	= $[];
+
+    string images_dir	= Kiwi::images_dir;
+    if (!FileUtils::Exists (images_dir))
+	SCR::Execute (.target.mkdir, images_dir);
+
+    map out = (map) SCR::Execute (.target.bash_output,
+	sformat ("ls -A1 %1", images_dir));
+    if (out != $[])
+    {
+	foreach (string d, splitstring(out["stdout"]:"", "\n"), {
+	    if (d == "") return;
+	    if (FileUtils::Exists (images_dir + "/" + d + "/config.xml"))
+	    {
+		map config	= Kiwi::ReadConfigXML (images_dir + "/" + d);
+		if (config["image_type"]:"" != "system")
+		{
+		    y2warning ("%1 not a 'system' image type, skipping", d);
+		    return;
+		}
+		string task	= "iso";
+		// FIXME duplicated in kiwi_dialogs
+		foreach (string type, map data, config["type"]:$[], {
+		    task   = type;
+		    if (data["primary"]:"" == "true")
+			break;
+		});
+
+		config["kiwi_configuration_" + task] = images_dir + "/" + d;
+		config["current_task"]	= task;
+
+		string name	= config["name"]:d;
+		Configurations[name]	= config;
+		overview = add (overview, `item (
+		    `id (name), name,
+		    config["version"]:"1", config["size"]:0
+		));
+	    }
+	});
+    }
+
+    // help text
+    string help_text	= _("<p>Start the creating of new image configuration with <b>Add</b>.</p>") +
+
+    // help text
+    _("<p>Use <b>Edit</b> to change selected image configuration or create the image.</p>") +
+
+    // help text
+    _("<p>Delete the directory with selected configuration using <b>Delete</b>.</p>") +
+
+    // help text, %1 is directory
+    sformat (_("<p>All image configurations are saved in <tt>%1</tt> directory.</p>"), images_dir);
+
+    // main dialog caption
+    string caption = _("Image Creator Configuration Overview");
+
+    term contents = `VBox (
+	`VWeight (3, `Table (`id (`table), `opt (`notify, `immediate),
+                `header (_("Name"), _("Version"), _("Size")),
+		overview
+	)),
+	`VWeight (1, `RichText (`id (`descr), "")),
+	`HBox (
+	    `PushButton (`id (`add), `opt (`key_F3), Label::AddButton ()),
+	    `PushButton (`id (`edit), `opt (`key_F4), Label::EditButton ()),
+	    `PushButton (`id (`delete), `opt (`key_F5), Label::DeleteButton ()),
+	    `HStretch ()
+	)
+    );
+
+    contents = Wizard_hw::SpacingAround(contents, 1.5, 1.5, 1.0, 1.0);
+
+    Wizard::SetContentsButtons(caption, contents, help_text,
+        Label::BackButton(), Label::CloseButton());
+    Wizard::HideBackButton();
+    Wizard::HideAbortButton();
+
+    UI::ChangeWidget (`id (`edit), `Enabled, size (overview) > 0);
+    UI::ChangeWidget (`id (`delete), `Enabled, size (overview) > 0);
+    if (size (overview) > 0)
+    {
+	string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
+	string val	= Configurations[current,"specification"]:"";
+	UI::ChangeWidget (`id (`descr), `Value,
+	    mergestring (splitstring(String::EscapeTags (val), "\n"), "<br>"));
+    }
+
+    any ret = nil;
+    while(true) {
+
+	ret = UI::UserInput();
+	string current = (string) UI::QueryWidget(`id(`table), `CurrentItem );
+
+	if(ret == `abort || ret == `cancel) {
+	    if(ProductCreator::ReallyAbort()) break;
+            else continue;
+        }
+	else if (ret == `table)
+	{
+	    UI::ChangeWidget (`id (`descr), `Value,
+		Configurations[current,"specification"]:"");
+	}
+        else if (ret == `add)
+	{
+	    ProductCreator::Config = $[];
+            ret = `kiwi;
+            break;
+        }
+        else if(ret == `delete)
+	{
+	    if (Popup::YesNo (
+// yes/no popup
+sformat (_("Delete configutation %1 now?"), current)))
+	    {
+		map config	= Configurations[current]:$[];
+		string dir	=
+		    config["kiwi_configuration_"+ config["current_task"]:""]:"";
+		// TODO at the end? (solve possible new config with same name..)
+		if (dir != "" && issubstring (dir, Kiwi::images_dir))
+		    SCR::Execute (.target.bash, "rm -rf " + dir);
+		Configurations	= remove (Configurations, current);
+		overview = filter (term it, (list<term>) overview,
+		    ``(it[0,0]:"" != current));
+		UI::ChangeWidget (`id (`table), `Items, overview);
+		UI::ChangeWidget (`id (`edit), `Enabled, size (overview) > 0);
+	        UI::ChangeWidget (`id (`delete), `Enabled, size (overview) > 0);
+	    }
+        }
+        else if (ret == `edit)
+	{
+            ProductCreator::Config = Configurations[current]:$[];
+	    string task	= ProductCreator::Config["current_task"]:"";
+	    list<string> to_install	= [ "kiwi" ];
+	    if (contains ([ "iso", "xen", "vmx", "usb" ], task))
+	    {
+		string bootdir	= ProductCreator::Config["type",task,"boot"]:"";
+		if (bootdir == "" ||
+		    (!FileUtils::Exists ("/usr/share/kiwi/image/" + bootdir) &&
+		    !FileUtils::Exists (bootdir))
+		)
+		{
+		    to_install = add (to_install, sformat("kiwi-desc-%1boot", task));
+		}
+	    }
+	    if (Package::InstallAll (to_install))
+	    {
+		string dir	=
+		    ProductCreator::Config["kiwi_configuration_" + task]:"";
+		Kiwi::ImportImageRepositories (ProductCreator::Config, dir);
+		Kiwi::kiwi_task	= task;
+		ret = `kiwi;
+		break;
+	    }
+	    continue;
+        }
+	else if (ret == `next || ret == `back) {
+	    break;
+	}
+	else {
+	    y2error("unexpected retcode: %1", ret);
+	    continue;
+	}
+    }
+    if (ret == `kiwi)
+    {
+	// we do import own sources...
+	ProductCreator::enable_sources	= false;
+	// ask on abort...
+	ProductCreator::modified	= true;
+    }
+    return (symbol)ret;
+}
 
     /* EOF */
 }

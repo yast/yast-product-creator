@@ -2,6 +2,9 @@
 
 @HEADER@
 BuildRequires:	perl-XML-Writer update-desktop-files yast2-devtools yast2-testsuite yast2-packager autoyast2-installation yast2-security
+
+PreReq:         %fillup_prereq
+
 Requires:	yast2-packager autoyast2-installation yast2-security
 
 # GPG.ycp and GPGWidgets.ycp
@@ -25,14 +28,19 @@ install -d $RPM_BUILD_ROOT/var/lib/YaST2/product-creator
 
 @CLEAN@
 
+%post
+%{fillup_only -n product-creator}
+
 %files
 %defattr(-,root,root)
 %dir @yncludedir@/product-creator
 @yncludedir@/product-creator/*
 @clientdir@/product-creator.ycp
+@clientdir@/image-creator.ycp
 @moduledir@/*.ycp
 @moduledir@/*.ybc
 @desktopdir@/product-creator.desktop
+@desktopdir@/image-creator.desktop
 @ybindir@/y2mkiso
 %doc @docdir@
 %dir @ydatadir@/product-creator
@@ -40,3 +48,4 @@ install -d $RPM_BUILD_ROOT/var/lib/YaST2/product-creator
 #%dir /etc/YaST2/product-creator
 @scrconfdir@/*.scr
 @agentdir@/ag_*
+/var/adm/fillup-templates/sysconfig.product-creator

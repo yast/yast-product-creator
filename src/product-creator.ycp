@@ -53,13 +53,24 @@ map cmdline_description = $[
 	],
 	"passphrase" : $[
 	    // translators: command line help text for the 'passhrase' option
-	    "help" : _("File with GPG passhrase required for signing the source."),
+	    "help" : _("GPG passhrase required for signing the source."),
+	    "type"	: "string"
+	],
+	"passphrase_file" : $[
+	    // command line help text for the 'passhrase_file' option
+	    "help" : _("File with GPG passhrase required for signing the source"),
+	    "type"	: "string"
+	],
+	"configfile" : $[
+	    // cmd line help text for the 'configfile' option, %1 is a file name
+	    "help" : sformat(_("Path to the configuration file (default is %1"),
+		ProductCreator::ConfigFile),
 	    "type"	: "string"
 	]
     ],
     "mappings"	: $[
-	"list"		: [],
-	"create-iso"	: ["name", "passphrase"],
+	"list"		: ["configfile"],
+	"create-iso"	: ["name", "passphrase", "passphrase_file", "configfile"],
     ]
 ];
 
