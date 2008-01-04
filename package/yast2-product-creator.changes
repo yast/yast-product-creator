@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Jan  4 13:31:35 CET 2008 - lslezak@suse.cz
+
+- do not call Pkg::SaveState() and Pkg::RestoreState(), the state
+  is saved/restored by the package selector widget
+
+-------------------------------------------------------------------
 Wed Dec  5 09:57:45 CET 2007 - jsuchome@suse.cz
 
 - added command line support (F302395)
