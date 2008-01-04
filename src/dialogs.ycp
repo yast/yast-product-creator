@@ -772,8 +772,6 @@ The created medium will not be bootable.\n"))
      **/
     symbol detailedSelection( symbol mode )
     {
-	Pkg::SaveState();
-
 	// Open empty dialog for instant feedback
 
 	UI::OpenDialog(`opt(`defaultsize),
@@ -793,11 +791,6 @@ The created medium will not be bootable.\n"))
 	symbol result = (symbol) UI::RunPkgSelection(`id(`packages ) );
 	UI::CloseDialog();
 	y2milestone( "Package selector returned  %1", result );
-
-	if (result == `accept)
-	    Pkg::ClearSaveState();
-	else
-	    Pkg::RestoreState(false);
 
 	return result;
     }
