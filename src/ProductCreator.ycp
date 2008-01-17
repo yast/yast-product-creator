@@ -163,8 +163,13 @@ global void CheckCode10Source()
 symbol autoyastPackages ()
 {
     string base_selection = "";
-    //Pkg::TargetFinish ();
-    Popup::ShowFeedback(_("Reading data from Package Database..."), _("Please wait..."));
+    // busy message
+    string feedback	= _("Reading data from Package Database...");
+    if (Mode::commandline())
+	CommandLine::PrintVerbose (feedback);
+    else
+	// popup
+	Popup::ShowFeedback (feedback, _("Please wait..."));
 
     Pkg::TargetFinish ();
     string tmp = (string)SCR::Read( .target.tmpdir );

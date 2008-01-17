@@ -330,11 +330,11 @@
     foreach (string user, map usermap, (map<string,map>) config["users"]:$[], {
 	if (!haskey (ret, "users"))
 	    ret["users"]     = $[];
-	if (haskey (usermap, "group"))
-	    ret["group"]	= usermap["group"]:"";
 	ret["users",user]     = $[
 	    "home"	: usermap["home"]:sformat ("/home/%1", user),
-	    "pwd"	: user
+	    "pwd"	: user,
+	    "group"	: usermap["group"]:"",
+	    "username"	: user,
 	];
     });
     return ret;
@@ -508,19 +508,29 @@
 	write_list[0,"inherit"]	= KiwiConfig["inherit"]:"";
     if (haskey (KiwiConfig, "users"))
     {
-	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
-	    "__key"	: "users",
-	    "group"	: KiwiConfig["group"]:"users",
-	    "__children" :
-		maplist (string user, map usermap, (map<string,map>) KiwiConfig["users"]:$[], ``(
+	map<string,list> groups2users	= $[];
+	foreach (string user, map usermap, (map<string,map>) KiwiConfig["users"]:$[], {
+	    string g	= usermap["group"]:"";
+	    if (g == "")
+		g	= user == "root" ? "root" : "users";
+	    if (!haskey (groups2users, g))
+		groups2users[g]	= [];
+	    groups2users[g]	= add (groups2users[g]:[], usermap);
+	});
+	foreach (string group, list userlist, groups2users, {
+	    write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
+		"__key"	: "users",
+		"group"	: group,
+		"__children" : maplist (map usermap, (list<map>) userlist, ``(
 		    $[
 			"__key"	: "user",
-			"name"	: user,
+			"name"	: usermap["username"]:"",
 			"pwd"	: crypt_password (usermap["pwd"]:""),
 			"home"	: usermap["home"]:"",
 		    ]
 		))
-	]);
+	    ]);
+	});
     }
     write_list[0,"__children"] = union (write_list[0,"__children"]:[],
 	maplist (string source, (list<string>) KiwiConfig["sources"]:[],
