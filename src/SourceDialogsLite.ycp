@@ -15,7 +15,7 @@
  */
 
 {
-textdomain "packager";
+textdomain "product-creator";
 
 module "SourceDialogsLite";
 

@@ -1,4 +1,18 @@
 -------------------------------------------------------------------
+Thu Jan 17 10:25:06 CET 2008 - jsuchome@suse.cz
+
+- textdomain of SourceDialogsLite changed to product-creator
+  (#347484)
+- 2.13.27
+
+-------------------------------------------------------------------
+Wed Jan 16 11:19:03 CET 2008 - jsuchome@suse.cz
+
+- support more user groups in kiwi configuration (#346501)
+- added command line support (F302395)
+- 2.13.26
+
+-------------------------------------------------------------------
 Wed Dec  5 12:33:16 CET 2007 - jsuchome@suse.cz
 
 - fixed generating configuration path name (#346152)

@@ -335,7 +335,7 @@
   define void InitUsersTable (string id) {
 
     list items = maplist (string user, map usermap, (map<string,map>) KiwiConfig["users"]:$[],
-    ``(`item (`id (user), user, usermap["home"]:"")));
+    ``(`item (`id (user), user, usermap["home"]:"", usermap["group"]:"users")));
     UI::ChangeWidget (`id ("table"), `Items, items);
     UI::ChangeWidget (`id ("edituser"), `Enabled, size (items) > 0);
     UI::ChangeWidget (`id ("deleteuser"), `Enabled, size (items) > 0);
@@ -359,6 +359,7 @@
 	`Password (`id (`pw1), Label::Password(), ""),
 	`Password (`id(`pw2), Label::ConfirmPassword(), ""),
 	`TextEntry (`id (`home), _("&Home Directory")),
+	`TextEntry (`id (`group), _("&Group Name")),
 	`HBox (
 	    `PushButton (`id(`ok),`opt(`key_F10), Label::OKButton()),
 	    `PushButton (`id(`cancel),`opt(`key_F9), Label::CancelButton())
@@ -369,6 +370,7 @@
     {
 	UI::ChangeWidget (`id (`username), `Value, current_user);
 	UI::ChangeWidget (`id (`home), `Value, KiwiConfig["users", current_user, "home"]:"");
+	UI::ChangeWidget (`id (`group), `Value, KiwiConfig["users", current_user, "group"]:"users");
 	UI::ChangeWidget (`id (`pw1), `Value, "*****");
 	UI::ChangeWidget (`id (`pw2), `Value, "*****");
 	// popup label
@@ -408,9 +410,14 @@ Try again."));
 		KiwiConfig["users"]	= $[];
 	    else if (key == "edituser" && username != current_user)
 		KiwiConfig["users"]	= remove (KiwiConfig["users"]:$[], current_user);
+	    string group	= (string) UI::QueryWidget (`id(`group), `Value);
+	    if (group == "")
+		group = username == "root" ? "root" : "users";
 	    KiwiConfig["users", username]	= $[
 		"pwd"	: pwd,
-		"home"	: UI::QueryWidget (`id(`home), `Value)
+		"home"	: UI::QueryWidget (`id(`home), `Value),
+		"group"	: group,
+		"username"	: username,
 	    ];
 	}
     } until (ret == `ok || ret == `cancel);
@@ -933,7 +940,7 @@ directory."), out_dir));
 	    `VBox (
 		"general_users",
 		`VSpacing (0.2),
-		"group",
+//		"group",
 		`VSpacing (0.2),
 		"userstable",
 		`VSpacing (0.2),
@@ -1345,6 +1352,7 @@ directory.</p>
 	// general help for users tab
 	"help"		: _("<p>Here, create users that should be available in the target system.</p>"),
     ],
+    /*
     "group" : $[
 	"widget"	: `textentry,
 	// textentry label
@@ -1354,15 +1362,20 @@ directory.</p>
 	"store"		: StoreDescription,
 	"handle"	: HandleDescription,
     ],
+    */
     "userstable" : $[
 	"widget"	: `custom,
 	"custom_widget" : `Table (`id("table"), `opt (`notify), `header(
 			    // table header
 			    _("Name"),
 			    // table header
-			    _("Home Directory"))),
+			    _("Home Directory"),
+			    // table header
+			    _("Group"))
+	),
 	// help for table with users
-	"help"		: _("<p>For each user, specify <b>Name</b>, <b>Password</b>, and <b>Home Directory</b>.</p>"),
+	"help"		: _("<p>For each user, specify <b>Name</b>, <b>Password</b>, <b>Home Directory</b> and group
+to which the users belongs.</p>"),
 	"init"		: InitUsersTable,
 	"handle"	: HandleAddEditUser,
     ],
