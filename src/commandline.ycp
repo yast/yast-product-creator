@@ -9,10 +9,12 @@
 
 {
     import "CommandLine";
+    import "FileUtils";
     import "Progress";
     import "ProductCreator";
-    textdomain "product-creator";
+    import "RichText";
 
+    textdomain "product-creator";
 
     void ProcessConfigFileOption(map params)
     {
@@ -32,6 +34,135 @@
 	}
     }
 
+    /**
+     * Go through the command line parameters map, verify the validity
+     * and fill appropriate gloal values
+     * @param params map with command line parameters
+     * @param action for what action are the parameters intended (create/edit)
+     */
+    boolean ProcessParameters (map params, string action)
+    {
+	string name = params["name"]:"";
+	if (name == "")
+	{
+	    // command line error message
+	    Report::Error (_("Configuration name is missing."));
+	    return false;
+	}
+	map<string,any> Config	= $[
+	    "name"	: name
+	];
+
+	if (action != "create" && !haskey (ProductCreator::Configs, name))
+	{
+	    // command line error message, %1 is a name
+	    Report::Error (sformat (_("There is no configuration %1."), name));
+	    return false;
+	}
+	if (action == "edit" || action == "show")
+	{
+	    ProductCreator::LoadConfig (name);
+	    Config	= ProductCreator::Config;
+	}
+	if (action == "show")
+	    return true;
+
+	// first, handle required parameters
+	if (params["output_dir"]:"" != "")
+	{
+	    Config["iso-directory"]	= params["output_dir"]:"";
+	}
+	else if (action == "create")
+	{
+	    // command line error message
+	    Report::Error (_("Path to output directory is missing."));
+	    return false;
+	}
+
+	list<string> repos	= splitstring (params["repositories"]:"", ",");
+	if (repos != [])
+	    Config["sources"]	= repos;
+	else if (action == "create")
+	{
+	    // command line error message
+	    Report::Error (_("List of package repositories is empty."));
+	    return false;
+	}
+
+	if (params["profile"]:"" != "")
+	    Config["profile"]	= params["profile"]:"";
+	else if (action == "create")
+	{
+	    // command line error message
+	    Report::Error (_("Path to AutoYaST profile is missing."));
+	    return false;
+	}
+	if (haskey (params, "copy_profile"))
+	    Config["copy_profile"]	= true;
+
+	// there is no manual way for selecting packages:
+	if (action == "create" || params["profile"]:"" != "")
+	{
+	    Config["pkgtype"]	= "autoyast";
+	    ProductCreator::profile_parsed = false;
+	}
+
+	if (params["iso_name"]:"" != "")
+	    Config["isofile"]	= params["iso_name"]:"";
+	else if (action == "create")
+	    Config["isofile"]   = name + ".iso";
+
+	if (haskey (params, "create_iso"))
+	    Config["result"]	= "iso";
+	else if (action == "create")
+	    Config["result"]	= "tree";
+
+	if (haskey (params, "savespace"))
+	    Config["savespace"]	= true;
+
+	if (params["gpg_key"]:"" != "")
+	{
+	    Config["gpg_key"]	= params["gpg_key"]:"";
+	}
+
+	// no selections
+	if (action == "create")
+	    Config["type"]	= `patterns;
+
+	if (params["isolinux_path"]:"" != "")
+	{
+	    string file	= params["isolinux_path"]:"";
+	    if (!FileUtils::Exists (file))
+	    {
+		// command line error message
+		Report::Error (sformat (_("File %1 does not exist."), file));
+		return false;
+	    }
+	    if (SCR::Read(.target.size, file)> 0)
+	    {
+		string cont = (string)SCR::Read (.target.string, file);
+		if (cont != nil)
+		    Config["bootconfig"]	= cont;
+	    }
+	}
+
+	ProductCreator::Config = Config;
+
+	// read default isolinux (Config needs to be saved already to
+	// ProductCreator::Config, it is used by Readisolinux)
+	if (params["isolinux_path"]:"" == "" && action == "create")
+	{
+	    ProductCreator::Config["bootconfig"]	=
+		ProductCreator::Readisolinux();
+	}
+
+	// save the new configuration into global map, parse autoyast profile
+	ProductCreator::CommitConfig ();
+    }
+
+    /**
+     * Command line handler for List action: list available configurations
+     */
     boolean ListHandler(map params)
     {
 	ProcessConfigFileOption(params);
@@ -42,9 +173,12 @@
 	    }
 	);
 
-	return true;
+	return false; // = do not try to write
     }
 
+    /**
+     * Command line handler for Create ISO action
+     */
     boolean CreateIsoHandler(map params)
     {
 	y2milestone("CreateIsoHandler parameters: %1", params);
@@ -60,6 +194,7 @@
 
 	    if (!ProductCreator::LoadConfig(name))
 	    {
+		// command line error message
 		CommandLine::Print(sformat(_("Cannot load configuration %1."), name));
 		return false;
 	    }
@@ -80,6 +215,7 @@
 	    // verify the destination
 	    if (VerifyDialog() != `next)
 	    {
+		// command line error message
 		CommandLine::Print("Cannot verify the destination");
 		return false;
 	    }
@@ -94,11 +230,13 @@
 	    integer image_size = (integer)SCR::Read(.target.size, iso_name);
 	    if (SCR::Read(.target.size, iso_name) < 0)
 	    {
+		// command line error message (%1 is path)
 		CommandLine::Print(sformat(_("Cannot create ISO image %1."), iso_name));
 		return false;
 	    }
 	    else
 	    {
+		// command line info message
 		CommandLine::Print(sformat(_("ISO image %1 has been written."), iso_name));
 	    }
 
@@ -106,10 +244,127 @@
 	}
 	else
 	{
-	    CommandLine::Print(_("Error: Configuration name cannot be empty."));
+	    // command line error message
+	    Report::Error (_("Configuration name cannot be empty."));
 	    return false;
 	}
 
 	return true;
+    }
+
+    /**
+     * Command line handler for Create Config action: create new product
+     * configuration
+     */
+    boolean CreateConfigHandler (map params)
+    {
+	y2milestone ("CreateConfigHandler parameters: %1", params);
+	ProcessConfigFileOption(params);
+
+	return ProcessParameters (params, "create");
+    }
+
+    /**
+     * Command line handler for Delete Config action
+     */
+    boolean DeleteConfigHandler (map params)
+    {
+	y2milestone ("DeleteConfigHandler parameters: %1", params);
+	string name = params["name"]:"";
+
+	if (name == "")
+	{
+	    // command line error message
+	    Report::Error (_("Configuration name is missing."));
+	    return false;
+	}
+        ProductCreator::Configs = filter(string k, map<string,any> v, ProductCreator::Configs, ``(k!=name));
+	return true;
+    }
+
+    /**
+     * Command line handler for Edit Config action
+     */
+    boolean EditConfigHandler (map params)
+    {
+	y2milestone ("EditConfigHandler parameters: %1", params);
+	ProcessConfigFileOption(params);
+
+	return ProcessParameters (params, "edit");
+    }
+
+    /**
+     * Command line handler for Show Config action
+     */
+    boolean ShowConfigHandler (map params)
+    {
+	y2milestone ("EditConfigHandler parameters: %1", params);
+	ProcessConfigFileOption(params);
+	if (!ProcessParameters (params, "show"))
+	    return false;
+
+        // summary caption
+	CommandLine::Print (_("Package Source"));
+        foreach(string s, ProductCreator::Config["sources"]:[], ``{
+                CommandLine::Print ("* " + s);
+	});
+
+
+	/*
+        // summary line (%1 is number)
+        CommandLine::Print (sformat(_("Selected %1 packages"),
+	    size (ProductCreator::Config["packages"]:[])));
+	// currently does not have sense: packages from patterns would need
+	// to be counted as well
+	*/
+	if (ProductCreator::Config["profile"]:"" != "")
+	{
+	    // summary line (%1 is file path)
+	    CommandLine::Print (sformat(_("Using AutoYaST profile %1"),
+		ProductCreator::Config["profile"]:""));
+	}
+
+
+	if (ProductCreator::Config["result"]:"tree" == "iso")
+	{
+	    // summary line (%1/%2 is file path)
+	    CommandLine::Print (sformat(_("Creating ISO image %1/%2"),
+		ProductCreator::Config["iso-directory"]:"",
+		ProductCreator::Config["isofile"]:"") );
+	}
+	else
+	{
+	    // summary line (%1/%2 is file path)
+	    CommandLine::Print (sformat(_("Creating directory tree in %1/%2"),
+		ProductCreator::Config["iso-directory"]:"",
+		ProductCreator::Config["name"]:"") );
+	}
+
+	string gpgkey = ProductCreator::Config["gpg_key"]:"";
+
+	if (gpgkey != "")
+	{
+	    list<map> privatekeys = GPG::PrivateKeys();
+	    string uid = "";
+	    foreach(map key, privatekeys,
+		{
+		    if (key["id"]:"" == gpgkey)
+		    {
+			uid = mergestring(key["uid"]:[], ", ");
+		    }
+		}
+	    );
+	    if (uid != "")
+		uid = sformat(" (%1)", uid);
+
+	    // summary text - %1 is GPG key ID (e.g. ABCDEF01), %2 is GPG key user ID (or empty if not defined)
+	    CommandLine::Print (sformat(_("Digitally sign the medium with GPG key %1%2"), gpgkey, uid));
+	}
+	else
+	{
+	    // summary text
+	    CommandLine::Print (_("The medium will not be digitally signed"));
+	}
+	return false;
     }
 }

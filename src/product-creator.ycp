@@ -34,16 +34,36 @@ map cmdline_description = $[
     "initialize"        : ProductCreator::Read,
     "finish"            : ProductCreator::Write,
     "actions"           : $[
-	"list" :$[
+	"list"		: $[
 	    "handler"	: ListHandler,
-	    // translators: command line help text for summary action
+	    // translators: command line help text for list action
 	    "help"	: _("Print existing configurations")
 	],
-	"create-iso" :$[
+	"create-iso"	: $[
 	    "handler"	: CreateIsoHandler,
-	    // translators: command line help text for summary action
+	    // translators: command line help text for create-iso action
 	    "help"	: _("Create installation ISO image")
-	]
+	],
+	"create"	: $[
+	    "handler"	: CreateConfigHandler,
+	    // translators: command line help text for create-config action
+	    "help"	: _("Create new product configuration")
+	],
+	"delete"	: $[
+	    "handler"	: DeleteConfigHandler,
+	    // translators: command line help text for delete-config action
+	    "help"	: _("Delete existing configuration")
+	],
+	"edit"		: $[
+	    "handler"	: EditConfigHandler,
+	    // translators: command line help text for delete-config action
+	    "help"	: _("Edit existing configuration")
+	],
+	"show"		: $[
+	    "handler"	: ShowConfigHandler,
+	    // translators: command line help text for show action
+	    "help"	: _("Show the summary of selected configuration")
+	],
     ],
     "options"	: $[
 	"name" : $[
@@ -52,13 +72,13 @@ map cmdline_description = $[
 	    "type"	: "string"
 	],
 	"passphrase" : $[
-	    // translators: command line help text for the 'passhrase' option
+	    // translators: command line help text for the 'passphrase' option
 	    "help" : _("GPG passhrase required for signing the source."),
 	    "type"	: "string"
 	],
 	"passphrase_file" : $[
 	    // command line help text for the 'passhrase_file' option
-	    "help" : _("File with GPG passhrase required for signing the source"),
+	    "help" : _("File with GPG passphrase required for signing the source"),
 	    "type"	: "string"
 	],
 	"configfile" : $[
@@ -66,11 +86,64 @@ map cmdline_description = $[
 	    "help" : sformat(_("Path to the configuration file (default is %1"),
 		ProductCreator::ConfigFile),
 	    "type"	: "string"
-	]
+	],
+	"output_dir"    : $[
+	    // command line help text for 'output_dir' option
+	    "help"      : _("Path to the output directory"),
+	    "type"      : "string"
+	],
+	// TODO provide also for create-iso...?
+	"create_iso"    : $[
+	    // command line help text for 'create_iso' option
+	    "help"      : _("Output should be ISO image instead of directory tree"),
+	],
+	"iso_name"      : $[
+	    // command line help text for 'iso_name' option
+	    "help"      : _("Name of the output ISO image"),
+	    "type"      : "string",
+	],
+	"savespace"      : $[
+	    // command line help text for 'savespace' option
+	    "help"      : _("Copy only needed files to save space"),
+	],
+	"profile"	: $[
+	    // command line help text for 'profile' option
+	    "help"	: _("Path to AutoYaST profile"),
+	    "type"	: "string"
+	],
+	"copy_profile"	: $[
+	    // command line help text for 'copy_profile' option
+	    "help"	: _("Copy AutoYaST profile to CD image"),
+	],
+	"isolinux_path"	: $[
+	    // command line help text for 'isolinux_path' option
+	    "help"	: _("Path to isolinux.cfg file"),
+	    "type"	: "string"
+	],
+	"gpg_key"       : $[
+	    // command line help text for 'gpg_key' option
+	    "help"      : _("GPG key ID used to sign a product"),
+	    "type"      : "string",
+	],
+	"repositories"	: $[
+	    // command line help text for 'repositories' option
+	    "help"	: _("List of package repositories (separated by commas)"),
+	    "type"	: "string"
+	],
     ],
     "mappings"	: $[
 	"list"		: ["configfile"],
 	"create-iso"	: ["name", "passphrase", "passphrase_file", "configfile"],
+	"create"	: ["name", "configfile", "output_dir", "create_iso",
+	    "iso_name", "savespace", "profile", "copy_profile", "isolinux_path",
+	    "gpg_key", "repositories",
+	],
+	"edit"		: ["name", "configfile", "output_dir", "create_iso",
+	    "iso_name", "savespace", "profile", "copy_profile", "isolinux_path",
+	    "gpg_key", "repositories",
+	],
+	"delete"	: ["name"],
+	"show"		: ["name"],
     ]
 ];
 
