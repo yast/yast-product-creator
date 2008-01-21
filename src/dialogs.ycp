@@ -1376,7 +1376,7 @@ This key is checked when the product is added as an installation source.</p>")
 	else
 	{
 	    // summary text
-	    summary = Summary::AddLine(summary, _("The medium will not be digitally signed"));
+	    summary = Summary::AddLine(summary, _("The medium will not be digitally signed."));
 	}
 
         term contents =
