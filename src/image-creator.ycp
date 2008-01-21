@@ -50,7 +50,7 @@ failed."));
 map cmdline_description = $[
     "id"	: "image-creator",
     // transltors: command line help text for the Xproduct-creator module
-    "help"	: _("Configuration of Image creator"),
+    "help"	: _("Configuration of Image Creator"),
     "guihandler"        : ICSequence,
 ];
 

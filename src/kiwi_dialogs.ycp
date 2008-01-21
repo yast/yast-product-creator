@@ -1138,7 +1138,7 @@ directory.</p>
 	"widget"	: `textentry,
 	// textentry label
 	"label"		: _("O&utput Directory"),
-	"help"		: _("help for output dir"),
+	"help"		: _("Help for output dir"),
 	"init"		: InitOutputDir,
     ],
     "browse_output_dir"	: $[
@@ -1494,7 +1494,7 @@ return ret;
     _("<p>Select <b>Output Directory</b> for the created image.</p>") +
 
     // help text for kiwi UI preparation, cont.
-    _("<p>Modify the list of <b>Package Repositories</b> that will be used for creating the image. Use <b>Add From System</b> to add one of current system repository.</p>") +
+    _("<p>Modify the list of <b>Package Repositories</b> that will be used for creating the image. Use <b>Add From System</b> to add one of the current system repository.</p>") +
 
     // help text for kiwi UI preparation, cont.
     _("<p>Use <b>Next</b> to continue with the configuration.</p>");

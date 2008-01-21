@@ -153,7 +153,7 @@ symbol InitSources () {
 
 %1.
 
-They were removed from current configuration."), mergestring (removed, "\n")));
+They were removed from the current configuration."), mergestring (removed, "\n")));
     }
     return `next;
 }

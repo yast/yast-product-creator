@@ -576,7 +576,7 @@ define symbol ImagesOverviewDialog() {
     }
 
     // help text
-    string help_text	= _("<p>Start the creating of new image configuration with <b>Add</b>.</p>") +
+    string help_text	= _("<p>Start the creation of a new image configuration with <b>Add</b>.</p>") +
 
     // help text
     _("<p>Use <b>Edit</b> to change selected image configuration or create the image.</p>") +
@@ -585,7 +585,7 @@ define symbol ImagesOverviewDialog() {
     _("<p>Delete the directory with selected configuration using <b>Delete</b>.</p>") +
 
     // help text, %1 is directory
-    sformat (_("<p>All image configurations are saved in <tt>%1</tt> directory.</p>"), images_dir);
+    sformat (_("<p>All image configurations are saved in the <tt>%1</tt> directory.</p>"), images_dir);
 
     // main dialog caption
     string caption = _("Image Creator Configuration Overview");
@@ -646,7 +646,7 @@ define symbol ImagesOverviewDialog() {
 	{
 	    if (Popup::YesNo (
 // yes/no popup
-sformat (_("Delete configutation %1 now?"), current)))
+sformat (_("Delete configuration %1 now?"), current)))
 	    {
 		map config	= Configurations[current]:$[];
 		string dir	=

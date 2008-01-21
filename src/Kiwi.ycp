@@ -699,7 +699,7 @@
 		cmd	= sformat ("ZYPP_READONLY_HACK=1 kiwi --create %1 -d %2 --logfile terminal", chroot_dir, out_dir);
 		y2milestone ("calling '%1'", cmd);
 		// label
-		UI::ReplaceWidget (`id (`rpl), `Left (`Label (_("Creating Image"))));
+		UI::ReplaceWidget (`id (`rpl), `Left (`Label (_("Creating Image..."))));
 		SCR::Execute (.background.run_output_err, cmd);
 		ret	= nil;
 		continue;

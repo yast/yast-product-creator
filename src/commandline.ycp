@@ -363,7 +363,7 @@
 	else
 	{
 	    // summary text
-	    CommandLine::Print (_("The medium will not be digitally signed"));
+	    CommandLine::Print (_("The medium will not be digitally signed."));
 	}
 	return false;
     }
