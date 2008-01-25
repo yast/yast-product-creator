@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Jan 25 15:43:13 CET 2008 - jsuchome@suse.cz
+
+- added support for keytable and timezone keys; save preferences
+  section with correct ordering (#355568)
+- 2.16.7 
+
+-------------------------------------------------------------------
 Thu Jan 17 10:23:52 CET 2008 - jsuchome@suse.cz
 
 - support more user groups in kiwi configuration (#346501)

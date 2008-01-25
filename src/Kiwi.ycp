@@ -312,7 +312,8 @@
     foreach (string key, [ "author", "contact", "image_type", "specification",
 	"packagemanager", "version", "rpm-check-signatures", "rpm-force",
 	"sizeunit", "type", "name", "repository", "defaultdestination",
-	"schemeversion", "defaultroot", "inherit", "locale"],
+	"schemeversion", "defaultroot", "inherit", "locale", "timezone",
+	"keytable"],
     {
 	if (config[key]:nil != nil)
 	    ret[key]	= config[key]:nil;
@@ -422,6 +423,7 @@
 	])
     );
 
+    // for the order of keys in preferences section, see bug 355568
     map preferences	= $[
 	    "__key"	: "preferences",
 	    "__children"	: [
@@ -452,24 +454,24 @@
 		],
 	    ],
     ];
+    // "type" goes to the first place
     foreach (map typemap, get_type_values (KiwiConfig, task), {
 	preferences["__children"]	= prepend (preferences["__children"]:[],
 	    typemap);
     });
-    if (KiwiConfig["defaultroot"]:"" != "")
+    // iso-directory is the correct value, it could have been altered via UI
+    KiwiConfig["defaultdestination"]	= KiwiConfig["iso-directory"]:"";
+    foreach (string key, [ "keytable", "timezone", "locale",
+	"defaultdestination", "defaultroot" ],
     {
-	preferences["__children"]	= add (preferences["__children"]:[], $[
-		    "__key"	: "defaultroot",
-		    "__value"	: KiwiConfig["defaultroot"]:"",
-	]);
-    }
-    if (KiwiConfig["locale"]:"" != "")
-    {
-	preferences["__children"]	= add (preferences["__children"]:[], $[
-		    "__key"	: "locale",
-		    "__value"	: KiwiConfig["locale"]:"",
-	]);
-    }
+	if (KiwiConfig[key]:"" != "")
+	{
+	    preferences["__children"]	= add (preferences["__children"]:[], $[
+		"__key"		: key,
+		"__value"	: KiwiConfig[key]:"",
+	    ]);
+	}
+    });
 
 
 
