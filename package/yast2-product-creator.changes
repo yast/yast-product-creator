@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Jan 25 15:40:06 CET 2008 - jsuchome@suse.cz
+
+- added support for keytable and timezone keys; save preferences
+  section with correct ordering (#355568)
+- 2.13.29 
+
+-------------------------------------------------------------------
 Mon Jan 21 12:48:24 CET 2008 - jsuchome@suse.cz
 
 - merged texts from proofreading 

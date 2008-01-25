@@ -60,7 +60,8 @@ while (<STDIN>)
 	}
 	my $prefs	= $optionsNodeList -> get_node(1);
 	foreach my $tag ("packagemanager", "version", "rpm-check-signatures",
-	    "rpm-force", "size", "defaultdestination", "defaultroot", "locale")
+	    "rpm-force", "size", "defaultdestination", "defaultroot", "locale",
+	    "timezone", "keytable")
 	{
 	    my $element	= $prefs -> getElementsByTagName ($tag);
 	    $retmap{$tag} = $element->get_node(1)->textContent () if ($element);
