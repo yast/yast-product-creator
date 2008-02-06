@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Feb  6 13:33:32 CET 2008 - jsuchome@suse.cz
+
+- save user password when importing configuration (bnc#357922)
+- 2.13.30 
+
+-------------------------------------------------------------------
 Fri Jan 25 15:40:06 CET 2008 - jsuchome@suse.cz
 
 - added support for keytable and timezone keys; save preferences
