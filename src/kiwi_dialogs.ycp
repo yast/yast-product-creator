@@ -416,6 +416,7 @@ Try again."));
 		group = username == "root" ? "root" : "users";
 	    KiwiConfig["users", username]	= $[
 		"pwd"	: pwd,
+		"encrypted"	: false,
 		"home"	: UI::QueryWidget (`id(`home), `Value),
 		"group"	: group,
 		"username"	: username,
