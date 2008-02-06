@@ -331,9 +331,12 @@
     foreach (string user, map usermap, (map<string,map>) config["users"]:$[], {
 	if (!haskey (ret, "users"))
 	    ret["users"]     = $[];
+	string pwd	= usermap["pwd"]:"";
+	boolean crypted	= (pwd != "");
 	ret["users",user]     = $[
 	    "home"	: usermap["home"]:sformat ("/home/%1", user),
-	    "pwd"	: user,
+	    "pwd"	: (pwd == "") ? user : pwd,
+	    "encrypted"	: crypted,
 	    "group"	: usermap["group"]:"",
 	    "username"	: user,
 	];
@@ -522,7 +525,7 @@
 		    $[
 			"__key"	: "user",
 			"name"	: usermap["username"]:"",
-			"pwd"	: crypt_password (usermap["pwd"]:""),
+			"pwd"	: (usermap["encrypted"]:false) ? usermap["pwd"]:"" : crypt_password (usermap["pwd"]:""),
 			"home"	: usermap["home"]:"",
 		    ]
 		))
