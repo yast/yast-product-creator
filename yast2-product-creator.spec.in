@@ -5,7 +5,10 @@ BuildRequires:	perl-XML-Writer update-desktop-files yast2-devtools yast2-testsui
 
 PreReq:         %fillup_prereq
 
-Requires:	yast2-packager autoyast2-installation yast2-security perl-XML-LibXML
+Requires:	autoyast2-installation yast2-security perl-XML-LibXML
+
+# SourceDialogs::IsPlainDir()
+Requires:	yast2-packager >= 2.16.20
 
 # GPG.ycp and GPGWidgets.ycp
 Requires:	yast2 >= 2.15.2

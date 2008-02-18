@@ -1825,14 +1825,8 @@ without having %1 package installed"),
 		if (haskey (repositories, url))
 		    continue;
 
-		map parsed = URL::Parse(url);
-		boolean plaindir	= false;
-		if (parsed["scheme"]:"" == "pkg")
-		{
-		    parsed["scheme"]	= "dir";
-		    plaindir		= true;
-		    url = URL::Build (parsed);
-		}
+		boolean plaindir = SourceDialogs::IsPlainDir();
+
 		repositories[url]	= $[
 		    "url"		: url,
 		    "plaindir"		: plaindir,

@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Feb 18 10:53:37 CET 2008 - lslezak@suse.cz
+
+- adapted to the new plaindir API in SourceDialogs module
+  (use SourceDialogs::IsPlainDir() to get the plaindir flag)
+
+-------------------------------------------------------------------
 Wed Feb  6 13:30:55 CET 2008 - jsuchome@suse.cz
 
 - save user password when importing configuration (bnc#357922)
