@@ -13,6 +13,4 @@ ydata_DATA = \
 
 fillup_DATA = sysconfig.product-creator
 
-fillupdir = /var/adm/fillup-templates
-
 EXTRA_DIST = $(ydata_DATA) $(fillup_DATA)
