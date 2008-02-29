@@ -12,11 +12,12 @@
   import "CWM";
   import "CWMTab";
   import "Directory";
-  import "ProductCreator";
   import "FileUtils";
   import "Label";
   import "Kiwi";
+  import "Package";
   import "Popup";
+  import "ProductCreator";
   import "SourceDialogsLite";
   import "SourceManager";
   import "Summary";
@@ -1963,6 +1964,22 @@ Continue anyway?"), mergestring (failed_repositories, "\n"))))
 		else
 		{
 		    repositories	= new_repositories;
+		}
+	    }
+	    string to_install	= "";
+	    if (contains ([ "iso", "xen", "vmx", "usb" ], kiwi_task))
+	    {
+		string bootdir	= Config["type",kiwi_task,"boot"]:"";
+		if (bootdir == "" ||
+		    (!FileUtils::Exists ("/usr/share/kiwi/image/" + bootdir) &&
+		    !FileUtils::Exists (bootdir))
+		)
+		{
+		    to_install = sformat("kiwi-desc-%1boot", kiwi_task);
+		}
+		if (to_install != "" && !Package::Install (to_install))
+		{
+		    continue;
 		}
 	    }
 	    break;

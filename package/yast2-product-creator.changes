@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Fri Feb 29 15:41:59 CET 2008 - jsuchome@suse.cz
+
+- fixes for bnc#364838:
+- save modification of target image type
+- set the default value of format attribute for vmx image
+- check for kiwi-desc-* packages after selecting image type
+- 2.13.31
+
+-------------------------------------------------------------------
 Wed Feb  6 13:33:32 CET 2008 - jsuchome@suse.cz
 
 - save user password when importing configuration (bnc#357922)

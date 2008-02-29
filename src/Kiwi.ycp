@@ -167,6 +167,7 @@
   list<map> get_type_values (map config, string task) {
 
     string boot_image	= sformat ("%1boot/%2", task, config[task + "boot"]:"suse-10.2");
+    boolean task_included	= false;
     list<map> retlist = maplist (
 	string type, map typemap, (map<string,map>)config["type"]:$[], {
 
@@ -184,21 +185,28 @@
 	    ret["flags"]            = typemap["flags"]:"";
 	if (typemap["format"]:"" != "")
 	    ret["format"]           = typemap["format"]:"";
+	if (type == "vmx" && ret["format"]:"" == "")
+	    ret["format"]		= "vmdk";
 	if (type == task)
+	{
 	    ret["primary"]	= "true";
+	    task_included	= true;
+	}
 	return ret;
     });
-    if (retlist == [])
+    if (retlist == [] || !task_included)
     {
 	map ret	= $[
 	    "__key"		: "type",
 	    "__value"		: task,
-	    "boot"		: boot_image,
+	    "boot"		: sformat ("%1boot/%2", task, config[task + "boot"]:"suse-10.2"),
 	    "primary"		: "true"
 	];
 	if (task != "iso")
 	    ret["filesystem"]	= "ext3";
-	retlist	= [ ret ];
+	if (task == "vmx")
+	    ret["format"]	= "vmdk";
+	retlist	= add (retlist, ret);
     }
     return retlist;
   }
