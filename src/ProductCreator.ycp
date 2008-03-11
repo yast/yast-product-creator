@@ -2481,7 +2481,7 @@ global void StartDownloadEmpty (string url, string localfile)
     y2debug("StartDownload: %1", url);
 }
 
-global boolean ProgressDownload (integer percent, integer expected_size)
+global boolean ProgressDownload (integer percent, integer bps_avg, integer bps_current)
 {
     return UI::PollInput() != `abort;
 }
