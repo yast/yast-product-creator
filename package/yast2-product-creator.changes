@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Mar 11 13:37:26 CET 2008 - lslezak@suse.cz
+
+- adapted to the new ProgressDownload callback signature (#168935)
+- 2.16.9
+
+-------------------------------------------------------------------
 Mon Feb 18 10:53:37 CET 2008 - lslezak@suse.cz
 
 - adapted to the new plaindir API in SourceDialogs module
