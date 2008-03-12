@@ -116,6 +116,23 @@ to the skeleton.
 </p>
 "),
 
+    /* help text - the base selection dialog 1/4 */
+"baseSelection" : _("<p><b>The Base Product</b></p>") +
+
+    /* help text - the base selection dialog 2/4 */
+_("<p>One of the used repositories must be marked as the base product. The base
+product repository should be bootable to ensure the new created product is also
+bootable.</p>") +
+
+    /* help text - the base selection dialog 3/4 */
+_("<p>The other repositories will be used as add-ons for the base repository.</p>")
+
+    /* help text - the base selection dialog 4/4 */
++ _("<p>The product creator solves dependencies of the selected products and proposes
+the base product. If the proposed value is wrong then select the right base
+repository from the list.</p>"),
+
+
 ];
 
 /* EOF */

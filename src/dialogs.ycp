@@ -16,7 +16,6 @@
     import "SourceManager";
     import "Report";
     import "URL";
-    import "StorageDevices";
     import "Arch";
     import "Label";
     import "Popup";
@@ -254,6 +253,9 @@
         return (symbol)ret;
     }
 
+    // remember the direction to correctly skip baseProductSelectionDialog()
+    boolean going_back = false;
+
     /**
      * Configure2 dialog
      * @return dialog result
@@ -381,6 +383,7 @@
                              }
                              else if (ret == `back)
                              {
+				 going_back = true;
                                  break;
                              }
                              else if(ret == `next)
@@ -535,11 +538,17 @@
 
 		y2milestone("Architecture %1 is supported: %2", arch, found_architecture);
 
-		if (true)
+		if (found_architecture)
 		{
 		    if (!contains(selected_items, SrcID))
 		    {
 			selected_items = add (selected_items, SrcID );
+
+			// enable the source
+			if (general_info["enabled"]:false)
+			{
+			    Pkg::SourceSetEnabled(SrcID, true);
+			}
 		    }
 
 		    UI::ChangeWidget(`id(`table), `Item(SrcID, 0) , _("X"));
@@ -554,6 +563,14 @@ Select another source.
             else if (ret == `remove)
             {
                 integer SrcID = (integer)UI::QueryWidget(`id(`table), `CurrentItem);
+		map general_info = Pkg::SourceGeneralData(SrcID);
+
+		// disable the source
+		if (general_info["enabled"]:false)
+		{
+		    Pkg::SourceSetEnabled(SrcID, false);
+		}
+
                 selected_items = filter(integer i, selected_items, ``(SrcID!=i ));
                 UI::ChangeWidget(`id(`table), `Item(SrcID, 0) , "");
             }
@@ -597,17 +614,9 @@ Select another source.
                     Report::Error(_("Select at least one source."));
                     continue;
                 }
-                integer base_source = ProductCreator::checkProductDependency();
 
-		// is the base source bootable?
-		if (!ProductCreator::isBootSource(base_source))
-		{
-		    if (Popup::ContinueCancel("The selected repository doesn't contain /boot directory.
-The created medium will not be bootable.\n"))
-		    {
-			break;
-		    }
-		}
+		going_back = false;
+
                 break;
             }
             else if( ret == `back) {
@@ -620,6 +629,81 @@ The created medium will not be bootable.\n"))
         }
 
         return (symbol)ret;
+    }
+
+    define symbol baseProductSelectionDialog()
+    {
+	if (size(ProductCreator::Config["sources"]:[]) == 1)
+	{
+	    // there is just one repository, we can skip this dialog
+	    y2milestone("Only one repository selected, skipping base repository selection");
+
+	    // remove the option if it exists
+	    ProductCreator::Config = remove(ProductCreator::Config, "base_repo");
+	    return going_back ? `back : `next;
+	}
+
+        /* dialog caption */
+        string caption = _("Base Source Selection");
+
+        integer default_base = ProductCreator::Config["base_repo"]:-1;
+
+	if (default_base < 0)
+	{
+	    y2milestone("The base repository is unknown, proposing...");
+	    default_base = ProductCreator::checkProductDependency();
+	}
+
+	string default_url = Pkg::SourceGeneralData(default_base)["url"]:"";
+
+	list<term> items = [];
+
+	foreach(string srcurl, ProductCreator::Config["sources"]:[],
+	    {
+		items = add(items, `item(srcurl, srcurl == default_url));
+	    }
+	);
+
+        term contents = `SelectionBox(`id(`base_selection), _("Selected Base Source"), items);
+
+        Wizard::SetContentsButtons(caption, contents, HELPS["baseSelection"]:"",
+                Label::BackButton(), Label::NextButton());
+
+        symbol ret = `again;
+	string base = "";
+
+        while(!contains([`next, `back, `abort], ret))
+	{
+            ret = (symbol)UI::UserInput();
+
+	    if (ret == `next)
+	    {
+		// get the selected source
+		base = (string)UI::QueryWidget(`id(`base_selection), `CurrentItem);
+		y2internal("Selected base product: %1", base);
+
+		integer base_src_id =  ProductCreator::UrlToId([base])[0]:-1;
+
+		// is the base source bootable?
+		if (!ProductCreator::isBootSource(base_src_id))
+		{
+		    y2warning("Selected base product is not bootable");
+
+		    if (!Popup::ContinueCancel("The selected base repository doesn't contain /boot directory.
+The created medium will not be bootable.\n"))
+		    {
+			ret = `again;
+		    }
+		}
+	    }
+	}
+
+	if (ret == `next)
+	{
+	    ProductCreator::Config["base_repo"] = base;
+	}
+
+	return ret;
     }
 
     /**
@@ -784,8 +868,8 @@ The created medium will not be bootable.\n"))
 	// while the package manager is initialized
 	UI::ReplaceWidget(`rep,
 			  mode == nil ?
-			  `PackageSelector(`id(`packages ), StorageDevices::FloppyDevice ()) :
-			  `PackageSelector(`id(`packages ), `opt(mode), StorageDevices::FloppyDevice ())
+			  `PackageSelector(`id(`packages )) :
+			  `PackageSelector(`id(`packages ), `opt(mode))
 			  );
 
 	symbol result = (symbol) UI::RunPkgSelection(`id(`packages ) );

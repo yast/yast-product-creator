@@ -32,6 +32,7 @@ define symbol AddSequence() ``{
 
     map aliases = $[
 	"source"	: ``( sourceDialog() ),
+	"base"		: ``( baseProductSelectionDialog() ),
 	"config1"	: ``( Configure1Dialog() ),
 	"config2"	: ``( Configure2Dialog() ),
 	"isolinuxcheck" : [ ``( CheckBootableSrc() ), true],
@@ -46,6 +47,10 @@ define symbol AddSequence() ``{
     map sequence = $[
 	"ws_start" : "config1",
 	"source" : $[
+	    `abort	: `abort,
+	    `next	: "base"
+	],
+	"base" : $[
 	    `abort	: `abort,
 	    `next	: "config2"
 	],
