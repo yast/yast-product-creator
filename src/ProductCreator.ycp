@@ -738,16 +738,6 @@ global boolean UpdateContentFile(string dir, string prod_dir)
     return ret;
 }
 
-global boolean UpdateMD5File(string directory)
-{
-    string command = sformat("/usr/bin/create_md5sums '%1'", String::Quote(directory));
-    boolean ret = SCR::Execute(.target.bash, command) == 0;
-
-    y2milestone("MD5SUMS updated: %1", ret);
-
-    return ret;
-}
-
 // execute a command
 boolean Exec(string command)
 {
@@ -764,6 +754,16 @@ boolean Exec(string command)
     }
 
     return ret == 0;
+}
+
+global boolean UpdateMD5File(string directory)
+{
+    string command = sformat("/bin/sh /usr/bin/create_md5sums '%1'", String::Quote(directory));
+    boolean ret = Exec(command);
+
+    y2milestone("MD5SUMS updated: %1", ret);
+
+    return ret;
 }
 
 boolean CopyFile(integer srcid, integer mid, string src, string target)
@@ -1085,60 +1085,97 @@ global define integer checkProductDependency() ``{
 
     list<integer> sources = UrlToId(Config["sources"]:[]);
 
+    if (size(sources) == 1)
+    {
+	y2milestone("Only one source selected");
+	return sources[0]:-1;
+    }
+
+    // the products must be in the pool
+    Pkg::SourceLoad();
+
+    list<map> product_deps = Pkg::ResolvableDependencies("", `product, "");
+    y2milestone("found products: %1", product_deps);
+
+    // filter out unused products
+    product_deps = filter(map prod, product_deps, {return contains(sources, prod["source"]:-1);});
+
+    y2milestone("used products: %1", product_deps);
+
     // we have to sort the products according to requires to get the base product
     string tsort_input = "";
 
-    map<string,integer> provide_map = $[];
-
-    string base_product_name = "";
-
-    foreach(integer id , sources, ``{
-
-	map general_info = Pkg::SourceGeneralData(id);
-
-	// a YUM source cannot contain base product
-	// only YaST source is supported
-	if (general_info["type"]:"" == "YaST")
+    foreach(map prod, product_deps,
 	{
-	    map content_file = ReadContentFile(id);
+	    list<string> provides = [];
+	    list<string> requires = [];
 
-	    string requires = content_file["REQUIRES"]:"";
-	    string provides = content_file["PROVIDES"]:"";
+	    // collect provides and requires dependencies
+	    foreach(map dep, (list<map>)prod["dependencies"]:[],
+		{
+		    string kind = dep["dep_kind"]:"";
+		    // replace ' ' -> '_' (tsort uses space as a separator)
+		    string name = String::Replace(dep["name"]:"", " ", "_");
 
-	    if (provides == "")
-	    {
-		//provides = sformat("%1-%2", productData["productname"]:"", productData["productversion"]:"" );
-		provides = sformat("%1-%2", content_file["PRODUCT"]:"", content_file["VERSION"]:"" );
-	    }
+		    if (name != "")
+		    {
+			if (kind == "provides")
+			{
+			    provides = add(provides, name);
+			}
+			else if (kind == "requires")
+			{
+			    requires = add(requires, name);
+			}
+		    }
+		}
+	    );
 
-	    string provides_tsort = String::Replace(provides, " ", "_");
+	    integer src = prod["source"]:-1;
 
-	    base_product_name = provides;
+	    y2milestone("Source %1: provides: %2, requires: %3", src, provides, requires);
 
-	    tsort_input = tsort_input + provides_tsort + " " +  String::Replace(requires, " ", "_") + "\n";
-	    provide_map[provides_tsort] = id;
+	    string src_str = sformat("@repository_id:%1@", src);
+
+	    // add requires dependencies to the tsort input
+	    foreach(string r, requires,
+		{
+		    tsort_input = tsort_input + sformat("%1 %2\n", src_str, r);
+		}
+	    );
+
+	    // add provides dependencies to the tsort input
+	    foreach(string p, provides,
+		{
+		    tsort_input = tsort_input + sformat("%1 %2\n", p, src_str);
+		}
+	    );
 	}
-    });
+    );
 
-    integer base = sources[0]:0;
+    y2milestone("tsort input: %1", tsort_input);
 
-    if (size(sources) > 1)
-    {
-	y2debug("tsort_input: %1", tsort_input);
-	// run tsort
-	map sorted = (map)SCR::Execute(.target.bash_output, sformat("echo '%1' | tsort | tac", String::Quote(tsort_input)));
-	list<string> sorted_prods = splitstring(sorted["stdout"]:"", "\n");
+    // run tsort
+    map sorted = (map)SCR::Execute(.target.bash_output, sformat("echo '%1' | tsort | tac", String::Quote(tsort_input)));
+    list<string> sorted_prods = splitstring(sorted["stdout"]:"", "\n");
+    y2milestone("Sorted products: %1", sorted_prods);
 
-	// remove requires
-	sorted_prods = filter(string p, sorted_prods, {return haskey(provide_map, p);});
-	y2milestone("Sorted products: %1", sorted_prods);
+    integer base_source = sources[0]:-1;
 
-	base = provide_map[sorted_prods[0]:""]:0;
-    }
+    foreach(string line, sorted_prods,
+	{
+	    string src_id = regexpsub(line, "@repository_id:([0-9]*)@", "\\1");
 
-    y2milestone("Found base source: id: %1, %2", base, Pkg::SourceGeneralData(base));
+	    if (src_id != nil)
+	    {
+		base_source = tointeger(src_id);
+		y2milestone("Found base source: %1", base_source);
+		break;
+	    }
+	}
+    );
 
-    return base;
+    return base_source;
 }
 
 global string CreateAddonFile(map<integer,string> products)
@@ -1201,8 +1238,11 @@ global define boolean  CreateSkeleton () ``{
     skel_root = sformat("%1/%2", Config["iso-directory"]:"", Config["name"]:"");
     SCR::Execute(.target.mkdir, skel_root);
 
+    string base_url = Config["base_repo"]:"";
+    y2milestone("Configured base repository: %1", base_url);
+
     // detect the base source
-    integer base_source = checkProductDependency();
+    integer base_source = (base_url != "") ? (UrlToId([base_url])[0]:-1) : checkProductDependency();
     boolean bootable_product = isBootSource(base_source);
 
     // ppc64 has /boot/ppc
@@ -1718,13 +1758,14 @@ foreach(integer source_id, enabled, ``{
 		{
 		    // remove the pattern
 		    string cmd = sformat("/bin/rm -- '%1/%2/%3'", String::Quote(skel_root), String::Quote(descrDir), String::Quote(f));
-		    y2milestone("removing pattern %1", f);
 		    success = success && Exec(cmd);
-		    y2debug("success: %1", success);
+		    y2milestone("removing pattern %1: %2", f, success);
 		    refresh_diryast = true;
 		}
 	    }
 	);
+
+	y2milestone("removed patterns: %1", success);
 
 	if (refresh_diryast)
 	{
@@ -1754,7 +1795,7 @@ foreach(integer source_id, enabled, ``{
 	success = success && SCR::Write(.target.string, target_addon_file, addon_file);
     }
 
-    y2debug("success: %1", success);
+    y2milestone("Created skeleton: %1", success);
     return success;
 }
 

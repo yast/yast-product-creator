@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Wed Mar 12 14:42:28 CET 2008 - lslezak@suse.cz
+
+- do not use StorageDevices:: module, not needed anymore
+- fixed the architecture check
+- better check product dependency, added a new dialog for selecting
+  the base product (#368580)
+
+-------------------------------------------------------------------
 Tue Mar 11 13:37:26 CET 2008 - lslezak@suse.cz
 
 - adapted to the new ProgressDownload callback signature (#168935)
