@@ -885,7 +885,7 @@ boolean CopyDocu(integer srcid, string target)
 		"docu/RELEASE-NOTES.en.html", "docu/RELEASE-NOTES.en.rtf"
 	    ];
 
-	    y2internal("Directory listing may be missing using fixed list: %1", files);
+	    y2milestone("Directory listing may be missing using fixed list: %1", files);
 
 	    foreach(string f, files,
 		{
@@ -914,12 +914,12 @@ boolean CopyPPCBoot(integer srcid, string target)
 
     if (contains(lst, "ppc/"))
     {
-	y2internal("Copying /ppc subdirectory");
+	y2milestone("Copying /ppc subdirectory");
 	boolean r = CopyDirectoryRecOpt(srcid, 1, "/ppc", target);
 
 	if (!r)
 	{
-	    y2internal("Directory listing may be missing, copying /ppc/bootinfo.txt");
+	    y2milestone("Directory listing may be missing, copying /ppc/bootinfo.txt");
 	    CopyFile(srcid, 1, "/ppc/bootinfo.txt", target + "/ppc");
 	}
 
@@ -928,12 +928,12 @@ boolean CopyPPCBoot(integer srcid, string target)
 
     if (contains(lst, "PS3/"))
     {
-	y2internal("Copying /ppc subdirectory");
+	y2milestone("Copying /ppc subdirectory");
 	boolean r = CopyDirectoryRecOpt(srcid, 1, "/PS3", target);
 
 	if (!r)
 	{
-	    y2internal("Directory listing may be missing, copying /ppc/bootinfo.txt");
+	    y2milestone("Directory listing may be missing, copying /ppc/bootinfo.txt");
 	    Exec(sformat("/bin/mkdir -p '%1/PS3/otheros'", String::Quote(target)));
 	    CopyFile(srcid, 1, "/PS3/otheros/otheros.bld", target + "/PS3/otheros");
 	}
@@ -943,9 +943,9 @@ boolean CopyPPCBoot(integer srcid, string target)
 
     if (contains(lst, "suseboot/"))
     {
-	y2internal("Copying /suseboot subdirectory");
+	y2milestone("Copying /suseboot subdirectory");
 	boolean r = CopyDirectoryRecOpt(srcid, 1, "/suseboot", target);
-	y2internal("Result: %1", r);
+	y2milestone("Result: %1", r);
 
 	if (!r)
 	{
@@ -955,7 +955,7 @@ boolean CopyPPCBoot(integer srcid, string target)
 		"/suseboot/yaboot.txt"
 	    ];
 
-	    y2internal("Directory listing may be missing using fixed list: %1", files);
+	    y2milestone("Directory listing may be missing using fixed list: %1", files);
 
 	    foreach(string f, files,
 		{
@@ -969,12 +969,12 @@ boolean CopyPPCBoot(integer srcid, string target)
 
     if (contains(lst, "etc/"))
     {
-	y2internal("Copying /etc subdirectory");
+	y2milestone("Copying /etc subdirectory");
 	boolean r = CopyDirectoryRecOpt(srcid, 1, "/etc", target);
 
 	if (!r)
 	{
-	    y2internal("Directory listing may be missing, copying /etc/yaboot.conf");
+	    y2milestone("Directory listing may be missing, copying /etc/yaboot.conf");
 	    CopyFile(srcid, 1, "/etc/yaboot.conf", target + "/etc");
 	}
 
@@ -1738,7 +1738,7 @@ foreach(integer source_id, enabled, ``{
 	list<string> used_files_regexps = (list<string>)union(maplist(string p, used_patterns, {return sformat("^%1-.*\\.pat$", p);}),
 	    maplist(string p, used_patterns, {return sformat("^%1-.*\\.pat.gz$", p);}));
 
-	y2internal("used_files_regexps: %1", used_files_regexps);
+	y2milestone("used_files_regexps: %1", used_files_regexps);
 
 	boolean refresh_diryast = false;
 	foreach(string f, files,
