@@ -21,3 +21,4 @@ Exec=/sbin/yast2 image-creator
 Name=Image Creator
 GenericName=Create the Live CD, USB or XEN image
 X-KDE-SubstituteUID=true
+StartupNotify=true
