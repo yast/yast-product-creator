@@ -326,6 +326,11 @@
 		return `overview;
 	    }
 	}
+	else
+	{
+	    // update content files if the source is not signed (bnc #368146)
+	    ProductCreator::UpdateContentFiles();
+	}
 
         integer i = 0;
 
