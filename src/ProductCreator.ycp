@@ -2034,6 +2034,26 @@ global boolean SignYUMSource(string gpg_key, string dir, string passphrase)
     return ret;
 }
 
+// do not sign the sources, just update content files
+global boolean UpdateContentFiles()
+{
+    boolean success = true;
+
+    foreach(integer srcid, string dir, product_map,
+	{
+	    map general_info = Pkg::SourceGeneralData(srcid);
+
+	    if (general_info["type"]:"" == "YaST")
+	    {
+		success = UpdateContentFile(skel_root + "/" + dir, "suse/setup/descr") && success;
+		y2milestone("Updated content file in %1: %2", skel_root + "/" + dir, success);
+	    }
+	}
+    );
+
+    return success;
+}
+
 global boolean SignSourceStep()
 {
     boolean success = true;
@@ -2646,7 +2666,7 @@ global boolean CopyPackages()
 
 		// check if the metadata are gzipped
 		boolean compressed_meta = FileUtils::Exists(sformat("%1/%2/%3/setup/descr/packages.DU.gz", basedir, subdir, datadir));
-		y2internal("Compressed metadata: %1", compressed_meta);
+		y2milestone("Compressed metadata: %1", compressed_meta);
 
 		if (compressed_meta)
 		{
