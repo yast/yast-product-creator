@@ -12,12 +12,13 @@
   import "CWM";
   import "CWMTab";
   import "Directory";
-  import "ProductCreator";
   import "FileUtils";
   import "Label";
   import "Kiwi";
+  import "Package";
   import "PackageSystem";
   import "Popup";
+  import "ProductCreator";
   import "SourceDialogs";
   import "SourceManager";
   import "Summary";
@@ -55,9 +56,9 @@
     return ret;
   }
 
-  /********************************************************************************************
+  /*****************************************************************************
    * widget handlers
-   *******************************************************************************************/
+   ****************************************************************************/
 
   /**
    * Initialize the widget with ignored packages
@@ -103,27 +104,26 @@
    */
   define void InitSWRichText (string id) {
 
-    string sw_selection	= KiwiConfig["sw_selection"]:"image";
-    string pattern_key	= sw_selection == "image" ? "addons" : (sw_selection + "_patterns");
+    integer package_set	= KiwiConfig["package_set"]:0;
     string rt	= "";
-    if (KiwiConfig[pattern_key]:[] != [])
-    {
+
+    list packages	= KiwiConfig["packages"]:[];
+    string pat	= "";
+    string pac	= "";
+
+    if (size (packages[package_set,"opensusePattern"]:[]) > 0)
 	// richtext header
-	rt	= Summary::AddHeader ("", _("Patterns"));
-	foreach (string pattern, (list<string>) KiwiConfig[pattern_key]:[], {
-	    rt	= Summary::AddListItem (rt, pattern);
-	});
-    }
-    string package_key	= sw_selection == "image" ? "packages" : (sw_selection + "_packages");
-    if (KiwiConfig[package_key]:[] != [])
-    {
+	pat     = Summary::AddHeader ("", _("Patterns"));
+    foreach (map patmap, packages[package_set,"opensusePattern"]:[], {
+	pat	= Summary::AddListItem (pat, patmap["name"]:"");
+    });
+    if (size (packages[package_set,"package"]:[]) > 0)
 	// richtext header
-	rt	= Summary::AddHeader (rt, _("Packages"));
-	foreach (string package, (list<string>) KiwiConfig[package_key]:[], {
-	    rt	= Summary::AddListItem (rt, package);
-	});
-    }
-    UI::ChangeWidget (`id (id), `Value, rt);
+	pac	= Summary::AddHeader ("", _("Packages"));
+    foreach (map pacmap, packages[package_set,"package"]:[], {
+	pac	= Summary::AddListItem (pac, pacmap["name"]:"");
+    });
+    UI::ChangeWidget (`id (id), `Value, pat + pac);
   }
 
   /**
@@ -132,42 +132,34 @@
   define symbol HandleSWSelection (string key, map event) {
     if (event["ID"]:nil == key)
     {
-	string sw_selection	= KiwiConfig["sw_selection"]:"image";
+	integer package_set	= KiwiConfig["package_set"]:0;
+	map sw_contents		= KiwiConfig["packages",package_set]:$[];
 
 	integer mbytes	= (integer) UI::QueryWidget (`id ("size"), `Value);
 	if (UI::QueryWidget (`id ("sizeunit"), `Value) == "G")
 	    mbytes	= mbytes * 1024;
 	ProductCreator::max_size_mb	= mbytes;
-	if (sw_selection == "image" && packageSelector () != `cancel)
-	{
-	    KiwiConfig["addons"]	= ProductCreator::Config["addons"]:[];
-	    KiwiConfig["packages"]	= ProductCreator::Config["packages"]:[];
-	    InitSWRichText ("rt_sw");
-	    if (ProductCreator::Config["taboo"]:[] != nil)
-	    {
-		//FIXME do not replace current 'ignored' tags...
-		KiwiConfig["ignore"]	= union (KiwiConfig["ignore"]:[],
-		    ProductCreator::Config["taboo"]:[]);
-		InitSWIgnore ("ignore");
-	    }
-	}
-	else if (sw_selection != "image")
-	{
-	    map<string,any> selected = runPackageSelector ("",
-		KiwiConfig[sw_selection + "_patterns"]:[],
-		KiwiConfig[sw_selection + "_packages"]:[],
-		KiwiConfig[sw_selection + "_ignore"]:[],
-		`packages
-	    );
-	    KiwiConfig[sw_selection + "_patterns"]	= selected["addons"]:[];
-	    KiwiConfig[sw_selection + "_packages"]	= selected["packages"]:[];
-	    InitSWRichText ("rt_sw");
-	    if (ProductCreator::Config["taboo"]:[] != nil)
-	    {
-		KiwiConfig["ignore"]	= ProductCreator::Config["taboo"]:[];
-		InitSWIgnore ("ignore");
-	    }
-	}
+
+	map<string,any> ret_map	= runPackageSelector ("",
+	    maplist (map pat, sw_contents["opensusePattern"]:[],
+		``(pat["name"]:"")),
+	    maplist (map pat, sw_contents["package"]:[],
+		``(pat["name"]:"")),
+	    maplist (map pat, sw_contents["ignore"]:[],
+		``(pat["name"]:"")),
+	    `packages
+	);
+	if (ret_map["ui"]:nil == `cancel)
+	    return nil;
+	sw_contents["opensusePattern"]	= maplist (string patname,
+	    ret_map["addons"]:[], ``($[ "name" : patname]));
+	sw_contents["package"]	= maplist (string patname,
+	    ret_map["packages"]:[], ``($[ "name" : patname]));
+	sw_contents["ignore"]	= maplist (string patname,
+	    ret_map["taboo"]:[], ``($[ "name" : patname]));
+	KiwiConfig["packages",package_set]	= sw_contents;
+	InitSWRichText ("rt_sw");
+//	InitSWIgnore ("ignore"); FIXME
     }
     return nil;
   }
@@ -176,21 +168,34 @@
    * initialize the combo box with package selection groups
    */
   define void InitSWSelectionCombo (string id) {
-    string sw_selection	= KiwiConfig["sw_selection"]:"image";
-    list items	= [
-	`item (`id ("image"), _("Image"), sw_selection == "image"),
-    ];
-    if (kiwi_task == "xen")
-	items	= add (items, `item (`id ("xen"), _("Xen Specific"), sw_selection == "xen"));
+    integer package_set	= KiwiConfig["package_set"]:0;
+    list items	= [];
+    integer i	= 0;
+    foreach (map pmap, KiwiConfig["packages"]:[], {
+	string type	= pmap["type"]:"";
+	// combo box label
+	string label	= _("Image");
+	if (type == "bootstrap")
+	    // combo box label
+	    label	= _("Bootstrap");
+	if (type == "xen")
+	    // combo box label
+	    label	= _("Xen Specific"); // FIXME labels...
+	if (pmap["profiles"]:"" != "")
+	    // combo box label, %1 is profile name
+	    label = sformat (_("Image, profile %1"), pmap["profiles"]:"");
+	items	= add (items, `item (`id (i), label, package_set == i));
+	i	= i + 1;
+    });
     UI::ChangeWidget (`id (id), `Items, items);
   }
 
   define void StoreSWSelectionCombo (string key, map event) {
-      KiwiConfig[key]	= (string) UI::QueryWidget(`id(key), `Value);
+      KiwiConfig["package_set"]	= (integer) UI::QueryWidget(`id(key), `Value);
   }
 
   /**
-   * handler for combo box with isoboot items
+   * handler for combo box with package sets items
    */
   define symbol HandleSWSelectionCombo (string key, map event) {
     any id	= event["ID"]:nil;
@@ -198,13 +203,13 @@
     if (id == `next) StoreSWSelectionCombo (key, event);
     else if (event["ID"]:nil == key)
     {
-	string selected	= (string) UI::QueryWidget(`id(key), `Value);
-	if (selected != KiwiConfig["sw_selection"]:"image")
+	integer selected	= (integer) UI::QueryWidget(`id(key), `Value);
+	if (selected != KiwiConfig["package_set"]:0)
 	{
-	    StoreSWIgnore ("ignore", event);
+//	    StoreSWIgnore ("ignore", event); FIXME
 	    StoreSWSelectionCombo (key, event);
 	    InitSWRichText ("rt_sw");
-	    InitSWIgnore ("ignore");
+//	    InitSWIgnore ("ignore"); FIXME
 	}
     }
     return nil;
@@ -838,9 +843,10 @@ directory."), out_dir));
     map label2boot	= $[
 	    "openSUSE 10.2"	: "suse-10.2",
 	    "openSUSE 10.3"	: "suse-10.3",
+	    "openSUSE 11.0"	: "suse-11.0",
 	    "SUSE Linux 10.1"	: "suse-10.1",
 	    "SUSE Linux Enterprise Server 10"	: "suse-SLES10",
-	    "SUSE Linux Enterprise Desktop 10"	: "suse-SLED10"
+	    "SUSE Linux Enterprise Desktop 10"	: "suse-SLED10",
     ];
     map distproduct2boot	= $[
 	"openSUSE-10.2-CD-download"		: "suse-10.2",
@@ -884,9 +890,9 @@ directory."), out_dir));
   }
 
 
-  /********************************************************************************************
+  /****************************************************************************
    * widget descriptions
-   *******************************************************************************************/
+   ****************************************************************************/
 
   // return map with description of tabs
   // it is a function, to be able to adapt to actual state (e.g. boot_image_widget ())
@@ -901,23 +907,39 @@ directory."), out_dir));
 		`VSpacing (0.2),
 		`HBox (
 		    `HWeight (1, "version"),
-		    `HWeight (1, `HBox ("size", "sizeunit"))
+		    `HWeight (1, `HBox ("size", "sizeunit")),
+		    `VBox (
+			`Label (""), "compressed"
+		    )
 		),
+		/*
 		"sw_selection",
 		`HBox (
 		    `HWeight (1, `VBox (
-			`Left (`Label (_("Installed Software"))), "rt_sw", `Right ("configure_sw")
+			`Left (`Label (_("Installed Software"))),
+			"rt_sw", `Right ("configure_sw")
+		    ))
+//		    `HWeight (1, `VBox ("ignore", "delete_sw"))
+		),
+		*/
+		`HBox (
+		    `HWeight (2, `VBox (
+			"sw_selection",
+			`Left (`Label (_("Installed Software"))),
+			"rt_sw",
+			`Right ("configure_sw")
 		    )),
-		    `HWeight (1, `VBox ("ignore", "delete_sw"))
+		    `HWeight (1, "delete_sw")
 		),
 		`VSpacing (0.2)
 	    ), `HSpacing(1)),
 	"widget_names" : [
 	    "version",
-	    "size", "sizeunit",
+	    "size", "sizeunit", "compressed",
 	    "sw_selection",
 	    "rt_sw", "configure_sw",
-	    "ignore", "delete_sw"
+	    "delete_sw",
+//	    "ignore", "delete_sw"
 	],
     ],
     "description" : $[
@@ -1006,79 +1028,6 @@ directory."), out_dir));
 	"no_help"	: true,
     ],
     // widgets for config.xml tab
-    /*
-    "isoboot" : $[
-	"widget"	: `combobox,
-	"opt"		: [ `hstretch, `notify ],
-	// combo box label
-	"label"		: _("C&D Boot Image"),
-	// help text for "C&D Boot Image", %1/%2 is path (on extra line)
-	"help"		: sformat (_("<p>Choose one <b>CD Boot Image</b> from the<br>
-<tt>%1/%2</tt><br>
-directory.</p>
-"),
-	    Kiwi::kiwi_dir, boot_image_widget ()),
-	"items"		: [],
-	"init"		: InitBootCombo,
-	"store"		: StoreBootCombo,
-	"handle"	: HandleBootCombo,
-    ],
-    "xenboot" : $[
-	"widget"	: `combobox,
-	"opt"		: [ `hstretch, `notify ],
-	// combo box label
-	"label"		: _("&Xen Boot Image"),
-	// help text for "XEN Boot Image"
-	"help"		: sformat (_("<p>Choose one <b>Xen Boot Image</b> from the<br>
-<tt>%1/%2</tt><br>
-directory.</p>
-"),
-	    Kiwi::kiwi_dir, boot_image_widget ()),
-	"items"		: [],
-	"init"		: InitBootCombo,
-	"store"		: StoreBootCombo,
-	"handle"	: HandleBootCombo,
-    ],
-    "usbboot" : $[
-	"widget"	: `combobox,
-	"opt"		: [ `hstretch, `notify ],
-	// combo box label
-	"label"		: _("&USB Stick Boot Image"),
-	// help text for "XEN Boot Image"
-	"help"		: sformat (_("<p>Choose one <b>USB Stick Boot Image</b> from the<br>
-<tt>%1/%2</tt><br>
-directory.</p>
-"),
-	    Kiwi::kiwi_dir, boot_image_widget ()),
-	"items"		: [],
-	"init"		: InitBootCombo,
-	"store"		: StoreBootCombo,
-	"handle"	: HandleBootCombo,
-    ],
-    "vmxboot" : $[
-	"widget"	: `combobox,
-	"opt"		: [ `hstretch, `notify ],
-	// combo box label
-	"label"		: _("&Virtual Disk Boot Image"),
-	// help text for "XEN Boot Image"
-	"help"		: sformat (_("<p>Choose one <b>Virtual Disk Boot Image</b> from the<br>
-<tt>%1/%2</tt><br>
-directory.</p>
-"),
-	    Kiwi::kiwi_dir, boot_image_widget ()),
-	"items"		: [],
-	"init"		: InitBootCombo,
-	"store"		: StoreBootCombo,
-	"handle"	: HandleBootCombo,
-    ],
-    */
-    "configure_boot"	: $[
-	"widget"	: `push_button,
-	// pusbutton label
-	"label"		: _("C&onfigure..."),
-	"help"		: _("<p>Create a new boot image with <b>Configure</b>.</p>"),
-	"handle"        : NotImplementedHandler
-     ],
     "compressed" : $[
 	"widget"	: `checkbox,
 	// textentry label
@@ -1088,6 +1037,7 @@ directory.</p>
 	"store"		: StoreCompressCheckBox,
 	"handle"	: HandleCompressCheckBox,
     ],
+    /*
     "sw_selection"	: kiwi_task == "xen" ? $[
 	"widget"	: `combobox,
 	"opt"		: [ `hstretch, `notify ],
@@ -1102,6 +1052,19 @@ directory.</p>
     ] : $[
 	"widget"	: `empty,
 	"no_help"	: true,
+    ],
+    */
+    "sw_selection"	: $[
+	"widget"	: `combobox,
+	"opt"		: [ `hstretch, `notify ],
+	// combo box label
+	"label"		: _("So&ftware Selection"),
+	// help text for "So&ftware selection"
+	"help"		: "",
+	"items"		: [],
+	"init"		: InitSWSelectionCombo,
+	"store"		: StoreSWSelectionCombo,
+	"handle"	: HandleSWSelectionCombo,
     ],
     "rt_sw"		: $[
 	"widget"	: `richtext,
@@ -1725,7 +1688,7 @@ return ret;
 	if (template_items != [])
 	    UI::ChangeWidget (`id (`template), `Enabled, false);
 	UI::ChangeWidget (`id (`import), `Enabled, false);
-	UI::ChangeWidget (`id (`config), `ValidChars, String::CAlnum () + "-_");
+	UI::ChangeWidget (`id (`config), `ValidChars, String::CAlnum ()+".-_");
     }
     any ret = nil;
     while (true)
@@ -1924,6 +1887,7 @@ Choose a different one."), name));
 	    kiwi_task	= (string)  UI::QueryWidget (`id (`type), `Value);
 
 	    list<string> failed_repositories	= [];
+	    map<string,map> new_repositories    = $[];
 	    if (size (repositories) > 0)
 	    {
 		map<string,integer> current_sources	= $[];
@@ -1935,7 +1899,7 @@ Choose a different one."), name));
 		    current_sources[url]	= srcid;
 		});
 		// initialize new repos now
-		repositories = filter (string url, map repo, repositories, {
+		new_repositories = filter (string url, map repo, repositories, {
 		    if (substring (url, 0, 1) == "/")
 			url		= "dir://" + url;
 		    if (haskey (current_sources, url))
@@ -1968,7 +1932,26 @@ Choose a different one."), name));
 
 Continue anyway?"), mergestring (failed_repositories, "\n"))))
 		{
-		    update_repo_table ();
+		    continue;
+		}
+		else
+		{
+		    repositories	= new_repositories;
+		}
+	    }
+	    string to_install	= "";
+	    if (contains ([ "iso", "xen", "vmx", "usb" ], kiwi_task))
+	    {
+		string bootdir	= Config["type",kiwi_task,"boot"]:"";
+		if (bootdir == "" ||
+		    (!FileUtils::Exists ("/usr/share/kiwi/image/" + bootdir) &&
+		    !FileUtils::Exists (bootdir))
+		)
+		{
+		    to_install = sformat("kiwi-desc-%1boot", kiwi_task);
+		}
+		if (to_install != "" && !Package::Install (to_install))
+		{
 		    continue;
 		}
 	    }

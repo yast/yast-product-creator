@@ -10,9 +10,9 @@ Requires:	autoyast2-installation yast2-security perl-XML-LibXML
 # SourceDialogs::IsPlainDir()
 Requires:	yast2-packager >= 2.16.20
 
-# GPG.ycp and GPGWidgets.ycp
-Requires:	yast2 >= 2.15.2
-BuildRequires: 	yast2 >= 2.15.2
+# ag_anyxml with perl-XML-Simple
+Requires:	yast2 >= 2.16.40
+BuildRequires: 	yast2 >= 2.16.40
 
 # New API of StorageDevices.ycp
 Conflicts:      yast2-storage < 2.16.1

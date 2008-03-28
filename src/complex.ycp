@@ -698,17 +698,6 @@ sformat (_("Delete configutation %1 now?"), current)))
             ProductCreator::Config = Configurations[current]:$[];
 	    string task	= ProductCreator::Config["current_task"]:"";
 	    list<string> to_install	= [ "kiwi" ];
-	    if (contains ([ "iso", "xen", "vmx", "usb" ], task))
-	    {
-		string bootdir	= ProductCreator::Config["type",task,"boot"]:"";
-		if (bootdir == "" ||
-		    (!FileUtils::Exists ("/usr/share/kiwi/image/" + bootdir) &&
-		    !FileUtils::Exists (bootdir))
-		)
-		{
-		    to_install = add (to_install, sformat("kiwi-desc-%1boot", task));
-		}
-	    }
 	    if (Package::InstallAll (to_install))
 	    {
 		string dir	=

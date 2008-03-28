@@ -178,6 +178,8 @@
 	    ret["flags"]            = typemap["flags"]:"";
 	if (typemap["format"]:"" != "")
 	    ret["format"]           = typemap["format"]:"";
+	if (type == "vmx" && ret["format"]:"" == "")
+	    ret["format"]		= "vmdk";
 	if (type == task)
 	    ret["primary"]	= "true";
 	return ret;
@@ -192,6 +194,8 @@
 	];
 	if (task != "iso")
 	    ret["filesystem"]	= "ext3";
+	if (task == "vmx")
+	    ret["format"]	= "vmdk";
 	retlist	= [ ret ];
     }
     return retlist;
@@ -199,6 +203,7 @@
 
   /**
    * generate the list of packages/patterns for image
+   * FIXME generate from new map...
    */
   map get_image_packages (map config, list packages, list patterns,list ignored)
   {
@@ -222,6 +227,7 @@
     "user"		: true,
     "source"		: true,
     "file"		: true, // for drivers section
+    "profile"		: true,
   ];
 
   /**
@@ -235,7 +241,8 @@
     integer i		= 0;
     while (i < level) {
 	i = i + 1;
-	tab	= tab + "\t";
+//	tab	= tab + "\t";
+	tab	= tab + "  ";
     }
     string key	= descr["__key"]:"";
     if (key == "") return "";
@@ -279,36 +286,13 @@
     if (config == nil)
 	return ret;
     map<string,map> packages	= config["packages"]:$[];
-    // rest parts of "packages" are saved in product-creator map
-    ret["ignore"] = maplist (map p,
-	(list<map>)packages["image","ignore"]:[], ``(p["name"]:""));
-    // value of "arch" is currently ignored...
-    foreach (string section, [ "boot", "xen" ], {
-	ret[section + "_packages"]	= maplist (map p,
-	    (list<map>)packages[section, "package"]:[], ``(p["name"]:""));
-	ret[section + "_patterns"]	= maplist (map p,
-	    (list<map>)packages[section,"opensusePattern"]:[],``(p["name"]:""));
-	ret[section + "_ignore"]	= maplist (map p,
-	    (list<map>)packages[section, "ignore"]:[], ``(p["name"]:""));
-    });
-    // list of packages and patterns is needed for import, not for new image
-    ret["addons"] = maplist (map p,
-	(list<map>)packages["image","opensusePattern"]:[], ``(p["name"]:""));
-    ret["packages"] = maplist (map p,
-	(list<map>)packages["image","package"]:[], ``(p["name"]:""));
 
-    if (haskey (packages, "delete"))
-    {
-	ret["delete_packages"]	= maplist (map p,
-	    (list<map>)packages["delete", "package"]:[], ``(p["name"]:""));
-    }
-
-    if (packages["image","patternType"]:"" != "")
-	ret["image_patternType"]	= packages["image","patternType"]:"";
+    // FIXME these should be part of "packages" already...
     if (packages["xen","disk"]:"" != "")
 	ret["xen_disk"]	= packages["xen","disk"]:"";
     if (packages["xen","memory"]:"" != "")
 	ret["xen_memory"]	= tointeger (packages["xen","memory"]:"512");
+
     foreach (string key, [ "author", "contact", "image_type", "specification",
 	"packagemanager", "version", "rpm-check-signatures", "rpm-force",
 	"sizeunit", "type", "name", "repository", "defaultdestination",
@@ -334,7 +318,16 @@
 	    "group"	: usermap["group"]:"",
 	    "username"	: user,
 	];
+	//FIXME save this, show in UI...
+	if (usermap["realname"]:"" != "")
+	    ret["users",user,"realname"]	= usermap["realname"]:"";
     });
+
+    map anyxml		= (map) SCR::Read (.anyxml, base_path + "/config.xml");
+    map image		= anyxml["image",0]:$[];
+    ret["packages"]	= image["packages"]:[];
+    ret["profiles"]	= image["profiles"]:[];
+    ret["split"]	= image["split"]:[];
     return ret;
   }
 
@@ -355,50 +348,9 @@
 	KiwiConfig["defaultroot"]	= chroot_dir;
     }
 
-    list packages_list	= [];
-    list patterns_list	= [];
-    list ignored_list	= [];
-    list packages_boot_list	= [];
-    list patterns_boot_list	= [];
-    list ignored_boot_list	= [];
-
     list packages_xen_list	= [];
     list patterns_xen_list	= [];
     list ignored_xen_list	= [];
-
-    foreach (string package, (list<string>) KiwiConfig["packages"]:[], {
-	packages_list	= add (packages_list, $[
-	    "__key"	: "package",
-	    "name"	: package,
-	]);
-    });
-    foreach (string pattern, (list<string>) KiwiConfig["addons"]:[], {
-	patterns_list	= add (patterns_list, $[
-	    "__key"	: "opensusePattern",
-	    "name"	: pattern,
-	]);
-    });
-    foreach (string package, (list<string>) KiwiConfig["ignore"]:[], {
-	ignored_list	= add (ignored_list, $[
-	    "__key"	: "ignore",
-	    "name"	: package,
-	]);
-    });
-    list<string> boot_packages	=
-	KiwiConfig["boot_packages"]:["filesystem", "glibc-locale", "kernel-default", "devs" ];
-    foreach (string package, boot_packages, {
-	packages_boot_list	= add (packages_boot_list, $[
-	    "__key"		: "package",
-	    "name"		: package,
-	]);
-    });
-    foreach (string ignore, KiwiConfig["boot_ignore"]:[], {
-	ignored_boot_list	= add (ignored_boot_list, $[
-	    "__key"		: "ignore",
-	    "name"		: ignore,
-	]);
-    });
-
 
     foreach (string package, KiwiConfig["xen_packages"]:[], {
 	packages_xen_list	= add (packages_xen_list, $[
@@ -451,10 +403,6 @@
 		    "__key"	: "rpm-force",
 		    "__value"	: KiwiConfig["rpm-force"]:"True",
 		],
-		$[
-		    "__key"	: "defaultdestination",
-		    "__value"	: KiwiConfig["iso-directory"]:"",
-		],
 	    ],
     ];
     // "type" goes to the first place
@@ -475,8 +423,6 @@
 	    ]);
 	}
     });
-
-
 
     list write_list	= [ $[
       "__key"		: "image",
@@ -506,6 +452,16 @@
     ]];
     if (KiwiConfig["inherit"]:"" != "")
 	write_list[0,"inherit"]	= KiwiConfig["inherit"]:"";
+    if (haskey (KiwiConfig, "profiles"))
+    {
+	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
+	    "__key"     : "profiles",
+	    "__children" : maplist (
+		map profile, KiwiConfig["profiles",0,"profile"]:[], {
+		    return union ($[ "__key"     : "profile"], profile);
+		})
+	]);
+    }
     if (haskey (KiwiConfig, "users"))
     {
 	map<string,list> groups2users	= $[];
@@ -521,14 +477,17 @@
 	    write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
 		"__key"	: "users",
 		"group"	: group,
-		"__children" : maplist (map usermap, (list<map>) userlist, ``(
-		    $[
+		"__children" : maplist (map usermap, (list<map>) userlist, {
+		   map u	= $[
 			"__key"	: "user",
 			"name"	: usermap["username"]:"",
 			"pwd"	: (usermap["encrypted"]:false) ? usermap["pwd"]:"" : crypt_password (usermap["pwd"]:""),
 			"home"	: usermap["home"]:"",
-		    ]
-		))
+		    ];
+		    if (usermap["realname"]:"" != "")
+			u["realname"]	= usermap["realname"]:"";
+		    return u;
+		})
 	    ]);
 	});
     }
@@ -537,15 +496,64 @@
 	    ``(get_source_value (source, KiwiConfig))
 	)
     );
-    write_list[0,"__children"] = union (write_list[0,"__children"]:[], [
-	get_image_packages (
-	    KiwiConfig, packages_list, patterns_list, ignored_list),
+    map image_packages		= $[];
+    list<map> profiles_packages	= []; // + FIXME XEN + delete are here?
+    map bootstrap_packages	= $[];
+    foreach (map packagemap, KiwiConfig["packages"]:[], {
+	/* example of packagemap:
 	$[
-	    "__key"	: "packages",
-	    "type"	: "boot",
-	    "__children": union (union (packages_boot_list, patterns_boot_list), ignored_boot_list)
-	],
-    ]);
+	    "opensusePattern"	: [
+		$[ "name":"base" ],
+		$[ "name":"x11" ]
+	    ],
+	    "package"	: [ $[ "name":"zypper" ] ],
+	    "type"	: "image",
+	    "profiles"	: "KDE"
+	]*/
+	map pmap	= union (packagemap, $[
+	    "__key"     : "packages",
+	]);
+	string type	= pmap["type"]:"";
+	pmap["__children"]     = maplist (map p, pmap["package"]:[], ``(
+	    union (p, $[ "__key" : "package"]))
+	);
+	if (haskey (pmap, "package"))
+	    pmap	= remove (pmap,"package");
+	if (haskey (pmap, "ignore"))
+	{
+	    pmap["__children"]	= union (pmap["__children"]:[],
+		maplist (map p, pmap["ignore"]:[], ``(
+		    union (p, $[ "__key" : "ignore"]))
+		)
+	    );
+	    pmap        = remove (pmap, "ignore");
+	}
+	if (haskey (pmap, "opensusePattern"))
+	{
+	    pmap["__children"]  = union (pmap["__children"]:[],
+		maplist (map p, pmap["opensusePattern"]:[], ``(
+		    union (p, $[ "__key" : "opensusePattern"]))
+		)
+	    );
+	    pmap	= remove (pmap,"opensusePattern");
+	}
+	if (type == "bootstrap")
+	    bootstrap_packages	= pmap;
+	else if (type == "image" && pmap["profiles"]:"" == "")
+	    image_packages	= pmap;
+	else
+	    profiles_packages	= add (profiles_packages, pmap);
+    });
+    if (image_packages != $[])
+	write_list[0,"__children"] =
+	    add (write_list[0,"__children"]:[], image_packages);
+    if (profiles_packages != [])
+	write_list[0,"__children"] =
+	    union (write_list[0,"__children"]:[], profiles_packages);
+    if (bootstrap_packages != $[])
+	write_list[0,"__children"] =
+	    add (write_list[0,"__children"]:[], bootstrap_packages);
+    /*
     if (task == "xen")
     {
 	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
@@ -566,8 +574,24 @@
 	    "__children": packages_delete_list
 	]);
     }
+    */
+    if (haskey (KiwiConfig, "split"))
+	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
+	    "__key"     : "split",
+	    /* FIXME
+	    "__children": maplist (map what, KiwiConfig["split"]:[], {
+		map ret	= $[];
+		foreach (string k, list val, what, {
+		    ret["__key"]	= k;
+		    ret
+		});
+		return ret;
+	    });
+	    */
+	]);
 
-    string write_string	= Map2XML (write_list[0]:$[], 0);
+    string write_string	= "<?xml version=\"1.0\"?>\n" +
+	Map2XML (write_list[0]:$[], 0);
     config_dir	= tmp_dir + "/" + KiwiConfig["name"]:"";
     SCR::Execute (.target.mkdir, config_dir);
     SCR::Write (.target.string, config_dir + "/config.xml", write_string);
@@ -693,6 +717,7 @@
 		UI::ChangeWidget (`id(`log), `LastLine, "\n");
 		cmd	= sformat ("ZYPP_READONLY_HACK=1 kiwi --nocolor --create %1 -d %2 --logfile terminal", chroot_dir, out_dir);
 		y2milestone ("calling '%1'", cmd);
+// FIXME ask for profiles, than call with --add-profile <profile-name>
 		// label
 		UI::ReplaceWidget (`id (`rpl), `Left (`Label (_("Creating Image"))));
 		SCR::Execute (.background.run_output_err, cmd);
