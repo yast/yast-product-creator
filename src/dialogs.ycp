@@ -953,6 +953,9 @@ more <b>add-on</b> selections and packages.
 
         any ret = nil;
 
+	Pkg::ResolvableNeutral ("", `package, true);
+	Pkg::ResolvableNeutral ("", `pattern, true);
+
 	// set a mount point - there is no use to display DU of the current system
 	Pkg::TargetInitDU([ $[ "name" : "/",
 	    "free" : ProductCreator::max_size_mb * 1024,
@@ -1215,7 +1218,17 @@ more <b>add-on</b> selections and packages.
 	    }
 	    else
 	    {
-		seladd =  Pkg::GetPatterns(`selected, "");
+		// do not return patterns selected by dependencies
+		foreach (map pat, Pkg::ResolvableProperties ("", `pattern, ""),
+		{
+		    if (pat["status"]:`none == `selected)
+		    {
+			y2milestone ("pat %1 selected by %2" , pat["name"]:"",
+			    pat["transact_by"]:nil);
+			if (pat["transact_by"]:nil != `solver)
+			    seladd	= add (seladd, pat["name"]:"");
+		    }
+		});
 		selbase =  Pkg::GetPatterns(`selected, "base");
 	    }
         }

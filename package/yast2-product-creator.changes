@@ -1,4 +1,23 @@
 -------------------------------------------------------------------
+Fri Mar 28 16:12:34 CET 2008 - jsuchome@suse.cz
+
+- use new ag_anyxml to read parts of config.xml (WIP)
+- show package lists in different kiwi profiles
+- neutralize package and pattern selection before opening package
+  selector
+- do not return patterns selected by dependencies from package
+  selector (requires transact_by in Pkg:ResolvableProperties) 
+- 2.16.11
+
+-------------------------------------------------------------------
+Tue Mar 25 09:05:06 CET 2008 - jsuchome@suse.cz
+
+- fixes for bnc#364838:
+- save modification of target image type
+- set the default value of format attribute for vmx image
+- check for kiwi-desc-* packages after selecting image type
+
+-------------------------------------------------------------------
 Tue Mar 25 08:49:22 CET 2008 - lslezak@suse.cz
 
 - always update metadata in content files (bnc#368146)
