@@ -33,6 +33,7 @@ import "GPGWidgets";
 import "Mode";
 import "CommandLine";
 import "FileUtils";
+import "PackageCallbacks";
 
 
 global define void enableSources();
@@ -2506,7 +2507,7 @@ global boolean CallbackSourceReportProgress(integer value)
     return true;
 }
 
-global void CallbackSourceReportEnd(integer numeric_id, string url, string task, string error, string reason)
+global void CallbackSourceReportEnd(integer numeric_id, string url, string task, symbol error, string reason)
 {
     y2debug("source_id: %1, url: %2, task: %3, error: %4, reason: %5", numeric_id, url, task, error, reason);
 }
@@ -2549,29 +2550,29 @@ global boolean ProgressDownload (integer percent, integer bps_avg, integer bps_c
 
 global void RedirectCallbacks()
 {
-    Pkg::CallbackSourceReportStart("ProductCreator::CallbackSourceReportStart");
-    Pkg::CallbackSourceReportProgress("ProductCreator::CallbackSourceReportProgress");
-    Pkg::CallbackSourceReportEnd("ProductCreator::CallbackSourceReportEnd");
+    Pkg::CallbackSourceReportStart(ProductCreator::CallbackSourceReportStart);
+    Pkg::CallbackSourceReportProgress(ProductCreator::CallbackSourceReportProgress);
+    Pkg::CallbackSourceReportEnd(ProductCreator::CallbackSourceReportEnd);
 
-    Pkg::CallbackInitDownload ("ProductCreator::InitDownload");
-    Pkg::CallbackStartDownload ("ProductCreator::StartDownload");
-    Pkg::CallbackProgressDownload ("ProductCreator::ProgressDownload");
+    Pkg::CallbackInitDownload (ProductCreator::InitDownload);
+    Pkg::CallbackStartDownload (ProductCreator::StartDownload);
+    Pkg::CallbackProgressDownload (ProductCreator::ProgressDownload);
     // use the standard callback handler
-    Pkg::CallbackDoneDownload ("PackageCallbacks::DoneDownload");
-    Pkg::CallbackDestDownload ("ProductCreator::DestDownload");
+    Pkg::CallbackDoneDownload (PackageCallbacks::DoneDownload);
+    Pkg::CallbackDestDownload (ProductCreator::DestDownload);
 }
 
 global void ResetCallbacks()
 {
-    Pkg::CallbackSourceReportStart("PackageCallbacks::CallbackSourceReportStart");
-    Pkg::CallbackSourceReportProgress("PackageCallbacks::CallbackSourceReportProgress");
-    Pkg::CallbackSourceReportEnd("PackageCallbacks::CallbackSourceReportEnd");
+    Pkg::CallbackSourceReportStart(PackageCallbacks::SourceReportStart);
+    Pkg::CallbackSourceReportProgress(PackageCallbacks::SourceReportProgress);
+    Pkg::CallbackSourceReportEnd(PackageCallbacks::SourceReportEnd);
 
-    Pkg::CallbackInitDownload ("PackageCallbacks::InitDownload");
-    Pkg::CallbackStartDownload ("PackageCallbacks::StartDownload");
-    Pkg::CallbackProgressDownload ("PackageCallbacks::ProgressDownload");
-    Pkg::CallbackDoneDownload ("PackageCallbacks::DoneDownload");
-    Pkg::CallbackDestDownload ("PackageCallbacks::DestDownload");
+    Pkg::CallbackInitDownload (PackageCallbacks::InitDownload);
+    Pkg::CallbackStartDownload (PackageCallbacks::StartDownload);
+    Pkg::CallbackProgressDownload (PackageCallbacks::ProgressDownload);
+    Pkg::CallbackDoneDownload (PackageCallbacks::DoneDownload);
+    Pkg::CallbackDestDownload (PackageCallbacks::DestDownload);
 }
 
 /**
@@ -2590,7 +2591,7 @@ global boolean CopyPackages()
 
     y2milestone("Package summary: %1", toCopy);
 
-    Pkg::CallbackStartDownload ("ProductCreator::StartDownloadEmpty");
+    Pkg::CallbackStartDownload (ProductCreator::StartDownloadEmpty);
 
     // copy the packages
     foreach(integer source, map<integer, list<map> > srcmapping, toCopy,
@@ -2677,7 +2678,7 @@ global boolean CopyPackages()
 	}
     );
 
-    Pkg::CallbackStartDownload ("ProductCreator::StartDownload");
+    Pkg::CallbackStartDownload (ProductCreator::StartDownload);
 
     return ret;
 }
