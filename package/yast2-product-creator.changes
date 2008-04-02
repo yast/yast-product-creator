@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Wed Apr  2 16:47:28 CEST 2008 - lslezak@suse.cz
+
+- adapted to the new callback registration scheme (fate#302296)
+
+-------------------------------------------------------------------
 Fri Mar 28 16:12:34 CET 2008 - jsuchome@suse.cz
 
 - use new ag_anyxml to read parts of config.xml (WIP)
