@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Apr  3 14:30:16 CEST 2008 - jsuchome@suse.cz
+
+- write the full URL into config.xml for https sources (bnc#376666)
+- 2.13.32
+
+-------------------------------------------------------------------
 Fri Feb 29 15:41:59 CET 2008 - jsuchome@suse.cz
 
 - fixes for bnc#364838:

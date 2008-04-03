@@ -1935,10 +1935,13 @@ Choose a different one."), name));
 			return true;
 		    }
 		    integer source_ret	= -1;
+		    string full_url	= url;
+		    if (repo["full_url"]:"" != "" && repo["full_url"]:"" != url)
+			full_url	= repo["full_url"]:"";
 		    if (repo["plaindir"]:false)
-			source_ret = Pkg::SourceCreateType (url, "", "Plaindir");
+			source_ret = Pkg::SourceCreateType (full_url, "", "Plaindir");
 		    else
-			source_ret	= Pkg::SourceCreate (url, "");
+			source_ret	= Pkg::SourceCreate (full_url, "");
 		    if (source_ret == -1)
 		    {
 			failed_repositories = add (failed_repositories, url);
