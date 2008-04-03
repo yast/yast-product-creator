@@ -126,18 +126,23 @@
 
     // ... otherwise, we must ask zypp:
     string type		= "yast2";
-    string source_path	= adapt_source_path (source);
 
     foreach (map sourcemap, all_sources, {
 	integer srcid	= sourcemap["SrcId"]:-1;
         map data	= Pkg::SourceGeneralData (srcid);
 	string url	= data["url"]:"";
-	if (url == source || url == source_path)
+	if (url == source || url == adapt_source_path (source))
 	{
 	    if (data["type"]:"" == "Plaindir")
 		type	= "rpm-dir";
 	    if (data["type"]:"" == "YUM")
 		type	= "rpm-md";
+	    map parsed = URL::Parse(url);
+	    if (parsed["scheme"]:"" == "https")
+	    {
+		// change source url to contain password
+		source      = Pkg::SourceURL (srcid);
+	    }
 	}
     });
     ret = $[
@@ -146,7 +151,7 @@
 	"__children": [
 	    $[
 		"__key"	: "source",
-		"path"	: source_path
+		"path"	: adapt_source_path (source)
 	    ]
 	]
     ];
@@ -579,6 +584,8 @@
     config_dir	= tmp_dir + "/" + KiwiConfig["name"]:"";
     SCR::Execute (.target.mkdir, config_dir);
     SCR::Write (.target.string, config_dir + "/config.xml", write_string);
+    // config.xml may contain password
+    SCR::Execute (.target.bash, sformat ("chmod 600 %1/config.xml",config_dir));
     foreach (string dir, ["root_dir", "config_dir"], {
 	foreach (string val, KiwiConfig[dir]:[], {
 	    string realdir	= config_dir + "/" + substring (dir, 0, search (dir, "_"));
@@ -783,10 +790,18 @@
 		if (substring (source, 0, 1) == "/")
 		    url	= "dir://";
 		url	= url + source;
+		map parsed      = URL::Parse (url);
+		string full_url	= url;
+		if (parsed["pass"]:"" != "")
+		{
+		    parsed      = remove (parsed, "pass");
+		    url         = URL::Build (parsed);
+		}
 		current_repositories	[url]	= $[
 		    "url"	: url,
 		    "plaindir"	: repo["type"]:"" == "rpm-dir",
 		    "org"	: repo,
+		    "full_url"	: full_url
 		];
 	    }
 	});
