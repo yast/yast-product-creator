@@ -821,9 +821,13 @@
 	    map parsed = URL::Parse(url);
 	    if (! contains (unsupported_schemes, parsed["scheme"]:""))
 	    {
+		string full_url	= url;
+		if (parsed["scheme"]:"" == "https")
+		    full_url	= Pkg::SourceURL (srcid);
 		current_repositories[url]	= $[
 		    "url"       : url,
-		    "plaindir"  : data["type"]:"" == "Plaindir"
+		    "plaindir"  : data["type"]:"" == "Plaindir",
+		    "full_url"	: full_url,
 		];
 	    }
 	});
