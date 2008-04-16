@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Apr 16 16:43:41 CEST 2008 - lslezak@suse.cz
+
+- use relurl:// schema in 'add_on_products' file instead of cd://,
+  the addons will be used automatically also over FTP/HTTP/...
+
+-------------------------------------------------------------------
 Fri Apr  4 12:29:17 CEST 2008 - jsuchome@suse.cz
 
 - write the full URL into config.xml for https sources (bnc#376666)
