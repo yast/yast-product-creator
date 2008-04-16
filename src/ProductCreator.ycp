@@ -1194,7 +1194,7 @@ global string CreateAddonFile(map<integer,string> products)
 		    ret = ret + "\n";
 		}
 
-		ret = ret + "cd:///" + subdir;
+		ret = ret + "relurl://./" + subdir;
 	    }
 	}
     );
