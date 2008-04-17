@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Thu Apr 17 07:22:25 CEST 2008 - lslezak@suse.cz
+
+- fixed texts ('CD Creator' -> 'Product Creator')
+
+-------------------------------------------------------------------
 Wed Apr 16 16:43:41 CEST 2008 - lslezak@suse.cz
 
 - use relurl:// schema in 'add_on_products' file instead of cd://,

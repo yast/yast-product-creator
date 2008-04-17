@@ -49,7 +49,7 @@ An additional dialog informs whether it is safe to do so.
 
 
     /* Ovreview dialog help 1/3 */
-    "overview" : _("<p><b><big>CD Creator Configuration Overview</big></b><br>
+    "overview" : _("<p><b><big>Product Creator Configuration Overview</big></b><br>
 Obtain an overview of available configurations. Additionally
 edit those configuration.<br></p>
 ") +
