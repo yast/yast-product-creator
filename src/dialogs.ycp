@@ -95,7 +95,7 @@
     define symbol Configure1Dialog () ``{
 
         /* ProductCreator configure1 dialog caption */
-        string caption = _("CD Creator Configuration");
+        string caption = _("Product Creator Configuration");
 
 
         string name = ProductCreator::Config["name"]:"";
@@ -713,7 +713,7 @@ The created medium will not be bootable.\n"))
     define symbol isolinuxDialog () ``{
 
         /* dialog caption */
-        string caption = _("CD Creator Configuration");
+        string caption = _("Product Creator Configuration");
 
 
         string isolinux = ProductCreator::Readisolinux();

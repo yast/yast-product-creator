@@ -335,7 +335,7 @@ global map<string,string> ReadContentFile(integer srcid) {
 global define boolean Read() ``{
 
     /* ProductCreator read dialog caption */
-    string caption = _("Initializing CD Creator Configuration");
+    string caption = _("Initializing Product Creator Configuration");
 
     integer steps = 1;
 
@@ -423,7 +423,7 @@ global define list PrepareConfigs() ``{
 global define boolean Write() ``{
 
     /* ProductCreator read dialog caption */
-    string caption = _("Saving CD Creator Configuration");
+    string caption = _("Saving Product Creator Configuration");
 
     integer steps = 2;
 
