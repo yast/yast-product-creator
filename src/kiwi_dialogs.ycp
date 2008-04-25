@@ -174,13 +174,21 @@
     foreach (map pmap, KiwiConfig["packages"]:[], {
 	string type	= pmap["type"]:"";
 	// combo box label
-	string label	= _("Image");
+	string label	= _("Packages for Image");
 	if (type == "bootstrap")
 	    // combo box label
 	    label	= _("Bootstrap");
-	if (type == "xen")
+	else if (type == "xen")
 	    // combo box label
-	    label	= _("Xen Specific"); // FIXME labels...
+	    label	= _("Xen Specific Packages");
+	else if (type == "testsuite")
+	    // combo box label
+	    label       = _("Testing");
+	else if (type == "delete")
+	    // combo box label
+	    label       = _("Packages to Delete");
+	else if (type != "image")
+	    label       = type;
 	if (pmap["profiles"]:"" != "")
 	    // combo box label, %1 is profile name
 	    label = sformat (_("Image, profile %1"), pmap["profiles"]:"");
@@ -929,7 +937,8 @@ directory."), out_dir));
 			"rt_sw",
 			`Right ("configure_sw")
 		    )),
-		    `HWeight (1, "delete_sw")
+//		    `HWeight (1, "delete_sw")
+		    `HWeight (1, "ignore")
 		),
 		`VSpacing (0.2)
 	    ), `HSpacing(1)),
@@ -938,8 +947,8 @@ directory."), out_dir));
 	    "size", "sizeunit", "compressed",
 	    "sw_selection",
 	    "rt_sw", "configure_sw",
-	    "delete_sw",
-//	    "ignore", "delete_sw"
+	    "ignore",
+//	    "delete_sw",
 	],
     ],
     "description" : $[
