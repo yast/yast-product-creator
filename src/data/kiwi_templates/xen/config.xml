@@ -168,7 +168,7 @@
 		<package name="kernel-xen"/>
 		<package name="xen"/>
 	</packages>
-	<packages type="boot">
+	<packages type="bootstrap">
 		<package name="filesystem"/>
 		<package name="glibc-locale"/>
 		<package name="devs"/>
