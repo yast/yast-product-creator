@@ -10,9 +10,9 @@ Requires:	autoyast2-installation yast2-security perl-XML-LibXML
 # SourceDialogs::IsPlainDir()
 Requires:	yast2-packager >= 2.16.20
 
-# new registration of callbacks
-Requires:	yast2 >= 2.16.44
-BuildRequires: 	yast2 >= 2.16.44
+# ag_content agent
+Requires:	yast2 >= 2.16.60
+BuildRequires: 	yast2 >= 2.16.60
 
 # New API of StorageDevices.ycp
 Conflicts:      yast2-storage < 2.16.1

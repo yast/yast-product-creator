@@ -300,8 +300,7 @@ define boolean ProductCreatorSequence() ``{
 
     Wizard::CreateDialog();
     Wizard::SetDesktopIcon("cd-creator");
-    // .content_file agent is in yast2-instserver package - TODO: move it to yast2.rpm
-    list<string> required_packages = ["inst-source-utils", "mkisofs", "yast2-instserver", "createrepo"];
+    list<string> required_packages = ["inst-source-utils", "mkisofs", "createrepo"];
 
     // add PPC specific packages
     if (Arch::architecture() == "ppc" || Arch::architecture() == "ppc64")

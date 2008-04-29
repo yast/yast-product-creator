@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Apr 29 17:12:14 CEST 2008 - lslezak@suse.cz
+
+- do not require yast2-instserver package, ag_content agent is now
+  in yast2 package (bnc#339126)
+- 2.16.14
+
+-------------------------------------------------------------------
 Thu Apr 17 07:22:25 CEST 2008 - lslezak@suse.cz
 
 - fixed texts ('CD Creator' -> 'Product Creator')
