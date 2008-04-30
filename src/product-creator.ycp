@@ -83,7 +83,7 @@ map cmdline_description = $[
 	],
 	"configfile" : $[
 	    // cmd line help text for the 'configfile' option, %1 is a file name
-	    "help" : sformat(_("Path to the configuration file (default is %1"),
+	    "help" : sformat(_("Path to the configuration file (default is %1)"),
 		ProductCreator::ConfigFile),
 	    "type"	: "string"
 	],
