@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Apr 30 10:34:21 CEST 2008 - jsuchome@suse.cz
+
+- fixed kiwi templates
+- text fixes (software selection labels)
+- 2.16.15
+
+-------------------------------------------------------------------
 Tue Apr 29 17:12:14 CEST 2008 - lslezak@suse.cz
 
 - do not require yast2-instserver package, ag_content agent is now
