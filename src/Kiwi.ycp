@@ -37,7 +37,7 @@
   // directories with user-made templated
   global list<string> templates_dirs	= [];
 
-  global string default_packagemanager	= "smart";
+  global string default_packagemanager	= "zypper";
 
   list<map> all_sources		= [];
 
@@ -458,7 +458,7 @@
     ]];
     if (KiwiConfig["inherit"]:"" != "")
 	write_list[0,"inherit"]	= KiwiConfig["inherit"]:"";
-    if (haskey (KiwiConfig, "profiles"))
+    if (size (KiwiConfig["profiles"]:[]) > 0)
     {
 	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
 	    "__key"     : "profiles",
