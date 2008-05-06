@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Tue May  6 17:51:04 CEST 2008 - ug@suse.de
+
+- set "implicit" to "1" in the isolinux.cfg
+
+-------------------------------------------------------------------
 Wed Apr 30 11:55:18 CEST 2008 - lslezak@suse.cz
 
 - added missing ')' in a help text (bnc#384166)
