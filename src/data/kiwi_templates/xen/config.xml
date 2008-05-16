@@ -1,12 +1,14 @@
-<image name="kiwi-xen-image-template">
+<?xml version="1.0"?>
+<image schemeversion="2.0" name="kiwi-xen-image-template">
 	<description type="system">
 		<author></author>
 		<contact></contact>
 		<specification>Template for system image configuration</specification>
 	</description>
 	<preferences>
-		<version>1</version>
-		<size unit="M">2700</size>
+		<type boot="xenboot/suse-11.0" filesystem="ext3">xen</type>
+		<version>1.0.0</version>
+		<size unit="M">2000</size>
 		<rpm-check-signatures>False</rpm-check-signatures>
 		<rpm-force>True</rpm-force>
 	</preferences>
