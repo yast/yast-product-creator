@@ -64,6 +64,7 @@
    */
   string crypt_password	(string pw)
   {
+    if (pw == "") return pw;
     if (encryption_method == nil)
     {
 	boolean progress = Progress::set (false);
@@ -190,6 +191,7 @@
 	    ret["primary"]	= "true";
 	return ret;
     });
+    // create default values for new project
     if (retlist == [])
     {
 	map ret	= $[
@@ -202,25 +204,11 @@
 	    ret["filesystem"]	= "ext3";
 	if (task == "vmx")
 	    ret["format"]	= "vmdk";
+	if (task == "iso" || task == "oem")
+	    ret["flags"]	= "unified";
 	retlist	= [ ret ];
     }
     return retlist;
-  }
-
-  /**
-   * generate the list of packages/patterns for image
-   * FIXME generate from new map...
-   */
-  map get_image_packages (map config, list packages, list patterns,list ignored)
-  {
-    map ret	= $[
-	    "__key"	: "packages",
-	    "type"	: "image",
-	    "__children": union (union (packages, patterns), ignored)
-    ];
-    if (config["image_patternType"]:"" != "")
-	ret["patternType"]	= config["image_patternType"]:"";
-    return ret;
   }
 
   /**
@@ -247,7 +235,6 @@
     integer i		= 0;
     while (i < level) {
 	i = i + 1;
-//	tab	= tab + "\t";
 	tab	= tab + "  ";
     }
     string key	= descr["__key"]:"";
@@ -261,7 +248,7 @@
 	    });
 	else if (subkey == "__value")
 	    value = String::EscapeTags (sformat ("%1", val));
-	else if (is (val, string))
+	else if (is (val, string) || is (val, integer))
 	    ret	= sformat ("%1 %2=\"%3\"",
 		ret, subkey, String::EscapeTags (tostring (val)));
     });
@@ -273,7 +260,56 @@
 	ret	= ret + ">";
     if (children != "")
 	ret =	 ret + children + "\n";
+
+    if (level == 0 && key == "image") // ugly hack
+	return ret;
     ret	= sformat ("%1%2</%3>", ret, haskey (descr, "__value") ? "" : tab, key);
+    return ret;
+  }
+
+  // argument for any_xml agent: key indicating content of element without
+  // attributes
+  string content_key	= "__yast_content__";
+
+  /**
+   * convert YCP map (of type read from any_xml agent) to XML
+   */
+  string MapAny2XML (string item_key, map item_descr, integer level) {
+
+    string tab		= "";
+    integer i		= 0;
+    while (i < level) {
+	i = i + 1;
+	tab	= tab + "  ";
+    }
+    string ret		= tab + "<" + item_key;
+    string attr		= "";
+    string subret	= "";
+    string content	= "";
+    foreach (string key, any value, (map<string,any>) item_descr, {
+
+	if (is (value, list))
+	{
+	    foreach (map it_map, (list<map>) value, {
+		subret	= subret + "\n" + MapAny2XML (key, it_map, level + 1);
+	    });
+	}
+	else if (is (value,string) || is (value,integer) || is (value,boolean))
+	{
+	    if (key == content_key)
+		content	= String::EscapeTags (tostring (value));
+	    else
+		attr = attr + sformat (" %1=\"%2\"",
+		    key, String::EscapeTags (tostring (value))
+		);
+	}
+    });
+    ret	= ret + attr;
+    ret	= ret + ((subret == "" && content == "")? "/>" : ">");
+    if (content != "")
+	ret	= ret + content + sformat ("</%1>", item_key);
+    else if (subret != "")
+	ret	= ret + subret + "\n" + tab + sformat ("</%1>", item_key);
     return ret;
   }
 
@@ -293,12 +329,6 @@
 	return ret;
     map<string,map> packages	= config["packages"]:$[];
 
-    // FIXME these should be part of "packages" already...
-    if (packages["xen","disk"]:"" != "")
-	ret["xen_disk"]	= packages["xen","disk"]:"";
-    if (packages["xen","memory"]:"" != "")
-	ret["xen_memory"]	= tointeger (packages["xen","memory"]:"512");
-
     foreach (string key, [ "author", "contact", "image_type", "specification",
 	"packagemanager", "version", "rpm-check-signatures", "rpm-force",
 	"sizeunit", "type", "name", "repository", "defaultdestination",
@@ -315,11 +345,11 @@
     foreach (string user, map usermap, (map<string,map>) config["users"]:$[], {
 	if (!haskey (ret, "users"))
 	    ret["users"]     = $[];
-	string pwd	= usermap["pwd"]:"";
-	boolean crypted	= (pwd != "");
+	any pwd	= usermap["pwd"]:nil;
+	boolean crypted	= (pwd != nil);
 	ret["users",user]     = $[
 	    "home"	: usermap["home"]:sformat ("/home/%1", user),
-	    "pwd"	: (pwd == "") ? user : pwd,
+	    "pwd"	: (pwd == nil) ? user : pwd,
 	    "encrypted"	: crypted,
 	    "group"	: usermap["group"]:"",
 	    "username"	: user,
@@ -353,36 +383,6 @@
 	    chroot_dir	= chroot_dir + "/" + KiwiConfig["name"]:"";
 	KiwiConfig["defaultroot"]	= chroot_dir;
     }
-
-    list packages_xen_list	= [];
-    list patterns_xen_list	= [];
-    list ignored_xen_list	= [];
-
-    foreach (string package, KiwiConfig["xen_packages"]:[], {
-	packages_xen_list	= add (packages_xen_list, $[
-	    "__key"		: "package",
-	    "name"		: package,
-	]);
-    });
-    foreach (string pattern, KiwiConfig["xen_patterns"]:[], {
-	patterns_xen_list	= add (patterns_xen_list, $[
-	    "__key"		: "pattern",
-	    "name"		: pattern,
-	]);
-    });
-    foreach (string ignore, KiwiConfig["xen_ignore"]:[], {
-	ignored_xen_list	= add (ignored_xen_list, $[
-	    "__key"		: "ignore",
-	    "name"		: ignore,
-	]);
-    });
-
-    list packages_delete_list	= maplist (string package,
-	KiwiConfig["delete_packages"]:[], ``($[
-	    "__key"		: "package",
-	    "name"		: package,
-	])
-    );
 
     // for the order of keys in preferences section, see bug 355568
     map preferences	= $[
@@ -503,7 +503,7 @@
 	)
     );
     map image_packages		= $[];
-    list<map> profiles_packages	= []; // + FIXME XEN + delete are here?
+    list<map> profiles_packages	= [];
     map bootstrap_packages	= $[];
     foreach (map packagemap, KiwiConfig["packages"]:[], {
 	/* example of packagemap:
@@ -546,9 +546,14 @@
 	if (type == "bootstrap")
 	    bootstrap_packages	= pmap;
 	else if (type == "image" && pmap["profiles"]:"" == "")
+	{
 	    image_packages	= pmap;
-	else
+	}
+	else if (size (pmap["__children"]:[]) > 0)
+	{
+y2internal ("pmap: %1", pmap);
 	    profiles_packages	= add (profiles_packages, pmap);
+	}
     });
     if (image_packages != $[])
 	write_list[0,"__children"] =
@@ -559,45 +564,22 @@
     if (bootstrap_packages != $[])
 	write_list[0,"__children"] =
 	    add (write_list[0,"__children"]:[], bootstrap_packages);
-    /*
-    if (task == "xen")
-    {
-	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
-	    "__key"	: "packages",
-	    "type"	: "xen",
-	    // FIXME disk and memory not configurable
-	    "disk"	: KiwiConfig["xen_disk"]:"/dev/sda",
-	    "memory"	: sformat ("%1", KiwiConfig["xen_memory"]:512),
-	    "__children": union (union (packages_xen_list, patterns_xen_list), ignored_xen_list)
-	]);
-    }
 
-    if (packages_delete_list != [])
-    {
-	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
-	    "__key"	: "packages",
-	    "type"	: "delete",
-	    "__children": packages_delete_list
-	]);
-    }
-    */
-    if (haskey (KiwiConfig, "split"))
-	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
-	    "__key"     : "split",
-	    /* FIXME
-	    "__children": maplist (map what, KiwiConfig["split"]:[], {
-		map ret	= $[];
-		foreach (string k, list val, what, {
-		    ret["__key"]	= k;
-		    ret
-		});
-		return ret;
-	    });
-	    */
-	]);
-
+    // generate the XML using current Map2XML function
     string write_string	= "<?xml version=\"1.0\"?>\n" +
 	Map2XML (write_list[0]:$[], 0);
+
+    // now, add the rest, created using more generic MapAny2XML function
+    if (haskey (KiwiConfig, "split") && size (KiwiConfig["split"]:[]) > 0)
+    {
+	string split	= MapAny2XML ("split", KiwiConfig["split",0]:$[], 1);
+	if (split != "")
+	{
+	    write_string = write_string + split + "\n";
+	}
+    }
+    write_string	= write_string + "</image>";
+
     config_dir	= tmp_dir + "/" + KiwiConfig["name"]:"";
     SCR::Execute (.target.mkdir, config_dir);
     SCR::Write (.target.string, config_dir + "/config.xml", write_string);
@@ -886,6 +868,5 @@
 	supported_boot_images	= "";
     return ReadImageTemplates ();
   }
-
 }
 

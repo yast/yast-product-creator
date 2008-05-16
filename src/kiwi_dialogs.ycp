@@ -85,13 +85,47 @@
    * Initialize the widget with packages intended for deletion
    */
   define void InitSWDelete (string id) {
-    UI::ChangeWidget (`id (id), `Value, mergestring (KiwiConfig["delete_packages"]:[], "\n"));
+
+    list<string> to_delete	= [];
+    foreach (map pmap, KiwiConfig["packages"]:[], {
+	string type	= pmap["type"]:"";
+	if (type == "delete")
+	{
+	    to_delete	= maplist (map pacmap, pmap["package"]:[], ``(
+		pacmap["name"]:"")
+	    );
+	}
+    });
+    UI::ChangeWidget (`id (id), `Value, mergestring (to_delete, "\n"));
   }
 
   define void StoreSWDelete (string key, map event) {
-    string ignore_key	= "delete_packages";
-    KiwiConfig[ignore_key]	= filter (string p,
-	splitstring ((string) UI::QueryWidget(`id(key), `Value), "\n"), ``(p != ""));
+
+    list<string> to_delete	= filter (string p, splitstring (
+	(string) UI::QueryWidget (`id(key), `Value), "\n"), ``(p != "")
+    );
+    integer index	= 0;
+    integer del_index	= -1;
+    foreach (map pmap, KiwiConfig["packages"]:[], {
+	if (pmap["type"]:"" == "delete")
+	{
+	    del_index	= index;
+	    break;
+	}
+	index	= index + 1;
+    });
+
+    map sw_contents	= KiwiConfig["packages",del_index]:$[];
+    if (del_index == -1)
+    {
+	sw_contents	= $[ "type" : "delete" ];
+	del_index	= size (KiwiConfig["packages"]:[]);
+	KiwiConfig["packages"] = add (KiwiConfig["packages"]:[], $[]);
+    }
+    sw_contents["package"]	= maplist (string name, to_delete,
+	``($[ "name" : name])
+    );
+    KiwiConfig["packages",del_index]	= sw_contents;
   }
 
   define symbol HandleSWDelete (string key, map event) {
@@ -110,6 +144,7 @@
     list packages	= KiwiConfig["packages"]:[];
     string pat	= "";
     string pac	= "";
+    string ign	= "";
 
     if (size (packages[package_set,"opensusePattern"]:[]) > 0)
 	// richtext header
@@ -123,7 +158,13 @@
     foreach (map pacmap, packages[package_set,"package"]:[], {
 	pac	= Summary::AddListItem (pac, pacmap["name"]:"");
     });
-    UI::ChangeWidget (`id (id), `Value, pat + pac);
+    if (size (packages[package_set,"ignore"]:[]) > 0)
+	ign	= Summary::AddHeader ("",
+	    deletechars (_("&Ignored Software"), "&"));
+    foreach (map pacmap, packages[package_set,"ignore"]:[], {
+	ign	= Summary::AddListItem (ign, pacmap["name"]:"");
+    });
+    UI::ChangeWidget (`id (id), `Value, pat + pac + ign);
   }
 
   /**
@@ -151,15 +192,14 @@
 	);
 	if (ret_map["ui"]:nil == `cancel)
 	    return nil;
-	sw_contents["opensusePattern"]	= maplist (string patname,
-	    ret_map["addons"]:[], ``($[ "name" : patname]));
-	sw_contents["package"]	= maplist (string patname,
-	    ret_map["packages"]:[], ``($[ "name" : patname]));
-	sw_contents["ignore"]	= maplist (string patname,
-	    ret_map["taboo"]:[], ``($[ "name" : patname]));
+	sw_contents["opensusePattern"]	= maplist (string name,
+	    ret_map["addons"]:[], ``($[ "name" : name]));
+	sw_contents["package"]	= maplist (string name,
+	    ret_map["packages"]:[], ``($[ "name" : name]));
+	sw_contents["ignore"]	= maplist (string name,
+	    ret_map["taboo"]:[], ``($[ "name" : name]));
 	KiwiConfig["packages",package_set]	= sw_contents;
 	InitSWRichText ("rt_sw");
-//	InitSWIgnore ("ignore"); FIXME
     }
     return nil;
   }
@@ -175,6 +215,13 @@
 	string type	= pmap["type"]:"";
 	// combo box label
 	string label	= _("Packages for Image");
+	if (type == "delete")
+	{
+	    // combo box label
+	    label       = _("Packages to Delete");
+	    i		= i + 1; // index to list must be increased
+	    return; // delete is handled by different widgets
+	}
 	if (type == "bootstrap")
 	    // combo box label
 	    label	= _("Bootstrap");
@@ -184,14 +231,11 @@
 	else if (type == "testsuite")
 	    // combo box label
 	    label       = _("Testing");
-	else if (type == "delete")
-	    // combo box label
-	    label       = _("Packages to Delete");
 	else if (type != "image")
 	    label       = type;
 	if (pmap["profiles"]:"" != "")
 	    // combo box label, %1 is profile name
-	    label = sformat (_("Image, profile %1"), pmap["profiles"]:"");
+	    label = sformat(_("Image, profile %1"),pmap["profiles"]:"");
 	items	= add (items, `item (`id (i), label, package_set == i));
 	i	= i + 1;
     });
@@ -212,12 +256,11 @@
     else if (event["ID"]:nil == key)
     {
 	integer selected	= (integer) UI::QueryWidget(`id(key), `Value);
-	if (selected != KiwiConfig["package_set"]:0)
+	if (selected != KiwiConfig["package_set"]:-1)
 	{
-//	    StoreSWIgnore ("ignore", event); FIXME
+	    KiwiConfig["package_set"]	= selected;
 	    StoreSWSelectionCombo (key, event);
 	    InitSWRichText ("rt_sw");
-//	    InitSWIgnore ("ignore"); FIXME
 	}
     }
     return nil;
@@ -273,7 +316,7 @@
    * initialize the value of version
    */
   define void InitVersion (string id) {
-    UI::ChangeWidget (`id (id), `Value, sformat ("%1", KiwiConfig[id]:"1"));
+    UI::ChangeWidget (`id (id), `Value, sformat ("%1", KiwiConfig[id]:"1.0.0"));
   }
 
   /**
@@ -747,7 +790,13 @@ directory."), out_dir));
   define void InitImageConfiguration () {
 
     kiwi_task	= Kiwi::kiwi_task;
-    string kiwi_dir	= "/usr/share/kiwi/image/";
+
+
+    // path to definition of openSUSE live CD (used if kiwi-config-openSUSE-kde,
+    // resp. kiwi-config-openSUSE-gnome is installed)
+    string kiwi_dir	= "/usr/share/openSUSE/kiwi-config-kde";
+    if (!FileUtils::Exists (kiwi_dir))
+	kiwi_dir	= "/usr/share/openSUSE/kiwi-config-gnome";
 
     // read the information from the base product
     integer src_id	= ProductCreator::checkProductDependency ();
@@ -757,17 +806,10 @@ directory."), out_dir));
     // busy popup
     Popup::ShowFeedback (_("Reading current image configuration..."), _("Please wait..."));
 
-    map default_dirmap	= $[
-	"iso"	: sformat ("%1/kwliveDVD-suse-10.3", kiwi_dir),
-	"xen"	: sformat ("%1/buildhost-suse-SLES10", kiwi_dir),
-	"usb"	: sformat ("%1/kwliveDVD-suse-10.3", kiwi_dir),
-	"vmx"	: sformat ("%1/kwliveDVD-suse-10.3", kiwi_dir),
-    ];
-
     // path to current config directory
-    string default_dir	= default_dirmap[kiwi_task]:"";
+    string default_dir	= (kiwi_task == "iso") ? kiwi_dir : "";
     string kiwi_configuration = KiwiConfig["kiwi_configuration_" + kiwi_task]:default_dir;
-    if (!FileUtils::Exists (kiwi_configuration))
+    if (kiwi_configuration == "" || !FileUtils::Exists (kiwi_configuration))
     {
 	// use local template if default dir does not exist (bug #289552)
 	if (!FileUtils::Exists (default_dir))
@@ -915,21 +957,14 @@ directory."), out_dir));
 		`VSpacing (0.2),
 		`HBox (
 		    `HWeight (1, "version"),
-		    `HWeight (1, `HBox ("size", "sizeunit")),
+		    `HWeight (1, `HBox ("size", "sizeunit"))
+		    /*
 		    `VBox (
 			`Label (""), "compressed"
+			FIXME compressed vs. unified
 		    )
+		    */
 		),
-		/*
-		"sw_selection",
-		`HBox (
-		    `HWeight (1, `VBox (
-			`Left (`Label (_("Installed Software"))),
-			"rt_sw", `Right ("configure_sw")
-		    ))
-//		    `HWeight (1, `VBox ("ignore", "delete_sw"))
-		),
-		*/
 		`HBox (
 		    `HWeight (2, `VBox (
 			"sw_selection",
@@ -937,18 +972,16 @@ directory."), out_dir));
 			"rt_sw",
 			`Right ("configure_sw")
 		    )),
-//		    `HWeight (1, "delete_sw")
-		    `HWeight (1, "ignore")
+		    `HWeight (1, "delete_sw")
 		),
 		`VSpacing (0.2)
 	    ), `HSpacing(1)),
 	"widget_names" : [
 	    "version",
-	    "size", "sizeunit", "compressed",
+	    "size", "sizeunit", // "compressed",
 	    "sw_selection",
 	    "rt_sw", "configure_sw",
-	    "ignore",
-//	    "delete_sw",
+	    "delete_sw",
 	],
     ],
     "description" : $[
@@ -1326,17 +1359,6 @@ directory."), out_dir));
 	// general help for users tab
 	"help"		: _("<p>Here, create users that should be available in the target system.</p>"),
     ],
-    /*
-    "group" : $[
-	"widget"	: `textentry,
-	// textentry label
-	"label"		: _("&Group name"),
-	"help"		: _("<p>Select the <b>Group Name</b> to which the users belong.</p>"),
-	"init"		: InitDescription,
-	"store"		: StoreDescription,
-	"handle"	: HandleDescription,
-    ],
-    */
     "userstable" : $[
 	"widget"	: `custom,
 	"custom_widget" : `Table (`id("table"), `opt (`notify), `header(
@@ -1448,7 +1470,7 @@ return ret;
     map<string,any> Config	= ProductCreator::Config;
     string kiwi_configuration	= Config["kiwi_configuration_" + kiwi_task]:"";
     string name			= Config["name"]:"";
-    string out_dir		= Config["iso-directory"]:"";
+    string out_dir		= Config["iso-directory"]:"/tmp";
     map <string,map> repositories	= Kiwi::current_repositories;
     boolean new_configuration	= (Config == $[]);
     boolean append_name		= false;

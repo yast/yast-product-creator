@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri May 16 16:32:38 CEST 2008 - jsuchome@suse.cz
+
+- updated kiwi templates, added support for spit section,
+  fixed handling of ignored and deleted packages (bnc#343212)
+- 2.16.17
+
+-------------------------------------------------------------------
 Tue May  6 17:51:04 CEST 2008 - ug@suse.de
 
 - set "implicit" to "1" in the isolinux.cfg
