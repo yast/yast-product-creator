@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu May 22 15:30:47 CEST 2008 - jsuchome@suse.cz
+
+- added support for profiles (bnc#343212)
+- do not install yast2-instserver
+- 2.16.18
+
+-------------------------------------------------------------------
 Fri May 16 16:40:22 CEST 2008 - jsrain@suse.cz
 
 - added categories Settings and System into desktop file

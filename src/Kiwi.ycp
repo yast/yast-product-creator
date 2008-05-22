@@ -551,7 +551,6 @@
 	}
 	else if (size (pmap["__children"]:[]) > 0)
 	{
-y2internal ("pmap: %1", pmap);
 	    profiles_packages	= add (profiles_packages, pmap);
 	}
     });
@@ -615,7 +614,7 @@ y2internal ("pmap: %1", pmap);
   }
 
   // run kiwi to finally create the live iso image
-  global boolean PrepareAndCreate (string out_dir) {
+  global boolean PrepareAndCreate (string out_dir, string selected_profiles) {
 
     if (config_dir == "" || !FileUtils::Exists (config_dir))
 	return false;
@@ -668,6 +667,8 @@ y2internal ("pmap: %1", pmap);
     }
 
     string cmd	= sformat ("ZYPP_READONLY_HACK=1 kiwi --nocolor --root %1 --prepare %2 --logfile terminal", chroot_dir, config_dir);
+    if (selected_profiles != "" && selected_profiles != nil)
+	cmd = cmd + selected_profiles;
 
     y2milestone ("calling '%1'", cmd);
 
@@ -707,7 +708,6 @@ y2internal ("pmap: %1", pmap);
 		UI::ChangeWidget (`id(`log), `LastLine, "\n");
 		cmd	= sformat ("ZYPP_READONLY_HACK=1 kiwi --nocolor --create %1 -d %2 --logfile terminal", chroot_dir, out_dir);
 		y2milestone ("calling '%1'", cmd);
-// FIXME ask for profiles, than call with --add-profile <profile-name>
 		// label
 		UI::ReplaceWidget (`id (`rpl), `Left (`Label (_("Creating Image"))));
 		SCR::Execute (.background.run_output_err, cmd);

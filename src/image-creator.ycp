@@ -33,7 +33,7 @@ define boolean ICSequence() {
 	return false;
     }
 
-    if (!Package::InstallAll (["kiwi", "yast2-instserver"]))
+    if (!Package::InstallAll (["kiwi"]))
     {
         Popup::Error(_("Installation of required packages
 failed."));

@@ -744,13 +744,63 @@ directory."),
     ];
 
     Kiwi::WriteConfigXML (KiwiConfig, kiwi_task);
-    // default question
-    if (Popup::YesNo (question[kiwi_task]:_("Create image now?")))
+    boolean create_image_now	= false;
+    string selected_profiles	= "";
+    if (size (KiwiConfig["profiles"]:[]) > 0)
     {
-	if (true)
+	term items = `VBox (`VSpacing (0.5));
+	list profiles = maplist (map prof,KiwiConfig["profiles",0,"profile"]:[],
 	{
+	    string name	= prof["name"]:"";
+	    string desc	= prof["description"]:"";
+	    items	= add (items, `Left (`CheckBox (`id (name),
+		desc == "" ? name : sformat ("%1 (%2)", name, desc)))
+	    );
+	    return name;
+	});
+	UI::OpenDialog (`opt(`decorated), `HBox (`HSpacing (0.5), `VBox (
+	    `VSpacing (0.5),
+	    // popup label
+	    `Label (question[kiwi_task]:_("Create image now?")),
+	    items,
+	    `HBox (
+		`PushButton (`id(`yes),`opt(`key_F10), Label::YesButton()),
+		`PushButton (`id(`no),`opt(`key_F9), Label::NoButton())
+	    ),
+	    `VSpacing (0.5)), `HSpacing (0.5))
+	);
+	while (true)
+	{
+	    any ret	= UI::UserInput ();
+	    if (ret == `no)
+	    {
+		create_image_now	= false;
+		break;
+	    }
+	    if (ret == `yes)
+	    {
+		create_image_now	= true;
+		foreach (string name, (list<string>) profiles, {
+		    if (UI::QueryWidget (`id (name), `Value) == true)
+			selected_profiles	= selected_profiles +
+			    " --add-profile " + name;
+		});
+		break;
+	    }
+	}
+	UI::CloseDialog ();
+    }
+    else
+    {
+	create_image_now	=
+	    // default question
+	    Popup::YesNo (question[kiwi_task]:_("Create image now?"));
+    }
+    if (create_image_now)
+    {
 	    string out_dir	= KiwiConfig["iso-directory"]:"";
-	    if (FileUtils::CheckAndCreatePath (out_dir) && Kiwi::PrepareAndCreate (out_dir))
+	    if (FileUtils::CheckAndCreatePath (out_dir) &&
+		Kiwi::PrepareAndCreate (out_dir, selected_profiles))
 	    {
 		if (kiwi_task == "usb" && false)
 		{
@@ -773,7 +823,6 @@ directory."), out_dir));
 	    {
 		ret	= false;
 	    }
-	}
     }
     string dir	= Kiwi::SaveConfiguration (KiwiConfig, kiwi_task);
     if (dir != nil && dir != "")
