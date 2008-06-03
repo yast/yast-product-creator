@@ -639,7 +639,8 @@ Select another source.
 	    y2milestone("Only one repository selected, skipping base repository selection");
 
 	    // remove the option if it exists
-	    ProductCreator::Config = remove(ProductCreator::Config, "base_repo");
+	    if (haskey (ProductCreator::Config, "base_repo"))
+		ProductCreator::Config = remove(ProductCreator::Config, "base_repo");
 	    return going_back ? `back : `next;
 	}
 
