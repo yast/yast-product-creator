@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Jun  3 15:49:54 CEST 2008 - jsuchome@suse.cz
+
+- check if map key exists before removing it (bnc#396666)
+- 2.16.19 
+
+-------------------------------------------------------------------
 Thu May 22 15:30:47 CEST 2008 - jsuchome@suse.cz
 
 - added support for profiles (bnc#343212)
