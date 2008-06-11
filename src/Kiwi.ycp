@@ -212,6 +212,38 @@
   }
 
   /**
+   * generate the value map for group to be used by Map2XML
+   */
+  map get_group_value (string group, list<map> userlist) {
+
+    string gid	= "";
+    map ret	= $[
+	"__key"	: "users",
+	"group"	: group,
+	"__children" : maplist (map usermap, userlist, {
+	    map u	= $[
+		"__key"	: "user",
+		"name"	: usermap["username"]:"",
+		"pwd"	: (usermap["encrypted"]:false) ?
+			    usermap["pwd"]:"" :
+			    crypt_password (usermap["pwd"]:""),
+		"home"	: usermap["home"]:"",
+	    ];
+	    if (usermap["realname"]:"" != "")
+		u["realname"]	= usermap["realname"]:"";
+	    if (usermap["id"]:"" != "")
+		u["id"]	= usermap["id"]:"";
+	    if (usermap["gid"]:"" != "")
+		gid	= usermap["gid"]:"";
+	    return u;
+	})
+    ];
+    if (gid != "")
+	ret["id"]	= gid;
+    return ret;
+  }
+
+  /**
    * which keys in config.xml are not unique
    */
   map non_unique_key	= $[
@@ -353,8 +385,9 @@
 	    "encrypted"	: crypted,
 	    "group"	: usermap["group"]:"",
 	    "username"	: user,
+	    "id"	: sformat ("%1", usermap["id"]:""),
+	    "gid"	: sformat ("%1", usermap["gid"]:""),
 	];
-	//FIXME save this, show in UI...
 	if (usermap["realname"]:"" != "")
 	    ret["users",user,"realname"]	= usermap["realname"]:"";
     });
@@ -471,7 +504,9 @@
     if (haskey (KiwiConfig, "users"))
     {
 	map<string,list> groups2users	= $[];
-	foreach (string user, map usermap, (map<string,map>) KiwiConfig["users"]:$[], {
+	foreach (string user, map usermap,
+	    (map<string,map>) KiwiConfig["users"]:$[],
+	{
 	    string g	= usermap["group"]:"";
 	    if (g == "")
 		g	= user == "root" ? "root" : "users";
@@ -480,21 +515,9 @@
 	    groups2users[g]	= add (groups2users[g]:[], usermap);
 	});
 	foreach (string group, list userlist, groups2users, {
-	    write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
-		"__key"	: "users",
-		"group"	: group,
-		"__children" : maplist (map usermap, (list<map>) userlist, {
-		   map u	= $[
-			"__key"	: "user",
-			"name"	: usermap["username"]:"",
-			"pwd"	: (usermap["encrypted"]:false) ? usermap["pwd"]:"" : crypt_password (usermap["pwd"]:""),
-			"home"	: usermap["home"]:"",
-		    ];
-		    if (usermap["realname"]:"" != "")
-			u["realname"]	= usermap["realname"]:"";
-		    return u;
-		})
-	    ]);
+	    write_list[0,"__children"] = add (write_list[0,"__children"]:[],
+		get_group_value (group, (list<map>) userlist)
+	    );
 	});
     }
     write_list[0,"__children"] = union (write_list[0,"__children"]:[],

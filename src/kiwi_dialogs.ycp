@@ -391,8 +391,16 @@
    */
   define void InitUsersTable (string id) {
 
-    list items = maplist (string user, map usermap, (map<string,map>) KiwiConfig["users"]:$[],
-    ``(`item (`id (user), user, usermap["home"]:"", usermap["group"]:"users")));
+   list items = maplist (string user, map usermap,
+	(map<string,map>) KiwiConfig["users"]:$[], ``(
+	    `item (`id (user),
+		    user, usermap["realname"]:"",
+		    sformat ("%1", usermap["id"]:""),
+		    usermap["home"]:"",
+		    usermap["group"]:"users", usermap["gid"]:""
+	    )
+	)
+    );
     UI::ChangeWidget (`id ("table"), `Items, items);
     UI::ChangeWidget (`id ("edituser"), `Enabled, size (items) > 0);
     UI::ChangeWidget (`id ("deleteuser"), `Enabled, size (items) > 0);
@@ -406,30 +414,49 @@
 
     if (key == "userstable") key = "edituser";
     string current_user = (string) UI::QueryWidget (`id ("table"), `CurrentItem);
+    map user_map	= KiwiConfig["users", current_user]:$[];
 
     UI::OpenDialog (`opt(`decorated), `HBox (`HSpacing (0.5), `VBox (
 	`VSpacing (0.5),
 	// popup label
 	`Label (`id (`label), _("Add new user")),
 	// text entry label
-	`TextEntry (`id (`username), _("&Name")),
-	`Password (`id (`pw1), Label::Password(), ""),
-	`Password (`id(`pw2), Label::ConfirmPassword(), ""),
+	`TextEntry (`id (`username), _("Login &Name")),
+	// text entry label
+	`TextEntry (`id (`realname), _("&Full Name")),
+	`Password (`id (`pw1), `opt (`hstretch), Label::Password(), ""),
+	`Password (`id(`pw2), `opt (`hstretch), Label::ConfirmPassword(), ""),
+	// text entry label
 	`TextEntry (`id (`home), _("&Home Directory")),
+	// text entry label
+	`InputField (`id (`uid), `opt (`hstretch), _("&UID")),
+	`HBox (
+	// text entry label
 	`TextEntry (`id (`group), _("&Group Name")),
+	// text entry label
+	`InputField (`id (`gid), `opt (`hstretch), _("&GID"))
+	),
 	`HBox (
 	    `PushButton (`id(`ok),`opt(`key_F10), Label::OKButton()),
 	    `PushButton (`id(`cancel),`opt(`key_F9), Label::CancelButton())
 	),
 	`VSpacing (0.5)), `HSpacing (0.5))
     );
+    UI::ChangeWidget (`id (`uid), `ValidChars, String::CDigit ());
+    UI::ChangeWidget (`id (`gid), `ValidChars, String::CDigit ());
     if (key == "edituser")
     {
 	UI::ChangeWidget (`id (`username), `Value, current_user);
-	UI::ChangeWidget (`id (`home), `Value, KiwiConfig["users", current_user, "home"]:"");
-	UI::ChangeWidget (`id (`group), `Value, KiwiConfig["users", current_user, "group"]:"users");
-	UI::ChangeWidget (`id (`pw1), `Value, "*****");
-	UI::ChangeWidget (`id (`pw2), `Value, "*****");
+	UI::ChangeWidget (`id (`realname), `Value, user_map["realname"]:"");
+	UI::ChangeWidget (`id (`home), `Value, user_map["home"]:"");
+	UI::ChangeWidget (`id (`group), `Value, user_map["group"]:"users");
+	UI::ChangeWidget (`id (`uid), `Value, user_map["id"]:"");
+	UI::ChangeWidget (`id (`gid), `Value, user_map["gid"]:"");
+	if (user_map["pwd"]:"" != "")
+	{
+	    UI::ChangeWidget (`id (`pw1), `Value, user_map["pwd"]:"");
+	    UI::ChangeWidget (`id (`pw2), `Value, user_map["pwd"]:"");
+	}
 	// popup label
 	UI::ChangeWidget (`id (`label), `Value, _("Edit User"));
     }
@@ -456,6 +483,7 @@ Try again."));
 		ret     = `notnext;
 		continue;
 	    }
+	    /* password can be empty
 	    if (pwd == "")
 	    {
 		// popup message
@@ -463,6 +491,7 @@ Try again."));
 		ret     = `notnext;
 		continue;
 	    }
+	    */
 	    if (! haskey (KiwiConfig, "users"))
 		KiwiConfig["users"]	= $[];
 	    else if (key == "edituser" && username != current_user)
@@ -473,9 +502,12 @@ Try again."));
 	    KiwiConfig["users", username]	= $[
 		"pwd"	: pwd,
 		"encrypted"	: false,
-		"home"	: UI::QueryWidget (`id(`home), `Value),
-		"group"	: group,
+		"home"		: UI::QueryWidget (`id(`home), `Value),
+		"realname"	: UI::QueryWidget (`id(`realname),  `Value),
+		"group"		: group,
 		"username"	: username,
+		"id"		: UI::QueryWidget (`id(`uid), `Value),
+		"gid"		: UI::QueryWidget (`id(`gid), `Value)
 	    ];
 	}
     } until (ret == `ok || ret == `cancel);
@@ -1412,11 +1444,17 @@ directory."), out_dir));
 	"widget"	: `custom,
 	"custom_widget" : `Table (`id("table"), `opt (`notify), `header(
 			    // table header
-			    _("Name"),
+			    _("Login Name"),
+			    // table header
+			    _("Full Name"),
+			    // table header
+			    _("UID"),
 			    // table header
 			    _("Home Directory"),
 			    // table header
-			    _("Group"))
+			    _("Group"),
+			    // table header
+			    _("GID"))
 	),
 	// help for table with users
 	"help"		: _("<p>For each user, specify <b>Name</b>, <b>Password</b>, <b>Home Directory</b> and group
