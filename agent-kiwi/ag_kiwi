@@ -108,18 +108,22 @@ while (<STDIN>)
 
 	$retmap{"users"}	= {};
 	foreach my $usernode ($usrdataNodeList -> get_nodelist()) {
-	    my $group = $usernode -> getAttribute("group");
+	    my $group	= $usernode -> getAttribute("group");
+	    my $gid	= $usernode -> getAttribute("id");
 	    my @ntag  = $usernode -> getElementsByTagName ("user") -> get_nodelist();
 	    foreach my $element (@ntag) {
 		my $name = $element -> getAttribute ("name");
 		my $pwd  = $element -> getAttribute ("pwd");
 		my $home = $element -> getAttribute ("home");
+		my $uid	 = $element -> getAttribute ("id");
 		my $realname = $element -> getAttribute ("realname");
 		if (defined $name) {
 		    $retmap{"users"}{$name}{group} = $group if (defined $group);
 		    $retmap{"users"}{$name}{home}  = $home if (defined $home);
 		    $retmap{"users"}{$name}{pwd}   = $pwd if (defined $pwd); 
 		    $retmap{"users"}{$name}{realname}   = $realname if (defined $realname); 
+		    $retmap{"users"}{$name}{id}   = $uid if (defined $uid); 
+		    $retmap{"users"}{$name}{gid}  = $gid if (defined $gid); 
 		}
 	    }
 	}
