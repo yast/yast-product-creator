@@ -110,23 +110,28 @@
         string plain_list = ProductCreator::Config["package-list"]:"";
 
 
-        term c2 =
-            `HBox(
-                    `HWeight(10, `Empty()),
-                    `HWeight(80, `VBox(
-                            `VSquash(
-                                `HBox(
-                                    `TextEntry(`id(`profile_loc), _("Profile Loca&tion:"), profile),
-                                    `VBox(
-                                        `VSpacing(),
-                                        `Bottom(`PushButton(`id(`open_profile), _("Select Fi&le")))
-                                        )
-                                    )
-                                ),
-                            `Left(`CheckBox(`id(`copyprofile), _("Copy Profile to CD I&mage"), copy_profile))
-                            )
-                        )
-                 );
+        term c2 = `HBox (
+            `HWeight (10, `Empty ()),
+            `HWeight (80, `VBox (
+		`VSquash (`HBox (
+		    `InputField (`id(`profile_loc), `opt (`hstretch),
+			// text entry label
+			_("Profile Loca&tion:"), profile),
+                    `VBox (
+			`VSpacing (),
+			`Bottom (
+			    // push button label
+			    `PushButton (`id (`open_profile), _("Select Fi&le"))
+			)
+                    )
+                )),
+		`Left (
+		    `CheckBox (`id(`copyprofile),
+			// check box label
+			_("Copy Profile to CD I&mage"), copy_profile)
+		)
+            ))
+        );
 
         term v =
             `VBox (
@@ -140,21 +145,17 @@
 
         list sources = []; // ProductCreator::GetDirSources(source);
         /* ProductCreator configure1 dialog contents */
-        term contents =
-            `HVSquash
-            (
-             `VBox(
-                 `TextEntry(`id(`name), _("&Configuration Name:"), name),
-                 `Frame(_("Packages"),
-                     `VBox(
-                         `RadioButtonGroup (
-                             `id (`pkg),
-                             v
-                             )
-                         )
-                     )
-                 )
-            );
+        term contents = `HVSquash (
+	    `VBox (
+		`InputField(`id(`name), `opt (`hstretch),
+		    // text entry label
+		    _("&Configuration Name:"), name),
+		// frame label
+                `Frame (_("Packages"), `VBox (
+		    `RadioButtonGroup (`id (`pkg), v)
+                ))
+            )
+        );
 
         Wizard::SetContentsButtons(caption, contents, HELPS["initial"]:"",
                 Label::BackButton(), Label::NextButton());
@@ -262,7 +263,7 @@
      */
     define symbol Configure2Dialog () ``{
 
-        /* ProductCreator configure2 dialog caption */
+        // ProductCreator configure2 dialog caption
         string caption = _("Product Creator Configuration");
 
         string dirtree = ProductCreator::Config["iso-directory"]:"";
@@ -277,164 +278,144 @@
             isofile_path = ProductCreator::Config["name"]:"" + ".iso";
         }
 
-
         /* ProductCreator configure2 dialog contents */
-        term contents =
-            `HVSquash
-            (
-             `VBox(
-                 /*
-                    `Frame(_("Package Database"),
-
-                    `RadioButtonGroup(`id(`pkgdb),
-                    `VBox(
-                    `Left(`RadioButton(`id(`origdb), `opt (`notify), _("Use original Package &Database"), db == "original")),
-                    `Left(`RadioButton(`id(`createdb),`opt (`notify),  _("Create ne&w Packa&ge Database"), db == "new" ))
+        term contents = `HVSquash (`VBox (
+	    // frame label
+            `Frame (_("Output:"), `VBox(
+		`VSquash (`HBox (
+		    `InputField (`id(`dirtree), `opt (`hstretch),
+			// text entry label
+			_("&Path to Generated Directory Tree:"), dirtree),
+                    `VBox (
+			`VSpacing (),
+			`Bottom (
+			    // push button label
+			    `PushButton (`id(`open_dir), _("&Select Directory"))
+			)
                     )
-                    )
-                    ),*/
-                 `Frame(_("Output:"),
-                     `VBox(
-                         `VSquash(
-                             `HBox(
-                                 `TextEntry(`id(`dirtree), _("&Path to Generated Directory Tree:"), dirtree),
-                                 `VBox(
-                                     `VSpacing(),
-                                     `Bottom(`PushButton(`id(`open_dir), _("&Select Directory")))
-                                     )
-                                 )
-                             ),
-                         `RadioButtonGroup(`id(`result),
-                             `VBox(
-                                 `Left(`RadioButton(`id(`isofile),`opt (`notify), _("&Generate ISO Image File"), result == "iso")),
-                                 `HBox(
-                                     `HWeight(10, `Empty()),
-                                     `HWeight(80,
-                                         `VBox(
-                                             `HBox(
-                                                 `HWeight(2,`TextEntry(`id(`isofile_path), _("&ISO Image File:"), isofile_path)),
-                                                 `HWeight(1, `Empty())
-                                                 )
-                                             )
-                                         )
-                                     ),
-                                 `Left(`RadioButton(`id(`directory), `opt (`notify),  _("Create Directory &Tree Only"), result == "tree"))
-                                 )
-                             )
-                             )
+                )),
+		`RadioButtonGroup (`id(`result), `VBox (
+		    `Left (`RadioButton(`id(`isofile),`opt (`notify),
+			// radio button label
+			_("&Generate ISO Image File"), result == "iso"
+		    )),
+                    `HBox (
+			`HWeight (10, `Empty()),
+                        `HWeight (80, `VBox (
+			    `HBox (
+				`HWeight (2, `InputField (`id(`isofile_path),
+				    `opt (`hstretch),
+				    // text entry label
+				    _("&ISO Image File:"), isofile_path
+				)),
+                                `HWeight (1, `Empty ())
+                            )
+                        ))
+		    ),
+		    `Left (`RadioButton(`id(`directory), `opt (`notify),
+			// radio button label
+			_("Create Directory &Tree Only"), result == "tree"
+		    ))
+                ))
+            )),
+            `VSpacing(1),
+	    // frame label
+	    `Frame (_("Other Options"), `VBox (
+		`Left (`CheckBox (`id (`savespace),
+		    // check box label
+		    _("Copy only needed files to save space."), savespace
+		)),
+		`VSpacing (),
+		`Left (`InputField (`id (`pub), `opt (`hstretch),
+		    // text entry label
+		    _("CD Publisher:"), publisher
+		)),
+                `Left (`InputField (`id(`prep), `opt (`hstretch),
+		    // text entry label
+		    _("CD Preparer:"), preparer
+		))
+	    ))
 
-                             ),
-                         `VSpacing(1),
-                         `Frame(_("Other Options"),
-                                 `VBox(
-                                     `Left(`CheckBox(`id(`savespace), _("Copy only needed files to save space."), savespace)),
-                                    `VSpacing(1),
-                                     `Left(`TextEntry(`id(`pub), _("CD Publisher:"), publisher)),
-                                     `Left(`TextEntry(`id(`prep), _("CD Preparer:"), preparer))
-                                     )
-                               )
+        ));
 
-                             )
+        Wizard::SetContentsButtons(caption, contents, HELPS["dest"]:"",
+            Label::BackButton(), Label::NextButton()
+	);
 
-                             );
+        any ret = nil;
+        while(true) {
+	    symbol rb = (symbol)UI::QueryWidget(`id(`result), `CurrentButton);
 
-                         Wizard::SetContentsButtons(caption, contents,
-                                 HELPS["dest"]:"",
-                                 Label::BackButton(), Label::NextButton());
+	    if (rb == `isofile)
+	    {
+		UI::ChangeWidget(`id(`isofile_path), `Enabled, true);
+	    }
+            else
+            {
+		UI::ChangeWidget(`id(`isofile_path), `Enabled, false);
+	    }
 
-                         any ret = nil;
-                         while(true) {
+	    ret = UI::UserInput();
 
-                             symbol rb = (symbol)UI::QueryWidget(`id(`result), `CurrentButton);
-                             if (rb == `isofile)
-                             {
-                                 UI::ChangeWidget(`id(`isofile_path), `Enabled, true);
-
-                             }
-                             else
-                             {
-                                 UI::ChangeWidget(`id(`isofile_path), `Enabled, false);
-
-                             }
-
-
-                             ret = UI::UserInput();
-
-                             /* abort? */
-                             if(ret == `abort || ret == `cancel) {
-                                 if(ProductCreator::ReallyAbort()) break;
-                                 else continue;
-                             }
-                             else if (ret ==`open_dir)
-                             {
-                                 any new_dir = UI::AskForExistingDirectory( dirtree, _("Select Directory"));
-                                 if (new_dir != nil)
-                                 {
-                                     UI::ChangeWidget(`id(`dirtree), `Value, (string) new_dir);
-                                     /*
-                                        string iso = (string)UI::QueryWidget(`id(`isofile_path), `Value);
-                                        if (findfirstof( iso, "/") == nil && iso != "")
-                                        {
-                                        UI::ChangeWidget(`id(`isofile_path), `Value, new_dir + "/" + iso );
-                                        }
-                                      */
-                                 }
-                                 continue;
-                             }
-                             else if (ret == `back)
-                             {
-				 going_back = true;
-                                 break;
-                             }
-                             else if(ret == `next)
-                             {
-                                 /*
-                                    symbol dbrb = (symbol)UI::QueryWidget(`id(`pkgdb), `CurrentButton);
-                                    if (dbrb == `origdb)
-                                    {
-                                    ProductCreator::Config["database"] = "original";
-                                    }
-                                    else
-                                    {
-                                    ProductCreator::Config["database"] = "new" ;
-                                    }
-
-                                  */
-                                 string isodir = (string) UI::QueryWidget(`id(`dirtree), `Value);
-                                 if (isodir == "")
-                                 {
-                                     Report::Error(_("Path to generated directory tree missing."));
-                                     continue;
-                                 }
-                                 else
-                                 {
-                                     ProductCreator::Config["iso-directory"] = isodir;
-                                 }
-
-                                 if (rb  == `isofile)
-                                 {
-                                     ProductCreator::Config["result"] = "iso";
-                                     ProductCreator::Config["isofile"] = (string)UI::QueryWidget(`id(`isofile_path), `Value);
-
-                                 }
-                                 else
-                                 {
-                                     ProductCreator::Config["result"] = "tree";
-
-                                 }
-                                 ProductCreator::Config["savespace"] = (boolean)UI::QueryWidget(`id(`savespace), `Value);
-                                 ProductCreator::Config["publisher"] = (string)UI::QueryWidget(`id(`pub), `Value);
-                                 ProductCreator::Config["preparer"] = (string)UI::QueryWidget(`id(`prep), `Value);
-                                 break;
-                             }
-                             else if (ret != `directory && ret != `isofile)
-			     {
-                                 y2error("unexpected retcode: %1", ret);
-                                 continue;
-                             }
-                         }
-
-                         return (symbol)ret;
+	    // abort?
+            if(ret == `abort || ret == `cancel) {
+		if(ProductCreator::ReallyAbort()) break;
+                else continue;
+            }
+            else if (ret ==`open_dir)
+	    {
+		any new_dir = UI::AskForExistingDirectory (dirtree,
+		    // ask for directory widget label
+		    _("Select Directory"));
+                if (new_dir != nil)
+                {
+		    UI::ChangeWidget(`id(`dirtree), `Value, (string) new_dir);
+		}
+                continue;
+            }
+            else if (ret == `back)
+            {
+		going_back = true;
+                break;
+            }
+            else if (ret == `next)
+	    {
+		string isodir = (string) UI::QueryWidget(`id(`dirtree), `Value);
+                if (isodir == "")
+                {
+		    // error popup
+		  Report::Error(_("Path to generated directory tree missing."));
+		    continue;
+                }
+                else
+                {
+		    ProductCreator::Config["iso-directory"] = isodir;
+                }
+		if (rb  == `isofile)
+                {
+		    ProductCreator::Config["result"]	= "iso";
+                    ProductCreator::Config["isofile"]	=
+			(string)UI::QueryWidget(`id(`isofile_path), `Value);
+		}
+                else
+		{
+		    ProductCreator::Config["result"]	= "tree";
+		}
+		ProductCreator::Config["savespace"]	=
+		    (boolean)UI::QueryWidget (`id (`savespace), `Value);
+                ProductCreator::Config["publisher"]	=
+		    (string) UI::QueryWidget (`id (`pub), `Value);
+                ProductCreator::Config["preparer"]	=
+		    (string) UI::QueryWidget (`id (`prep), `Value);
+                break;
+            }
+            else if (ret != `directory && ret != `isofile)
+	    {
+		y2error("unexpected retcode: %1", ret);
+                continue;
+	    }
+        }
+	return (symbol)ret;
     }
 
     /**
