@@ -17,7 +17,7 @@ include "product-creator/wizards.ycp";
 
 import "CommandLine";
 import "Confirm";
-import "PackageCallbacksInit";
+import "PackageCallbacks";
 import "Sequencer";
 
 /**
@@ -62,7 +62,7 @@ failed."));
     }
 
     InitRepositories ();
-    PackageCallbacksInit::InitPackageCallbacks();
+    PackageCallbacks::InitPackageCallbacks();
 
     symbol ret = Sequencer::Run(aliases, sequence);
     UI::CloseDialog();

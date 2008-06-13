@@ -15,7 +15,7 @@ import "Kiwi";
 import "Wizard";
 import "Popup";
 import "Package";
-import "PackageCallbacksInit";
+import "PackageCallbacks";
 import "Sequencer";
 
 include "product-creator/complex.ycp";
@@ -213,7 +213,7 @@ define symbol ImageCreatorSequence() {
 	],
     ];
 
-    PackageCallbacksInit::InitPackageCallbacks();
+    PackageCallbacks::InitPackageCallbacks();
 
     symbol ret = Sequencer::Run(aliases, sequence);
     return ret;
@@ -299,7 +299,7 @@ define boolean ProductCreatorSequence() ``{
     ];
 
     Wizard::CreateDialog();
-    Wizard::SetDesktopIcon("cd-creator");
+    Wizard::SetDesktopIcon("product-creator");
     list<string> required_packages = ["inst-source-utils", "mkisofs", "createrepo"];
 
     // add PPC specific packages

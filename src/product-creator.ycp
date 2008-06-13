@@ -23,8 +23,9 @@ include "product-creator/commandline.ycp";
 import "CommandLine";
 import "ProductCreator";
 
-import "PackageCallbacksInit";
-PackageCallbacksInit::InitPackageCallbacks();
+import "PackageCallbacks";
+
+PackageCallbacks::InitPackageCallbacks();
 
 map cmdline_description = $[
     "id"	: "product-creator",
