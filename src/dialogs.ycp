@@ -26,6 +26,7 @@
     import "String";
     import "Package";
 
+    include "product-creator/routines.ycp";
     include "product-creator/helps.ycp";
 
     /**
@@ -1390,7 +1391,7 @@ This key is checked when the product is added as a repository.</p>")
         import "Summary";
 
         Wizard::CreateDialog();
-        Wizard::SetDesktopIcon("cd-creator");
+        Wizard::SetDesktopIcon("product-creator");
         string caption = _("Configuration Summary");
         Wizard::SetContents( caption,
                 `Empty(),
