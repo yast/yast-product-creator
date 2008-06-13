@@ -27,7 +27,9 @@ import "Profile";
 import "AutoinstSoftware";
 import "Arch";
 import "PackageAI";
+import "Popup";
 import "String";
+import "SourceManager";
 import "GPG";
 import "GPGWidgets";
 import "Mode";
@@ -108,7 +110,42 @@ global define boolean Modified() ``{
     return modified;
 };
 
-include "product-creator/routines.ycp";
+/**
+ * Abort function
+ * @return blah blah lahjk
+ */
+global define boolean Abort() ``{
+    if(AbortFunction != nil)
+	return eval(AbortFunction) == true;
+    return false;
+}
+
+/**
+ * Check for pending Abort press
+ * @return true if pending abort
+ */
+global define boolean PollAbort() ``{
+    return UI::PollInput() == `abort;
+}
+
+/**
+ * If modified, ask for confirmation
+ * @return true if abort is confirmed
+ */
+global define boolean ReallyAbort() ``{
+    return !ProductCreator::Modified() || Popup::ReallyAbort(true);
+}
+
+/**
+ * Progress::NextStage and Progress::Title combined into one function
+ * @param title progressbar title
+ */
+define void ProgressNextStage(string title) ``{
+    Progress::NextStage();
+    Progress::Title(title);
+}
+
+
 
 
 // set the packages to 'taboo' state

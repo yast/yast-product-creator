@@ -10,47 +10,56 @@
 {
 
 textdomain "product-creator";
+
+import "Kiwi";
 import "Progress";
-import "Popup";
-import "SourceManager";
 
-/* FIXME: Remove this file if you do not need it! */
-
-/**
- * Abort function
- * @return blah blah lahjk
- */
-global define boolean Abort() ``{
-    if(AbortFunction != nil)
-	return eval(AbortFunction) == true;
-    return false;
+// shortcut for returning "descripton" value from a map describing config.xml
+string get_description (map config, string key) {
+    return config["description",0,key,0,Kiwi::content_key]:"";
 }
 
-/**
- * Check for pending Abort press
- * @return true if pending abort
- */
-global define boolean PollAbort() ``{
-    return UI::PollInput() == `abort;
+// shortcut for returning "preferences" value from a map describing config.xml
+string get_preferences (map config, string key, any defval) {
+    return sformat ("%1",
+	config["preferences",0,key,0,Kiwi::content_key]:defval);
 }
 
-/**
- * If modified, ask for confirmation
- * @return true if abort is confirmed
- */
-global define boolean ReallyAbort() ``{
-    return !Modified() || Popup::ReallyAbort(true);
+// update the whole map with a new key in preferences section
+map<string,any> save_preferences (map<string,any> config, string key, string val) {
+    config["preferences",0,key]	= [
+	$[
+	    Kiwi::content_key	: val
+	]
+    ];
+    return config;
 }
 
-/**
- * Progress::NextStage and Progress::Title combined into one function
- * @param title progressbar title
- */
-global define void ProgressNextStage(string title) ``{
-    Progress::NextStage();
-    Progress::Title(title);
+// get the primary value of image type to be built ('type' from 'preferences')
+string get_current_task (map config) {
+
+    string task	= "iso";
+    foreach (map typemap, (list<map>) config["preferences",0,"type"]:[], {
+	task   = typemap[Kiwi::content_key]:task;
+	if (typemap["primary"]:false)
+	    break;
+    });
+    return task;
 }
 
+// get the value of boot image directory
+string get_bootdir (map config, string task) {
+
+    string dir	= "";
+    foreach (map typemap, (list<map>) config["preferences",0,"type"]:[], {
+	if (task == typemap[Kiwi::content_key]:"")
+	{
+	    dir	= typemap["boot"]:"";
+	    break;
+	}
+    });
+    return dir;
+}
 
 /* EOF */
 }
