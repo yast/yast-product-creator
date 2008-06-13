@@ -8,6 +8,7 @@
   <preferences>
     <type primary="true" boot="isoboot/suse-11.0" flags="unified">iso</type>
     <type boot="vmxboot/suse-11.0" filesystem="ext3" format="vmdk">vmx</type>
+    <type boot="usboot/suse-11.0" filesystem="ext3">usb</type>
     <type boot="xenboot/suse-11.0" filesystem="ext3">xen</type>
     <type boot="oemboot/suse-11.0" filesystem="ext3" flags="unified">oem</type>
     <version>1.0.0</version>
