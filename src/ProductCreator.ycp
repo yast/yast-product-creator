@@ -2748,12 +2748,9 @@ global define boolean readControlFile(string filename) ``{
  */
 global define void ProductCreator() ``{
     configSetup();
-    AYRepository = Misc::SysconfigRead( .sysconfig.autoinstall.REPOSITORY, 
+    if (FileUtils::Exists ("/etc/sysconfig/autoinstall"))
+	AYRepository = Misc::SysconfigRead( .sysconfig.autoinstall.REPOSITORY,
             "/var/lib/autoinstall/repository/");
-
-//    // Store original status
-//    old_enabled = Pkg::SourceGetCurrent(true);
-//    y2debug("old_enabled=%1", old_enabled );
 }
 
 
