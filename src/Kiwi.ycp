@@ -25,6 +25,12 @@
 
   string encryption_method	= nil;
 
+  /**
+   * argument for any_xml agent: key indicating content of element without
+   * attributes
+   */
+  global string content_key	= "__yast_content__";
+
   // temporary directory, where kiwi is working
   global string tmp_dir	= "";
 
@@ -191,7 +197,7 @@
 	    ret["primary"]	= "true";
 	return ret;
     });
-    // create default values for new project
+    // create default values for new project FIXME
     if (retlist == [])
     {
 	map ret	= $[
@@ -210,98 +216,6 @@
     }
     return retlist;
   }
-
-  /**
-   * generate the value map for group to be used by Map2XML
-   */
-  map get_group_value (string group, list<map> userlist) {
-
-    string gid	= "";
-    map ret	= $[
-	"__key"	: "users",
-	"group"	: group,
-	"__children" : maplist (map usermap, userlist, {
-	    map u	= $[
-		"__key"	: "user",
-		"name"	: usermap["username"]:"",
-		"pwd"	: (usermap["encrypted"]:false) ?
-			    usermap["pwd"]:"" :
-			    crypt_password (usermap["pwd"]:""),
-		"home"	: usermap["home"]:"",
-	    ];
-	    if (usermap["realname"]:"" != "")
-		u["realname"]	= usermap["realname"]:"";
-	    if (usermap["id"]:"" != "")
-		u["id"]	= usermap["id"]:"";
-	    if (usermap["gid"]:"" != "")
-		gid	= usermap["gid"]:"";
-	    return u;
-	})
-    ];
-    if (gid != "")
-	ret["id"]	= gid;
-    return ret;
-  }
-
-  /**
-   * which keys in config.xml are not unique
-   */
-  map non_unique_key	= $[
-    "package"		: true,
-    "opensusePattern"	: true,
-    "ignore"		: true,
-    "user"		: true,
-    "source"		: true,
-    "file"		: true, // for drivers section
-    "profile"		: true,
-  ];
-
-  /**
-   * convert YCP map (of internal type) to XML
-   */
-  string Map2XML (map descr, integer level) {
-
-    string children	= "";
-    string value	= "";
-    string tab		= "";
-    integer i		= 0;
-    while (i < level) {
-	i = i + 1;
-	tab	= tab + "  ";
-    }
-    string key	= descr["__key"]:"";
-    if (key == "") return "";
-    string ret	= tab + "<" + key;
-    foreach (string subkey, any val, (map<string,any>) descr, {
-	if (subkey == "__key" || non_unique_key[subkey]:false) return;
-	if (subkey == "__children" && is (val, list))
-	    foreach (map chmap, (list<map>) val, {
-		children	= children + "\n" + Map2XML (chmap, level + 1);
-	    });
-	else if (subkey == "__value")
-	    value = String::EscapeTags (sformat ("%1", val));
-	else if (is (val, string) || is (val, integer))
-	    ret	= sformat ("%1 %2=\"%3\"",
-		ret, subkey, String::EscapeTags (tostring (val)));
-    });
-    if (non_unique_key[key]:false)
-	return sformat ("%1/>", ret);
-    if (value != "")
-	ret = sformat ("%1>%2", ret, value);
-    else
-	ret	= ret + ">";
-    if (children != "")
-	ret =	 ret + children + "\n";
-
-    if (level == 0 && key == "image") // ugly hack
-	return ret;
-    ret	= sformat ("%1%2</%3>", ret, haskey (descr, "__value") ? "" : tab, key);
-    return ret;
-  }
-
-  // argument for any_xml agent: key indicating content of element without
-  // attributes
-  string content_key	= "__yast_content__";
 
   /**
    * convert YCP map (of type read from any_xml agent) to XML
@@ -345,6 +259,71 @@
     return ret;
   }
 
+
+  /**
+   * which keys in config.xml are not unique
+   */
+  map non_unique_key	= $[
+    "package"		: true,
+    "opensusePattern"	: true,
+    "ignore"		: true,
+    "user"		: true,
+    "source"		: true,
+    "file"		: true, // for drivers section
+    "profile"		: true,
+  ];
+
+  /**
+   * convert YCP map (of internal type) to XML
+   */
+  string Map2XML (map descr, integer level) {
+
+    string children	= "";
+    string value	= "";
+    string tab		= "";
+    integer i		= 0;
+    while (i < level) {
+	i = i + 1;
+	tab	= tab + "  ";
+    }
+    string key	= descr["__key"]:"";
+    if (key == "") return "";
+
+    if (key == "__anyxml")
+    {
+	// workaround, used until everything is transformed into MapAny2XML
+	return MapAny2XML (
+	    descr["__item"]:"", descr["__value"]:$[], descr["__level"]:0);
+    }
+
+    string ret	= tab + "<" + key;
+    foreach (string subkey, any val, (map<string,any>) descr, {
+	if (subkey == "__key" || non_unique_key[subkey]:false) return;
+	if (subkey == "__children" && is (val, list))
+	    foreach (map chmap, (list<map>) val, {
+		children	= children + "\n" + Map2XML (chmap, level + 1);
+	    });
+	else if (subkey == "__value")
+	    value = String::EscapeTags (sformat ("%1", val));
+	else if (is (val, string) || is (val, integer))
+	    ret	= sformat ("%1 %2=\"%3\"",
+		ret, subkey, String::EscapeTags (tostring (val)));
+    });
+    if (non_unique_key[key]:false)
+	return sformat ("%1/>", ret);
+    if (value != "")
+	ret = sformat ("%1>%2", ret, value);
+    else
+	ret	= ret + ">";
+    if (children != "")
+	ret =	 ret + children + "\n";
+
+    if (level == 0 && key == "image") // ugly hack
+	return ret;
+    ret	= sformat ("%1%2</%3>", ret, haskey (descr, "__value") ? "" : tab, key);
+    return ret;
+  }
+
   /**
    * import the data from given config.xml
    * @param directory where to look for config.xml
@@ -354,49 +333,61 @@
 
     map<string,any> ret	= $[];
     if (!FileUtils::Exists (base_path + "/config.xml"))
+    {
+	y2warning ("no such file %1/config.xml", base_path);
 	return ret;
+    }
 
     map config	= (map) SCR::Read (.kiwi, base_path + "/config.xml");
     if (config == nil)
 	return ret;
-    map<string,map> packages	= config["packages"]:$[];
 
-    foreach (string key, [ "author", "contact", "image_type", "specification",
-	"packagemanager", "version", "rpm-check-signatures", "rpm-force",
-	"sizeunit", "type", "name", "repository", "defaultdestination",
-	"schemeversion", "defaultroot", "inherit", "locale", "timezone",
-	"keytable"],
-    {
-	if (config[key]:nil != nil)
-	    ret[key]	= config[key]:nil;
-    });
-    if (haskey (config, "size"))
-	ret["size"]	= tointeger (config["size"]:"2700");
-    if (haskey (config, "defaultdestination"))
-	ret["iso-directory"]	= config["defaultdestination"]:"";
-    foreach (string user, map usermap, (map<string,map>) config["users"]:$[], {
-	if (!haskey (ret, "users"))
-	    ret["users"]     = $[];
-	any pwd	= usermap["pwd"]:nil;
-	boolean crypted	= (pwd != nil);
-	ret["users",user]     = $[
-	    "home"	: usermap["home"]:sformat ("/home/%1", user),
-	    "pwd"	: (pwd == nil) ? user : pwd,
-	    "encrypted"	: crypted,
-	    "group"	: usermap["group"]:"",
-	    "username"	: user,
-	    "id"	: sformat ("%1", usermap["id"]:""),
-	    "gid"	: sformat ("%1", usermap["gid"]:""),
-	];
-	if (usermap["realname"]:"" != "")
-	    ret["users",user,"realname"]	= usermap["realname"]:"";
-    });
+    // FIXME last remnant of .kiwi usage...
+    if (config["repository"]:nil != nil)
+	ret["repository"]	= config["repository"]:nil;
 
-    map anyxml		= (map) SCR::Read (.anyxml, base_path + "/config.xml");
+    // read rest of config.xml using more generic agent
+    map anyxml		= (map) SCR::Read (.anyxml, $[
+	"file"	: base_path + "/config.xml",
+	"args"	: $[
+	    "ForceArray"	: 1,
+            "KeepRoot"		: 1,
+	    "KeyAttr"		: [],
+	    "ForceContent"	: 1,
+	    "ContentKey"	: content_key,
+	]
+    ]);
     map image		= anyxml["image",0]:$[];
+    ret["name"]		= image["name"]:"";
+    ret["schemeversion"]= image["schemeversion"]:"2.0";
+    if (haskey (image, "inherit"))
+	ret["inherit"]	= image["inherit"]:"";
+    ret["preferences"]	= image["preferences"]:[];
+    ret["description"]	= image["description"]:[];
+    ret["users"]	= maplist (map gmap, (list<map>)image["users"]:[], {
+	// convert integer values to strings
+	gmap["user"]	= maplist (map umap, (list<map>) gmap["user"]:[], {
+	    if (umap["id"]:nil != nil)
+		umap["id"]	= sformat ("%1", umap["id"]:nil);
+	    // add internal info if password was already crypted
+	    umap["encrypted"]	= (umap["pwd"]:nil != nil);
+	    return umap;
+	});
+	if (gmap["id"]:nil != nil)
+	    gmap["id"]	= sformat ("%1", gmap["id"]:nil);
+	return gmap;
+    });
     ret["packages"]	= image["packages"]:[];
     ret["profiles"]	= image["profiles"]:[];
     ret["split"]	= image["split"]:[];
+
+    // FIXME iso-directory should be used only when converting PC->IC
+    if (haskey (ret["preferences",0]:$[], "defaultdestination"))
+    {
+	ret["iso-directory"]	=
+	    ret["preferences",0,"defaultdestination",0,content_key]:"";
+    }
+
     return ret;
   }
 
@@ -417,7 +408,7 @@
 	KiwiConfig["defaultroot"]	= chroot_dir;
     }
 
-    // for the order of keys in preferences section, see bug 355568
+    /*
     map preferences	= $[
 	    "__key"	: "preferences",
 	    "__children"	: [
@@ -462,31 +453,27 @@
 	    ]);
 	}
     });
+    */
 
+    // generate a structure for Map2XML function
     list write_list	= [ $[
       "__key"		: "image",
       "name"		: KiwiConfig["name"]:"",
-      "schemeversion"	: KiwiConfig["schemeversion"]:"1.4",
+      "schemeversion"	: KiwiConfig["schemeversion"]:"2.0",
       "__children"	: [
 	$[
-	    "__key"	: "description",
-	    "type"	: "system",
-	    "__children"	: [
-		$[
-		    "__key"	: "author",
-		    "__value"	: KiwiConfig["author"]:"",
-		],
-		$[
-		    "__key"	: "contact",
-		    "__value"	: KiwiConfig["contact"]:"",
-		],
-		$[
-		    "__key"	: "specification",
-		    "__value"	: KiwiConfig["specification"]:"",
-		],
-	    ],
+	    "__key"	: "__anyxml",
+	    "__item"	: "description",
+	    "__value"	: KiwiConfig["description",0]:$[],
+	    "__level"	: 1
 	],
-	preferences,
+//	preferences,
+	$[
+	    "__key"	: "__anyxml",
+	    "__item"	: "preferences",
+	    "__value"	: KiwiConfig["preferences",0]:$[],
+	    "__level"	: 1
+	],
       ],
     ]];
     if (KiwiConfig["inherit"]:"" != "")
@@ -494,98 +481,52 @@
     if (size (KiwiConfig["profiles"]:[]) > 0)
     {
 	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
-	    "__key"     : "profiles",
-	    "__children" : maplist (
-		map profile, KiwiConfig["profiles",0,"profile"]:[], {
-		    return union ($[ "__key"     : "profile"], profile);
-		})
+	    "__key"	: "__anyxml",
+	    "__item"	: "profiles",
+	    "__value"	: KiwiConfig["profiles",0]:$[],
+	    "__level"	: 1
 	]);
     }
     if (haskey (KiwiConfig, "users"))
     {
-	map<string,list> groups2users	= $[];
-	foreach (string user, map usermap,
-	    (map<string,map>) KiwiConfig["users"]:$[],
-	{
-	    string g	= usermap["group"]:"";
-	    if (g == "")
-		g	= user == "root" ? "root" : "users";
-	    if (!haskey (groups2users, g))
-		groups2users[g]	= [];
-	    groups2users[g]	= add (groups2users[g]:[], usermap);
-	});
-	foreach (string group, list userlist, groups2users, {
-	    write_list[0,"__children"] = add (write_list[0,"__children"]:[],
-		get_group_value (group, (list<map>) userlist)
-	    );
+	foreach (map gmap, KiwiConfig["users"]:[], {
+	    gmap["user"] = maplist (map umap, (list<map>) gmap["user"]:[], {
+		boolean encrypted	= umap["encrypted"]:false;
+		umap["pwd"]	= (umap["encrypted"]:false) ?
+		    umap["pwd"]:"" :
+		    crypt_password (umap["pwd"]:"");
+		if (haskey (umap, "encrypted"))
+		    umap	= remove (umap, "encrypted");
+		return umap;
+	    });
+	    write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
+		"__key"		: "__anyxml",
+		"__item"	: "users",
+		"__value"	: gmap,
+		"__level"	: 1
+	    ]);
 	});
     }
+// FIXME use __anyxml for repository
     write_list[0,"__children"] = union (write_list[0,"__children"]:[],
 	maplist (string source, (list<string>) KiwiConfig["sources"]:[],
 	    ``(get_source_value (source, KiwiConfig))
 	)
     );
-    map image_packages		= $[];
-    list<map> profiles_packages	= [];
-    map bootstrap_packages	= $[];
     foreach (map packagemap, KiwiConfig["packages"]:[], {
-	/* example of packagemap:
-	$[
-	    "opensusePattern"	: [
-		$[ "name":"base" ],
-		$[ "name":"x11" ]
-	    ],
-	    "package"	: [ $[ "name":"zypper" ] ],
-	    "type"	: "image",
-	    "profiles"	: "KDE"
-	]*/
-	map pmap	= union (packagemap, $[
-	    "__key"     : "packages",
+	if (size (packagemap["opensusePattern"]:[]) == 0 &&
+	    size (packagemap["package"]:[]) == 0)
+	{
+	    y2milestone ("no patterns/packages in %1", packagemap);
+	    return;
+	}
+	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
+	    "__key"	: "__anyxml",
+	    "__item"	: "packages",
+	    "__value"	: packagemap,
+	    "__level"	: 1
 	]);
-	string type	= pmap["type"]:"";
-	pmap["__children"]     = maplist (map p, pmap["package"]:[], ``(
-	    union (p, $[ "__key" : "package"]))
-	);
-	if (haskey (pmap, "package"))
-	    pmap	= remove (pmap,"package");
-	if (haskey (pmap, "ignore"))
-	{
-	    pmap["__children"]	= union (pmap["__children"]:[],
-		maplist (map p, pmap["ignore"]:[], ``(
-		    union (p, $[ "__key" : "ignore"]))
-		)
-	    );
-	    pmap        = remove (pmap, "ignore");
-	}
-	if (haskey (pmap, "opensusePattern"))
-	{
-	    pmap["__children"]  = union (pmap["__children"]:[],
-		maplist (map p, pmap["opensusePattern"]:[], ``(
-		    union (p, $[ "__key" : "opensusePattern"]))
-		)
-	    );
-	    pmap	= remove (pmap,"opensusePattern");
-	}
-	if (type == "bootstrap")
-	    bootstrap_packages	= pmap;
-	else if (type == "image" && pmap["profiles"]:"" == "")
-	{
-	    image_packages	= pmap;
-	}
-	else if (size (pmap["__children"]:[]) > 0)
-	{
-	    profiles_packages	= add (profiles_packages, pmap);
-	}
     });
-    if (image_packages != $[])
-	write_list[0,"__children"] =
-	    add (write_list[0,"__children"]:[], image_packages);
-    if (profiles_packages != [])
-	write_list[0,"__children"] =
-	    union (write_list[0,"__children"]:[], profiles_packages);
-    if (bootstrap_packages != $[])
-	write_list[0,"__children"] =
-	    add (write_list[0,"__children"]:[], bootstrap_packages);
 
     // generate the XML using current Map2XML function
     string write_string	= "<?xml version=\"1.0\"?>\n" +
@@ -605,8 +546,9 @@
     config_dir	= tmp_dir + "/" + KiwiConfig["name"]:"";
     SCR::Execute (.target.mkdir, config_dir);
     SCR::Write (.target.string, config_dir + "/config.xml", write_string);
-    // config.xml may contain password
+    // config.xml may contain password, do not let other users read it
     SCR::Execute (.target.bash, sformat ("chmod 600 %1/config.xml",config_dir));
+
     foreach (string dir, ["root_dir", "config_dir"], {
 	foreach (string val, KiwiConfig[dir]:[], {
 	    string realdir	= config_dir + "/" + substring (dir, 0, search (dir, "_"));
@@ -659,8 +601,10 @@
         `HSpacing(85),
 	`VWeight (2, `VBox (
 	    `VSpacing(0.5),
-	    // label
-	    `ReplacePoint (`id (`rpl), `Left (`Label(_("Preparing for Image Creation")))),
+	    `ReplacePoint (`id (`rpl),
+		// label
+		`Left (`Label(_("Preparing for Image Creation")))
+	    ),
 	    `VSpacing(0.5),
 	    `LogView (`id (`log), "", 8, 0)
 	)),
@@ -668,7 +612,9 @@
 	    `VSpacing(0.5),
 	    `LogView (`id (`errlog), "", 8, 0),
 	    `VSpacing(0.5),
-	    `ReplacePoint (`id (`rp), `PushButton (`id(`cancel),`opt(`key_F9), Label::CancelButton ())),
+	    `ReplacePoint (`id (`rp),
+		`PushButton (`id(`cancel),`opt(`key_F9), Label::CancelButton ())
+	    ),
 	    `VSpacing(0.5)
 	))
     ), `HSpacing(1.5)
