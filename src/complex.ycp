@@ -27,6 +27,7 @@
 
     include "product-creator/helps.ycp";
     include "product-creator/dialogs.ycp";
+    include "product-creator/routines.ycp";
 
     /**
      * Return a modification status
@@ -91,7 +92,7 @@
             contents,
 	    `HBox (
 		// push button label
-		`PushButton(`id(`create_button), _("&Create Image")),
+		`PushButton(`id(`create_button), _("&Create Product")),
 		// menu button label
 		`MenuButton (`id (`kiwi), _("Cre&ate Image with KIWI..."), [
 		    // push button label
@@ -582,19 +583,15 @@ define symbol ImagesOverviewDialog() {
 	    if (d == "") return;
 	    if (FileUtils::Exists (images_dir + "/" + d + "/config.xml"))
 	    {
+		// FIXME now, we should read only type, name, version, size to
+		// make initial start faster
 		map config	= Kiwi::ReadConfigXML (images_dir + "/" + d);
-		if (config["image_type"]:"" != "system")
+		if (config["description",0,"type"]:"" != "system")
 		{
 		    y2warning ("%1 not a 'system' image type, skipping", d);
 		    return;
 		}
-		string task	= "iso";
-		// FIXME duplicated in kiwi_dialogs
-		foreach (string type, map data, config["type"]:$[], {
-		    task   = type;
-		    if (data["primary"]:"" == "true")
-			break;
-		});
+		string task	= get_current_task (config);
 
 		config["kiwi_configuration_" + task] = images_dir + "/" + d;
 		config["current_task"]	= task;
@@ -603,7 +600,8 @@ define symbol ImagesOverviewDialog() {
 		Configurations[name]	= config;
 		overview = add (overview, `item (
 		    `id (name), name,
-		    config["version"]:"1", config["size"]:0
+		    get_preferences (config, "version", "1.0.0"),
+		    get_preferences (config, "size", 0)
 		));
 	    }
 	});
@@ -649,7 +647,8 @@ define symbol ImagesOverviewDialog() {
     if (size (overview) > 0)
     {
 	string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
-	string val	= Configurations[current,"specification"]:"";
+	string val = get_description (
+	    Configurations[current]:$[], "specification");
 	UI::ChangeWidget (`id (`descr), `Value,
 	    mergestring (splitstring(String::EscapeTags (val), "\n"), "<br>"));
     }
@@ -657,18 +656,15 @@ define symbol ImagesOverviewDialog() {
     any ret = nil;
     while(true) {
 
-	ret = UI::UserInput();
-	string current = (string) UI::QueryWidget(`id(`table), `CurrentItem );
+	map event	= UI::WaitForEvent ();
+	ret		= event["ID"]:nil;
+
+	string current	= (string) UI::QueryWidget(`id(`table), `CurrentItem );
 
 	if(ret == `abort || ret == `cancel) {
 	    if(ProductCreator::ReallyAbort()) break;
             else continue;
         }
-	else if (ret == `table)
-	{
-	    UI::ChangeWidget (`id (`descr), `Value,
-		Configurations[current,"specification"]:"");
-	}
         else if (ret == `add)
 	{
 	    ProductCreator::Config = $[];
@@ -693,7 +689,14 @@ sformat (_("Delete configutation %1 now?"), current)))
 		UI::ChangeWidget (`id (`table), `Items, overview);
 	    }
         }
-        else if (ret == `edit)
+	else if (ret == `table)
+	{
+	    UI::ChangeWidget (`id (`descr), `Value,
+		get_description (Configurations[current]:$[], "specification"));
+	    if (event["EventReason"]:"" == "Activated")
+		ret	= `edit;
+	}
+        if (ret == `edit)
 	{
             ProductCreator::Config = Configurations[current]:$[];
 	    string task	= ProductCreator::Config["current_task"]:"";
@@ -709,12 +712,8 @@ sformat (_("Delete configutation %1 now?"), current)))
 	    }
 	    continue;
         }
-	else if (ret == `next || ret == `back) {
+	if (ret == `next || ret == `back) {
 	    break;
-	}
-	else {
-	    y2error("unexpected retcode: %1", ret);
-	    continue;
 	}
     }
     if (ret == `kiwi)
