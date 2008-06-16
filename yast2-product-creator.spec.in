@@ -5,7 +5,7 @@ BuildRequires:	perl-XML-Writer update-desktop-files yast2-devtools yast2-testsui
 
 PreReq:         %fillup_prereq
 
-Requires:	autoyast2-installation yast2-security perl-XML-LibXML
+Requires:	autoyast2-installation yast2-security
 
 # SourceDialogs::IsPlainDir()
 Requires:	yast2-packager >= 2.16.20
@@ -53,5 +53,4 @@ install -d $RPM_BUILD_ROOT/var/lib/YaST2/product-creator
 @ydatadir@/product-creator/*
 #%dir /etc/YaST2/product-creator
 @scrconfdir@/*.scr
-@agentdir@/ag_*
 /var/adm/fillup-templates/sysconfig.product-creator

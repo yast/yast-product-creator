@@ -36,11 +36,6 @@
 
   string content_key	= Kiwi::content_key;
 
-  // return the id of actual widget for boot image
-  string boot_image_widget () {
-    return kiwi_task + "boot";
-  }
-
   // read available the images under /usr/share/kiwi/image/ directory
   list<term> GetAvailableImages (string subdir) {
 
@@ -271,20 +266,20 @@
 
 
   /**
-   * initialize the value of combo box with isoboot items
+   * initialize the value of combo box with boot items
    */
   define void InitBootCombo (string id) {
     UI::ChangeWidget (`id (id), `Items, GetAvailableImages (id));
   }
 
   /**
-   * store the value of current isoboot image
+   * store the value of current boot image
    */
   define void StoreBootCombo (string key, map event) {
       KiwiConfig[key]	= (string) UI::QueryWidget(`id(key), `Value);
   }
   /**
-   * handler for combo box with isoboot items
+   * handler for combo box with boot items
    */
   define symbol HandleBootCombo (string key, map event) {
     // store the value on exiting
@@ -343,7 +338,7 @@
   }
 
   /**
-   * initialize the value of combo box with isoboot items
+   * initialize the value of size unit
    */
   define void InitSizeUnitCombo (string id) {
     string unit	= KiwiConfig["preferences",0,"size",0,"unit"]:"M";
@@ -1116,6 +1111,9 @@ directory."), out_dir));
 	    pref[0,"version"]	= [ $[
 		content_key	: "1.0.0"
 	    ]];
+	    KiwiConfig["preferences"]	= pref;
+// FIXME check if boot directories match current product (-> enable building
+// for product different from installed one)
 	}
 	// set the primary building target according to kiwi_task
 	KiwiConfig["preferences",0,"type"]	= maplist (
@@ -1196,11 +1194,11 @@ directory."), out_dir));
    ****************************************************************************/
 
   // return map with description of tabs
-  // it is a function, to be able to adapt to actual state (e.g. boot_image_widget ())
+  // it is a function, to be able to adapt to actual state)
   map tabs_descr () {
 
     return $[
-    "config.xml" : $[
+      "config.xml" : $[
 	// tab header
 	"header"	: _("Image Configuration"),
 	"contents"	: `HBox (`HSpacing(1),
@@ -1305,7 +1303,7 @@ directory."), out_dir));
 	    "root_dir_table", "root_dir_add", "root_dir_delete",
 	    "config_dir_table", "config_dir_add", "config_dir_delete",
 	],
-    ],
+      ],
     ];
   }
 
@@ -1918,7 +1916,7 @@ return ret;
 	    )
 	),
 	`VSpacing (0.2),
-	`Table (`id(`repositories), `header (
+	`Table (`id(`repositories), `opt (`notify), `header (
 	    // table header
 	    _("Package Repository"))
 	),
@@ -2060,7 +2058,7 @@ without having %1 package installed"),
 		update_repo_table ();
 	    }
 	}
-	else if (ret == `edit)
+	else if (ret == `edit || ret == `repositories)
 	{
 	    string url		= (string)
 		UI::QueryWidget (`id (`repositories), `CurrentItem);
@@ -2071,22 +2069,17 @@ without having %1 package installed"),
 	    if (plaindir)
 	    {
 		map parsed = URL::Parse(url);
-		parsed["scheme"] = "pkg";
 		url = URL::Build (parsed);
+		url	= SourceDialogs::EditPopupType (url, true);
 	    }
-	    url	= SourceDialogs::EditPopup (url);
+	    else
+		url	= SourceDialogs::EditPopup (url);
 	    if (url == "" || url == nil || url == selected_url)
 		continue;
 	    // remove current url + add new one
 	    repositories	= remove (repositories, selected_url);
-	    map parsed = URL::Parse(url);
-	    plaindir		= false;
-	    if (parsed["scheme"]:"" == "pkg")
-	    {
-		parsed["scheme"] = "dir";
-		plaindir         = true;
-		url = URL::Build (parsed);
-	    }
+	    map parsed	= URL::Parse(url);
+	    plaindir	= SourceDialogs::IsPlainDir();
 	    repositories[url]	= $[
 		"url"		: url,
 		"plaindir"	: plaindir

@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Mon Jun 16 14:20:55 CEST 2008 - jsuchome@suse.cz
+
+- image-creator: removed dependency on ag_kiwi, use generci ag_anyxml
+  agent for reading config.xml
+- correctly handle plaindir repository type
+- 2.17.1
+
+-------------------------------------------------------------------
 Wed Jun 11 11:18:33 CEST 2008 - jsuchome@suse.cz
 
 - image-creator: added support for UID, GID and user's full name
