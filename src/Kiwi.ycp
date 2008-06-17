@@ -201,72 +201,6 @@
 
 
   /**
-   * which keys in config.xml are not unique
-   */
-  map non_unique_key	= $[
-    "package"		: true,
-    "opensusePattern"	: true,
-    "ignore"		: true,
-    "user"		: true,
-    "source"		: true,
-    "file"		: true, // for drivers section
-    "profile"		: true,
-  ];
-
-  /**
-   * convert YCP map (of internal type) to XML
-   */
-  string Map2XML (map descr, integer level) {
-
-    string children	= "";
-    string value	= "";
-    string tab		= "";
-    integer i		= 0;
-    while (i < level) {
-	i = i + 1;
-	tab	= tab + "  ";
-    }
-    string key	= descr["__key"]:"";
-    if (key == "") return "";
-
-    if (key == "__anyxml")
-    {
-	// workaround, used until everything is transformed into MapAny2XML
-	return MapAny2XML (
-	    descr["__item"]:"", descr["__value"]:$[], descr["__level"]:0);
-    }
-
-    string ret	= tab + "<" + key;
-    foreach (string subkey, any val, (map<string,any>) descr, {
-	if (subkey == "__key" || non_unique_key[subkey]:false) return;
-	if (subkey == "__children" && is (val, list))
-	    foreach (map chmap, (list<map>) val, {
-		children	= children + "\n" + Map2XML (chmap, level + 1);
-	    });
-	else if (subkey == "__value")
-	    value = String::EscapeTags (sformat ("%1", val));
-	else if (is (val, string) || is (val, integer))
-	    ret	= sformat ("%1 %2=\"%3\"",
-		ret, subkey, String::EscapeTags (tostring (val)));
-    });
-    if (non_unique_key[key]:false)
-	return sformat ("%1/>", ret);
-    if (value != "")
-	ret = sformat ("%1>%2", ret, value);
-    else
-	ret	= ret + ">";
-    if (children != "")
-	ret =	 ret + children + "\n";
-
-    /*
-    if (level == 0 && key == "image") // ugly hack
-	return ret;
-    */
-    ret	= sformat ("%1%2</%3>", ret, haskey (descr, "__value") ? "" : tab, key);
-    return ret;
-  }
-
-  /**
    * import the data from given config.xml
    * @param directory where to look for config.xml
    * @ret map of imported data
@@ -292,10 +226,13 @@
 	]
     ]);
     map image		= anyxml["image",0]:$[];
+
+    // attributes of 'image' tag:
     ret["name"]		= image["name"]:"";
     ret["schemeversion"]= image["schemeversion"]:"2.0";
     if (haskey (image, "inherit"))
 	ret["inherit"]	= image["inherit"]:"";
+
     ret["preferences"]	= image["preferences"]:[];
     ret["description"]	= image["description"]:[];
     ret["users"]	= maplist (map gmap, (list<map>)image["users"]:[], {
@@ -345,37 +282,17 @@
 	KiwiConfig	= save_preferences(KiwiConfig,"defaultroot",chroot_dir);
     }
 
-    // generate a structure for Map2XML function
-    list write_list	= [ $[
-      "__key"		: "image",
-      "name"		: KiwiConfig["name"]:"",
-      "schemeversion"	: KiwiConfig["schemeversion"]:"2.0",
-      "__children"	: [
-	$[
-	    "__key"	: "__anyxml",
-	    "__item"	: "description",
-	    "__value"	: KiwiConfig["description",0]:$[],
-	    "__level"	: 1
-	],
-	$[
-	    "__key"	: "__anyxml",
-	    "__item"	: "preferences",
-	    "__value"	: KiwiConfig["preferences",0]:$[],
-	    "__level"	: 1
-	],
-      ],
-    ]];
-    if (KiwiConfig["inherit"]:"" != "")
-	write_list[0,"inherit"]	= KiwiConfig["inherit"]:"";
-    if (size (KiwiConfig["profiles"]:[]) > 0)
-    {
-	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
-	    "__key"	: "__anyxml",
-	    "__item"	: "profiles",
-	    "__value"	: KiwiConfig["profiles",0]:$[],
-	    "__level"	: 1
-	]);
-    }
+    string image_tag	= sformat ("<image name=\"%1\" schemeversion=\"%2\"%3>",
+	KiwiConfig["name"]:"", KiwiConfig["schemeversion"]:"2.0",
+	(KiwiConfig["inherit"]:"" == "" ?
+	    "" :
+	    sformat (" inherit=\"%1\"", KiwiConfig["inherit"]:"")
+	)
+    );
+    string image_contents	=
+	MapAny2XML ("description", KiwiConfig["description",0]:$[], 1) + "\n" +
+	MapAny2XML ("preferences", KiwiConfig["preferences",0]:$[], 1) + "\n";
+
     if (haskey (KiwiConfig, "users"))
     {
 	foreach (map gmap, KiwiConfig["users"]:[], {
@@ -388,22 +305,19 @@
 		    umap	= remove (umap, "encrypted");
 		return umap;
 	    });
-	    write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
-		"__key"		: "__anyxml",
-		"__item"	: "users",
-		"__value"	: gmap,
-		"__level"	: 1
-	    ]);
+	    image_contents	= image_contents +
+		MapAny2XML ("users", gmap, 1) + "\n";
 	});
+    }
+    if (size (KiwiConfig["profiles"]:[]) > 0)
+    {
+	image_contents	= image_contents +
+	    MapAny2XML ("profiles", KiwiConfig["profiles",0]:$[], 1) + "\n";
     }
     foreach (string source, KiwiConfig["sources"]:[], {
 	map sourcemap	= get_source_value (source, KiwiConfig);
-	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
-	    "__key"	: "__anyxml",
-	    "__item"	: "repository",
-	    "__value"	: sourcemap,
-	    "__level"	: 1
-	]);
+	image_contents	= image_contents +
+	    MapAny2XML ("repository", sourcemap, 1) + "\n";
     });
     foreach (map packagemap, KiwiConfig["packages"]:[], {
 	if (size (packagemap["opensusePattern"]:[]) == 0 &&
@@ -412,27 +326,20 @@
 	    y2milestone ("no patterns/packages in %1", packagemap);
 	    return;
 	}
-	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
-	    "__key"	: "__anyxml",
-	    "__item"	: "packages",
-	    "__value"	: packagemap,
-	    "__level"	: 1
-	]);
+	image_contents	= image_contents +
+	    MapAny2XML ("packages", packagemap, 1) + "\n";
     });
 
     // now, add the rest, created using more generic MapAny2XML function
     if (haskey (KiwiConfig, "split") && size (KiwiConfig["split"]:[]) > 0)
     {
-	write_list[0,"__children"] = add (write_list[0,"__children"]:[], $[
-	    "__key"	: "__anyxml",
-	    "__item"	: "split",
-	    "__value"	: KiwiConfig["split",0]:$[],
-	    "__level"	: 1
-	]);
+	image_contents	= image_contents +
+	    MapAny2XML ("split", KiwiConfig["split",0]:$[], 1) + "\n";
     }
-    // generate the XML using current Map2XML function
-    string write_string	= "<?xml version=\"1.0\"?>\n" +
-	Map2XML (write_list[0]:$[], 0);
+    string write_string	= sformat ("<?xml version=\"1.0\"?>
+%1
+%2</image>", image_tag, image_contents);
+
 
     config_dir	= tmp_dir + "/" + KiwiConfig["name"]:"";
     SCR::Execute (.target.mkdir, config_dir);
