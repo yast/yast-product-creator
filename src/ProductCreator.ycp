@@ -357,7 +357,8 @@ global map<string,string> ReadContentFile(integer srcid) {
 
     string content = Pkg::SourceProvideFile(srcid, 1, "content");
     map<string,string> contentmap = (map<string,string>)SCR::Read(.content_file, content);
-
+    if (contentmap == nil)
+	contentmap	= $[];
     content_cache[srcid] = contentmap;
     y2debug("content_cache: %1", content_cache);
 
