@@ -339,17 +339,19 @@
         Progress::Title(_("ISO image directory ready"));
         Progress::Finish();
 
+	/*
 	if (!Mode::commandline())
 	{
 	    Wizard::EnableNextButton();
 	    Wizard::RestoreNextButton();
 	}
+	*/
 
 
         any ret  = nil;
         repeat
         {
-            ret = (Mode::commandline()) ? `next : UI::UserInput();
+            ret = `next;
             if (ret == `next)
             {
                 if ( ProductCreator::Config["result"]:"" == "iso")
@@ -531,17 +533,12 @@ Fix the problem and try again.</p>
 		return `next;
 	    }
 
+	    /*
             Wizard::EnableNextButton();
             Wizard::RestoreNextButton();
             Wizard::EnableBackButton();
-
-            any ret = nil;
-            repeat
-            {
-                ret = UI::UserInput();
-            }  until (ret == `next || ret == `back || ret == `abort);
-
-            return (symbol)ret;
+	    */
+	    return `next;
         }
 
     symbol CheckBootableSrc()

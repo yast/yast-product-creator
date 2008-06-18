@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Wed Jun 18 13:13:13 CEST 2008 - jsuchome@suse.cz
+
+- handle pattern file with more patterns when deleting unused
+  ones (bnc#393515)
+- do not delete patters required by selected ones
+- 2.17.2
+
+-------------------------------------------------------------------
 Mon Jun 16 14:20:55 CEST 2008 - jsuchome@suse.cz
 
 - image-creator: removed dependency on ag_kiwi, use generci ag_anyxml
