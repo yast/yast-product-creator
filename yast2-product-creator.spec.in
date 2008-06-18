@@ -1,11 +1,14 @@
 @HEADER-COMMENT@
 
 @HEADER@
-BuildRequires:	perl-XML-Writer update-desktop-files yast2-devtools yast2-testsuite yast2-packager autoyast2-installation yast2-security
+BuildRequires:	perl-XML-Writer update-desktop-files yast2-devtools yast2-testsuite yast2-packager autoyast2-installation yast2-security yast2-add-on-creator
 
 PreReq:         %fillup_prereq
 
 Requires:	autoyast2-installation yast2-security
+
+# ag_pattern handling gzipped files
+Requires:	yast2-add-on-creator >= 2.17.1
 
 # SourceDialogs::IsPlainDir()
 Requires:	yast2-packager >= 2.16.20
