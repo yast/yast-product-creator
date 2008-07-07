@@ -376,6 +376,16 @@
     return true;
   }
 
+  // for a given full path to directory, return the path one level up
+  // (/a/b/c -> /a/b)
+  string path_to_dir (string full_path) {
+    // first, leave '/' from the end of string
+    string adapted = "/" + mergestring (
+	filter (string p, splitstring (full_path, "/"), ``(p != "")),"/"
+    );
+    return substring (full_path, 0, findlastof (full_path, "/"));
+  }
+
   /**
    * run kiwi to finally create the selected image
    * @param out_dir output directory for the result
@@ -397,7 +407,8 @@
 	y2milestone ("%1 directory is present, removing...", chroot_dir);
 	SCR::Execute (.target.bash, sformat ("rm -rf %1", chroot_dir));
     }
-
+    // create path to chroot_dir if it does not exist (#406731)
+    FileUtils::CheckAndCreatePath (path_to_dir (chroot_dir));
     // construct the dialog
     UI::OpenDialog(`opt(`decorated), `HBox(`HSpacing(1.5),
     `VBox(
