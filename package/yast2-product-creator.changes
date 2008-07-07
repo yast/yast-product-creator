@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon Jul  7 15:04:30 CEST 2008 - jsuchome@suse.cz
+
+- create a path to the defaultroot directory if it doesn't exists
+  (bnc#406731)
+- 2.17.3 
+
+-------------------------------------------------------------------
 Wed Jun 18 13:13:13 CEST 2008 - jsuchome@suse.cz
 
 - handle pattern file with more patterns when deleting unused
