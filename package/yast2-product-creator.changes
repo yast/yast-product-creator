@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Thu Jul 24 10:55:06 CEST 2008 - jsuchome@suse.cz
+
+- adapted to last version of ag_anyxml (bnc#409491)
+- Image Creator: allow more configurations with same name
+- added new image type that was not in previous config.xml
+- 2.17.4
+
+-------------------------------------------------------------------
 Mon Jul  7 15:04:30 CEST 2008 - jsuchome@suse.cz
 
 - create a path to the defaultroot directory if it doesn't exists

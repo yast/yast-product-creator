@@ -576,6 +576,7 @@ define symbol ImagesOverviewDialog() {
 	sformat ("ls -A1 %1", images_dir));
     if (out != $[])
     {
+	integer i	= 0;
 	foreach (string d, splitstring(out["stdout"]:"", "\n"), {
 	    if (d == "") return;
 	    if (FileUtils::Exists (images_dir + "/" + d + "/config.xml"))
@@ -594,12 +595,14 @@ define symbol ImagesOverviewDialog() {
 		config["current_task"]	= task;
 
 		string name	= config["name"]:d;
-		Configurations[name]	= config;
+		// index by order, so we can handle more configs with same name
+		Configurations[i]	= config;
 		overview = add (overview, `item (
-		    `id (name), name,
+		    `id (i), name,
 		    get_preferences (config, "version", "1.0.0"),
 		    get_preferences (config, "size", 0)
 		));
+		i	= i + 1;
 	    }
 	});
     }
@@ -643,7 +646,7 @@ define symbol ImagesOverviewDialog() {
     UI::ChangeWidget (`id (`edit), `Enabled, size (overview) > 0);
     if (size (overview) > 0)
     {
-	string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
+	integer current = (integer) UI::QueryWidget(`id(`table), `CurrentItem);
 	string val = get_description (
 	    Configurations[current]:$[], "specification");
 	UI::ChangeWidget (`id (`descr), `Value,
@@ -656,7 +659,7 @@ define symbol ImagesOverviewDialog() {
 	map event	= UI::WaitForEvent ();
 	ret		= event["ID"]:nil;
 
-	string current	= (string) UI::QueryWidget(`id(`table), `CurrentItem );
+	integer current	= (integer) UI::QueryWidget(`id(`table), `CurrentItem);
 
 	if(ret == `abort || ret == `cancel) {
 	    if(ProductCreator::ReallyAbort()) break;
@@ -670,20 +673,24 @@ define symbol ImagesOverviewDialog() {
         }
         else if(ret == `delete)
 	{
+	    map config		= Configurations[current]:$[];
+	    string version	= get_preferences (config, "version", "");
 	    if (Popup::YesNo (
 // yes/no popup
-sformat (_("Delete configutation %1 now?"), current)))
+sformat (_("Delete configutation %1 (%2) now?"), config["name"]:"", version)))
 	    {
-		map config	= Configurations[current]:$[];
 		string dir	=
 		    config["kiwi_configuration_"+ config["current_task"]:""]:"";
-		// TODO at the end? (solve possible new config with same name..)
 		if (dir != "" && issubstring (dir, Kiwi::images_dir))
 		    SCR::Execute (.target.bash, "rm -rf " + dir);
 		Configurations	= remove (Configurations, current);
 		overview = filter (term it, (list<term>) overview,
-		    ``(it[0,0]:"" != current));
+		    ``(it[0,0]:-1 != current || it[2]:"" != version));
 		UI::ChangeWidget (`id (`table), `Items, overview);
+		current	= (integer) UI::QueryWidget(`id(`table), `CurrentItem);
+		UI::ChangeWidget (`id (`descr), `Value,
+		    get_description (Configurations[current]:$[],
+		    "specification"));
 	    }
         }
 	else if (ret == `table)
