@@ -1,7 +1,7 @@
 @HEADER-COMMENT@
 
 @HEADER@
-BuildRequires:	perl-XML-Writer update-desktop-files yast2-devtools yast2-testsuite yast2-packager autoyast2-installation yast2-security yast2-add-on-creator
+BuildRequires:	perl-XML-Writer update-desktop-files yast2-devtools yast2-testsuite yast2-packager autoyast2-installation yast2-security yast2-add-on-creator yast2
 
 PreReq:         %fillup_prereq
 
@@ -13,9 +13,8 @@ Requires:	yast2-add-on-creator >= 2.17.1
 # SourceDialogs::IsPlainDir()
 Requires:	yast2-packager >= 2.16.20
 
-# ag_content agent
-Requires:	yast2 >= 2.16.60
-BuildRequires: 	yast2 >= 2.16.60
+# changes in ag_anyxml agent
+Requires:	yast2 >= 2.17.8
 
 # New API of StorageDevices.ycp
 Conflicts:      yast2-storage < 2.16.1

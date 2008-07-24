@@ -41,7 +41,7 @@ string get_current_task (map config) {
     string task	= "iso";
     foreach (map typemap, (list<map>) config["preferences",0,"type"]:[], {
 	task   = typemap[Kiwi::content_key]:task;
-	if (typemap["primary"]:false)
+	if (typemap["primary"]:"false" == "true")
 	    break;
     });
     return task;

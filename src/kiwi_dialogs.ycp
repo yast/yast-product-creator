@@ -1115,17 +1115,38 @@ directory."), out_dir));
 // FIXME check if boot directories match current product (-> enable building
 // for product different from installed one)
 	}
+	boolean primary_included	= false;
+	string boot_dir			= "";
 	// set the primary building target according to kiwi_task
 	KiwiConfig["preferences",0,"type"]	= maplist (
 	    map typemap, (list<map>)pref[0,"type"]:[],
 	{
 	    string type	= typemap[content_key]:"";
-	    if (typemap["primary"]:false && type != kiwi_task)
+	    if (typemap["primary"]:"false" == "true" && type != kiwi_task)
 		typemap	= remove (typemap, "primary");
 	    else if (type == kiwi_task)
-		typemap["primary"]	= true;
+	    {
+		typemap["primary"]	= "true";
+		primary_included	= true;
+	    }
+	    if (boot_dir == "")
+		boot_dir	= typemap["boot"]:"";
 	    return typemap;
 	});
+	// add the new type, that was not previously defined in config.xml
+	// FIXME the default values (format,filesystem...) are missing
+	if (!primary_included)
+	{
+	    string prefix	= kiwi_task == "pxe" ? "net" : kiwi_task;
+	    boot_dir = substring (boot_dir, search (boot_dir, "/") + 1);
+	    KiwiConfig["preferences",0,"type"]	= add (
+		KiwiConfig["preferences",0,"type"]:[], $[
+		    content_key	: kiwi_task,
+		    "boot"	: prefix + "boot/" + boot_dir,
+		    "primary"	: "true"
+		]
+	    );
+	}
 	// save the info about packages and patterns into ProductCreator::Config
 	// ("sources" are already there...)
 	map sw_contents	= KiwiConfig["packages",0]:$[];
@@ -1845,7 +1866,7 @@ return ret;
 	    string type	= typemap[content_key]:"";
 	    if (!primary)
 		kiwi_task	= type;
-	    if (typemap["primary"]:false)
+	    if (typemap["primary"]:"false" == "true")
 		primary		= true;
 	    if ((supported_images == "" && !contains (present_types, type)) ||
 		supported_images == "template")
