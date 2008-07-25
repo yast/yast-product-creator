@@ -434,19 +434,16 @@
     ), `HSpacing(1.5)
     ));
 
-    void update_output () {
-        // read the output line from irw:
-	list<string> out	= (list<string>)SCR::Read(.background.newout);
-	foreach (string line, out, {
-	    line	= String::Replace (line, "\r", "\n");
-	    UI::ChangeWidget (`id(`log), `LastLine, line + "\n");
-	});
+    integer id	= -1;
 
-	list<string> err = (list<string>) SCR::Read(.background.newerr);
-	foreach (string line, err, {
-	    line	= String::Replace (line, "\r", "\n");
-	    UI::ChangeWidget (`id(`errlog), `LastLine, line + "\n");
-	});
+    void update_output () {
+
+	string line = (string)SCR::Read (.process.read_line, id);
+	if (line != nil && line != "")
+	    UI::ChangeWidget (`id(`log), `LastLine, line + "\n");
+	string err = (string)SCR::Read (.process.read_line_stderr, id);
+	if (err!= nil && err != "")
+	    UI::ChangeWidget (`id(`errlog), `LastLine, err + "\n");
     }
 
     string cmd	= sformat ("ZYPP_READONLY_HACK=1 kiwi --nocolor --root %1 --prepare %2 --logfile terminal", chroot_dir, config_dir);
@@ -455,23 +452,18 @@
 
     y2milestone ("calling '%1'", cmd);
 
-    SCR::Execute (.background.run_output_err, cmd);
+    id	= (integer) SCR::Execute (.process.start_shell, cmd);
 
     symbol ret		= nil;
     boolean creating	= false;
     do
     {
 	ret = (symbol) UI::PollInput();
-        if ((boolean) SCR::Read(.background.output_open) &&
-	    (integer) SCR::Read(.background.newlines)>0)
-        {
-	    update_output ();
-        }
-	else if (!(boolean)SCR::Read(.background.isrunning))
+	if (SCR::Read(.process.running, id) != true)
 	{
 	    update_output ();
 
-	    integer status	= (integer) SCR::Read (.background.status);
+	    integer status	= (integer) SCR::Read (.process.status, id);
 	    if (status != 0)
 	    {
 		UI::ReplaceWidget (`id (`rp), `HBox (
@@ -485,7 +477,7 @@
 	    else if (!creating)
 	    {
 		creating	= true;
-		SCR::Execute(.background.kill); // just to be sure...
+		SCR::Execute (.process.kill, id); // just to be sure...
 
 		// now continue with creating
 		UI::ChangeWidget (`id(`log), `LastLine, "\n");
@@ -493,7 +485,7 @@
 		y2milestone ("calling '%1'", cmd);
 		// label
 		UI::ReplaceWidget (`id (`rpl), `Left (`Label (_("Creating Image"))));
-		SCR::Execute (.background.run_output_err, cmd);
+		id	= (integer) SCR::Execute (.process.start_shell, cmd);
 		ret	= nil;
 		continue;
 	    }
@@ -508,14 +500,20 @@
 		break;
 	    }
 	}
+	else
+	{
+	    update_output ();
+	}
 	if (ret == `cancel)
 	{
-	    SCR::Execute(.background.kill);
+	    SCR::Execute (.process.kill, id, 15);
+	    sleep (100);
+	    SCR::Execute (.process.kill, id);
 	}
 	sleep (100);
     } while (ret == nil);
 
-    SCR::Execute(.background.kill);
+    SCR::Execute (.process.kill, id);
     UI::CloseDialog ();
     return ret == `ok;
   }
