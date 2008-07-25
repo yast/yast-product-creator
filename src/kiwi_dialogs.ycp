@@ -1134,18 +1134,25 @@ directory."), out_dir));
 	    return typemap;
 	});
 	// add the new type, that was not previously defined in config.xml
-	// FIXME the default values (format,filesystem...) are missing
+	// read the default values for this type from the template
 	if (!primary_included)
 	{
-	    string prefix	= kiwi_task == "pxe" ? "net" : kiwi_task;
-	    boot_dir = substring (boot_dir, search (boot_dir, "/") + 1);
-	    KiwiConfig["preferences",0,"type"]	= add (
-		KiwiConfig["preferences",0,"type"]:[], $[
-		    content_key	: kiwi_task,
-		    "boot"	: prefix + "boot/" + boot_dir,
-		    "primary"	: "true"
-		]
-	    );
+	    if (default_dir == "")
+	    {
+		default_dir =
+		    Directory::datadir+"/product-creator/kiwi_templates/";
+		default_dir = default_dir + (kiwi_task== "xen" ? "xen" : "iso");
+	    }
+	    map<string,any> def_map = Kiwi::ReadConfigXML (default_dir);
+	    foreach (map typemap, (list<map>)def_map["preferences",0,"type"]:[],
+	    {
+		if (typemap[content_key]:"" == kiwi_task)
+		{
+		    KiwiConfig["preferences",0,"type"]	= add (
+			KiwiConfig["preferences",0,"type"]:[], typemap);
+		    break;
+		}
+	    });
 	}
 	// save the info about packages and patterns into ProductCreator::Config
 	// ("sources" are already there...)
