@@ -58,6 +58,54 @@
    * widget handlers
    ****************************************************************************/
 
+  define void InitCompressionCombo (string id) {
+
+    string current_method	= "none";
+    foreach (map typemap, (list<map>)KiwiConfig["preferences",0,"type"]:[], {
+	if (typemap[content_key]:"" == kiwi_task)
+	{
+	    current_method	= typemap["flags"]:current_method;
+	}
+    });
+    map<string,string> methods	= $[
+	"unified"		: "unified",
+	"compressed"		: "compressed",
+	"unified-cromfs"	: "unified-cromfs",
+	"compressed-cromfs"	: "compressed-cromfs",
+	// combo box label
+	"none"			: _("None")
+    ];
+    list items	= maplist (string method, string label, methods, {
+	return `item (`id (method), label, method == current_method);
+    });
+    UI::ChangeWidget (`id (id), `Items, items);
+  }
+
+  define void StoreCompressionCombo (string key, map event) {
+
+    string selected	= (string) UI::QueryWidget (`id (key), `Value);
+    KiwiConfig["preferences",0,"type"]	= maplist (map typemap,
+	(list<map>)KiwiConfig["preferences",0,"type"]:[],
+    {
+	if (typemap[content_key]:"" == kiwi_task)
+	{
+	    if (selected == "none")
+	    {
+		if (haskey (typemap, "flags"))
+		    typemap	= remove (typemap, "flags");
+	    }
+	    else
+		typemap["flags"]	= selected;
+	}
+	return typemap;
+    });
+  }
+
+  define symbol HandleCompressionCombo (string key, map event) {
+    if (event["ID"]:nil == `next) StoreCompressionCombo (key, event);
+    return nil;
+  }
+
   /**
    * Initialize the widget with ignored packages
    */
@@ -1233,14 +1281,10 @@ directory."), out_dir));
 	    `VBox (
 		`VSpacing (0.2),
 		`HBox (
-		    `HWeight (1, "version"),
-		    `HWeight (1, `HBox ("size", "sizeunit"))
-		    /*
-		    `VBox (
-			`Label (""), "compressed"
-			FIXME compressed vs. unified
-		    )
-		    */
+		    `HWeight (2, `HBox (
+			"version", "size", "sizeunit"
+		    )),
+		    `HWeight (1, "compression")
 		),
 		`HBox (
 		    `HWeight (2, `VBox (
@@ -1255,7 +1299,7 @@ directory."), out_dir));
 	    ), `HSpacing(1)),
 	"widget_names" : [
 	    "version",
-	    "size", "sizeunit", // "compressed",
+	    "size", "sizeunit", "compression",
 	    "sw_selection",
 	    "rt_sw", "configure_sw",
 	    "delete_sw",
@@ -1353,6 +1397,18 @@ directory."), out_dir));
 	"init"		: InitCompressCheckBox,
 	"store"		: StoreCompressCheckBox,
 	"handle"	: HandleCompressCheckBox,
+    ],
+    "compression" : $[
+	"widget"	: `combobox,
+	"opt"		: [ `hstretch, `notify ],
+	"items"		: [],
+	// textentry label
+	"label"		: _("Co&mpression"),
+	// help text
+	"help"		:_("<p>Select the value for image <b>Compression</b>. This will modify the <i>flags</i> value of the image type. Check kiwi manual for the meaning of the available values.</p>"),
+	"init"		: InitCompressionCombo,
+	"store"		: StoreCompressionCombo,
+	"handle"	: HandleCompressionCombo,
     ],
     "sw_selection"	: $[
 	"widget"	: `combobox,
