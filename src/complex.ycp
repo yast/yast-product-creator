@@ -11,7 +11,6 @@
 
     textdomain "product-creator";
 
-    import "Arch";
     import "CommandLine";
     import "Directory";
     import "FileUtils";
@@ -60,6 +59,27 @@
     }
 
     boolean first_start = true;
+
+    // check if the selected configuration has the same target architecture as the machine architecture
+    // needed for creating kiwi images because kiwi cannot create cross-architecture images
+    boolean SameArchitecture()
+    {
+	string arch = ProductCreator::Config["arch"]:"";
+	string sysarch = Arch::architecture();
+
+	// is the target architecture different than the machine architecture?
+	if (arch != nil && arch != "" && arch != sysarch)
+	{
+	    // error message: %1 and %2 are architecture names like i386, x86_64, ppc...
+	    Report::Error(sformat(_("Target architecture of the current configuration (%1)
+does not match the system architecture (%2).
+
+Kiwi cannot create images for different architectures."), arch, sysarch));
+	    return false;
+	}
+
+	return true;
+    }
 
     /**
      * Overview dialog
@@ -122,6 +142,8 @@
 
         any ret = nil;
         while(true) {
+	    // reset the current architecture (needed when going back)
+	    ProductCreator::ResetArch();
 
             ret = UI::UserInput();
 
@@ -174,6 +196,8 @@
 		Package::InstallAll (["kiwi", "kiwi-desc-isoboot"])) {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
+		// check the architecture
+		if (!SameArchitecture()) continue;
 		Kiwi::kiwi_task	= "iso";
                 ret = `kiwi;
                 break;
@@ -182,6 +206,8 @@
 		Package::InstallAll (["kiwi", "kiwi-desc-xenboot"])) {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
+		// check the architecture
+		if (!SameArchitecture()) continue;
 		Kiwi::kiwi_task	= "xen";
                 ret = `kiwi;
 		break;
@@ -190,6 +216,8 @@
 		Package::InstallAll (["kiwi", "kiwi-desc-usbboot"])) {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
+		// check the architecture
+		if (!SameArchitecture()) continue;
 		Kiwi::kiwi_task	= "usb";
                 ret = `kiwi;
 		break;
@@ -198,6 +226,8 @@
 		Package::InstallAll (["kiwi", "kiwi-desc-vmxboot"])) {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
+		// check the architecture
+		if (!SameArchitecture()) continue;
 		Kiwi::kiwi_task	= "vmx";
                 ret = `kiwi;
 		break;
@@ -209,6 +239,10 @@
                 y2error("unexpected retcode: %1", ret);
                 continue;
             }
+
+	    if (ret == `kiwi)
+	    {
+	    }
         }
 
         return (symbol)ret;
@@ -303,7 +337,7 @@
                 y2debug("bootconfig available");
 
 		string fname = (ProductCreator::Config["code10"]:false)
-		    ? sformat("%1/boot/%2/loader/isolinux.cfg", ProductCreator::skel_root, Arch::architecture())
+		    ? sformat("%1/boot/%2/loader/isolinux.cfg", ProductCreator::skel_root, ProductCreator::GetArch())
 		    : sformat("%1/boot/loader/isolinux.cfg", ProductCreator::skel_root);
 
 		SCR::Write(.target.string, fname, ProductCreator::Config["bootconfig"]:"" );
@@ -369,7 +403,7 @@
 		    {
 			Popup::ShowFeedback(_("Creating CD Image..."), _("This may take a while"));
 		    }
-		    string arch = Arch::architecture ();
+		    string arch = ProductCreator::GetArch();
 		    if (arch == "s390_64") arch = "s390x";
 
 		    string command = sformat("/usr/lib/YaST2/bin/y2mkiso '%1' '%2' '%3'", String::Quote(isodir), String::Quote(isofile), String::Quote((ProductCreator::Config["code10"]:false) ? arch : ""));
@@ -481,6 +515,12 @@ Fix the problem and try again.</p>
 
             boolean success = true;
 
+	    string arch = ProductCreator::Config["arch"]:"";
+	    if (arch != nil && arch != "")
+	    {
+		ProductCreator::SetPackageArch(arch);
+	    }
+
 
             Progress::NextStage();
             Pkg::TargetFinish ();
@@ -552,7 +592,7 @@ Fix the problem and try again.</p>
 
 	// skip isolinux configuration if the architecture
 	// is not i386 or x86_64 - there is no isolinux
-	if (Arch::architecture() != "i386" && Arch::architecture() != "x86_64")
+	if (ProductCreator::GetArch() != "i386" && ProductCreator::GetArch() != "x86_64")
 	{
 	    return `skip_isolinux;
 	}

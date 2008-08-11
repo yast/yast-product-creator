@@ -26,6 +26,7 @@ import "Misc";
 import "Directory";
 import "Profile";
 import "AutoinstSoftware";
+// NOTE: do not use Arch:: directly in this module, use GetArch() function instead!
 import "Arch";
 import "Package";
 import "PackageAI";
@@ -92,6 +93,109 @@ map<string,map> pattern_descr	= nil;
  * return boolean return true if abort
  */
 global block<boolean> AbortFunction = nil;
+
+
+/*
+  Target architecture
+  Initialized to the current architecture
+*/
+
+// forward declaration
+string ToPackageArch(string arch);
+
+// default is the system architecture
+string _arch = nil;
+
+string ToPackageArch(string arch)
+{
+    if (arch == "s390_64")
+    {
+	arch = "s390x";
+    }
+    if (arch == "s390_32")
+    {
+	arch = "s390";
+    }
+
+    if (!contains(["i386", "i486", "i586", "i686", "sparc", "sparc64", "mips", "mips64", "ppc", "ppc64", "alpha", "s390", "s390x", "ia64", "x86_64"], arch))
+    {
+	y2error("Unknown architecture '%1'!", arch);
+	return nil;
+    }
+
+    return arch;
+}
+
+/**
+  Set the target package architecture
+  @param new_arch new architecture (i386, i486, i586, i686, sparc, sparc64, mips, mips64, ppc, ppc64, alpha, s390, s390x, ia64, x86_64)
+  @return true on success
+*/
+global boolean SetPackageArch(string new_arch)
+{
+    string pkgarch = ToPackageArch(new_arch);
+
+    if (pkgarch == nil)
+    {
+	return false;
+    }
+
+    _arch = pkgarch;
+    y2milestone("Target architecture set to '%1'", new_arch);
+
+    // set the architecture in the package manager
+    Pkg::SetArchitecture(_arch);
+
+    return true;
+}
+
+// convert package (like i686) arch to system arch (i386)
+global string GetArch()
+{
+    string ret = _arch;
+
+    // not set, use the current arch
+    if (ret == nil)
+    {
+	ret = Arch::architecture();
+    }
+
+    // convert x86 package archs to i386 system arch
+    if (contains(["i486", "i586", "i686"], ret))
+    {
+	ret = "i386";
+    }
+    else if (ret == "s390_64")
+    {
+	ret = "s390x";
+    }
+    else if (ret == "s390_32")
+    {
+	ret = "s390";
+    }
+
+    return ret;
+}
+
+// nil means not set
+global string GetPackageArch()
+{
+    return _arch;
+}
+
+global void ResetArch()
+{
+    _arch = nil;
+
+    if (Pkg::GetArchitecture() != Pkg::SystemArchitecture())
+    {
+	// set the system architecture in the package manager
+	y2milestone("Resetting the target architecture to '%1'", Pkg::SystemArchitecture());
+	Pkg::SetArchitecture(Pkg::SystemArchitecture());
+    }
+}
+
+
 
 /**
  * Data was modified?
@@ -178,7 +282,7 @@ global void MarkTaboo(list<string> packages_taboo)
 global boolean isCode10Source()
 {
     boolean code10 = false;
-    string arch	= Arch::architecture ();
+    string arch	= GetArch();
     if (arch == "s390_64") arch = "s390x";
     foreach (string url , ProductCreator::Config["sources"]:[],
     {
@@ -619,7 +723,7 @@ global define string Readisolinux() ``{
     }
     else
     {
-	string arch = Arch::architecture();
+	string arch = GetArch();
 	if (arch == "s390_64") arch = "s390x";
 	bootconfig_path = sformat("boot/%1/loader/isolinux.cfg", arch);
 
@@ -961,83 +1065,65 @@ boolean CopyDocu(integer srcid, string target)
 boolean CopyPPCBoot(integer srcid, string target)
 {
     y2milestone("Copying PPC boot files");
-
-    list<string> lst = GetList(srcid, 1, "");
-    if (lst == nil)
-    {
-	lst = [];
-    }
-
     boolean ret = true;
 
-    if (contains(lst, "ppc/"))
+    y2milestone("Copying /ppc subdirectory");
+    boolean r = CopyDirectoryRecOpt(srcid, 1, "/ppc", target);
+
+    if (!r)
     {
-	y2milestone("Copying /ppc subdirectory");
-	boolean r = CopyDirectoryRecOpt(srcid, 1, "/ppc", target);
-
-	if (!r)
-	{
-	    y2milestone("Directory listing may be missing, copying /ppc/bootinfo.txt");
-	    CopyFile(srcid, 1, "/ppc/bootinfo.txt", target + "/ppc");
-	}
-
-	ret = ret && r;
+	y2milestone("Directory listing may be missing, copying /ppc/bootinfo.txt");
+	CopyFile(srcid, 1, "/ppc/bootinfo.txt", target + "/ppc");
     }
 
-    if (contains(lst, "PS3/"))
+    ret = ret && r;
+
+
+    y2milestone("Copying /PS3 subdirectory");
+    r = CopyDirectoryRecOpt(srcid, 1, "/PS3", target);
+
+    if (!r)
     {
-	y2milestone("Copying /ppc subdirectory");
-	boolean r = CopyDirectoryRecOpt(srcid, 1, "/PS3", target);
-
-	if (!r)
-	{
-	    y2milestone("Directory listing may be missing, copying /ppc/bootinfo.txt");
-	    Exec(sformat("/bin/mkdir -p '%1/PS3/otheros'", String::Quote(target)));
-	    CopyFile(srcid, 1, "/PS3/otheros/otheros.bld", target + "/PS3/otheros");
-	}
-
-	ret = ret && r;
+	y2milestone("Directory listing may be missing, copying /ppc/bootinfo.txt");
+	Exec(sformat("/bin/mkdir -p '%1/PS3/otheros'", String::Quote(target)));
+	CopyFile(srcid, 1, "/PS3/otheros/otheros.bld", target + "/PS3/otheros");
     }
 
-    if (contains(lst, "suseboot/"))
+    ret = ret && r;
+
+
+    y2milestone("Copying /suseboot subdirectory");
+    r = CopyDirectoryRecOpt(srcid, 1, "/suseboot", target);
+    y2milestone("Result: %1", r);
+
+    if (!r)
     {
-	y2milestone("Copying /suseboot subdirectory");
-	boolean r = CopyDirectoryRecOpt(srcid, 1, "/suseboot", target);
-	y2milestone("Result: %1", r);
+	list<string> files = [
+	    "/suseboot/inst32", "/suseboot/inst64", "/suseboot/os-chooser",
+	    "/suseboot/yaboot", "/suseboot/yaboot.cnf", "/suseboot/yaboot.ibm",
+	    "/suseboot/yaboot.txt"
+	];
 
-	if (!r)
-	{
-	    list<string> files = [
-		"/suseboot/inst32", "/suseboot/inst64", "/suseboot/os-chooser",
-		"/suseboot/yaboot", "/suseboot/yaboot.cnf", "/suseboot/yaboot.ibm",
-		"/suseboot/yaboot.txt"
-	    ];
+	y2milestone("Directory listing may be missing using fixed list: %1", files);
 
-	    y2milestone("Directory listing may be missing using fixed list: %1", files);
-
-	    foreach(string f, files,
-		{
-		    CopyFile(srcid, 1, f, target + f);
-		}
-	    );
-	}
-
-	ret = ret && r;
+	foreach(string f, files,
+	    {
+		CopyFile(srcid, 1, f, target + f);
+	    }
+	);
     }
 
-    if (contains(lst, "etc/"))
+
+    y2milestone("Copying /etc subdirectory");
+    r = CopyDirectoryRecOpt(srcid, 1, "/etc", target);
+
+    if (!r)
     {
-	y2milestone("Copying /etc subdirectory");
-	boolean r = CopyDirectoryRecOpt(srcid, 1, "/etc", target);
-
-	if (!r)
-	{
-	    y2milestone("Directory listing may be missing, copying /etc/yaboot.conf");
-	    CopyFile(srcid, 1, "/etc/yaboot.conf", target + "/etc");
-	}
-
-	ret = ret && r;
+	y2milestone("Directory listing may be missing, copying /etc/yaboot.conf");
+	CopyOptionalFile(srcid, 1, "/etc/yaboot.conf", target + "/etc");
     }
+
+    ret = ret && r;
 
     return ret;
 }
@@ -1356,7 +1442,7 @@ global define boolean  CreateSkeleton () ``{
     string sles_path = "";
     integer sles_src = 0;
     string descr_dir = "";
-    string arch = Arch::architecture();
+    string arch = GetArch();
     if (arch == "s390_64") arch = "s390x";
 
     y2milestone("Config: %1", Config);
@@ -1390,7 +1476,7 @@ global define boolean  CreateSkeleton () ``{
 
     if (bootable_product)
     {
-	if (Arch::i386() || Arch::x86_64())
+	if (_arch == "i386" || _arch == "x86_64")
 	{
 	    if (Config["code10"]:false)
 	    {
@@ -1401,7 +1487,7 @@ global define boolean  CreateSkeleton () ``{
 		Exec(sformat("/bin/mkdir -p '%1/boot/loader'", String::Quote(skel_root)));
 	    }
 	}
-	else if (Arch::ppc() || Arch::ppc64())
+	else if (_arch == "ppc" || _arch == "ppc64")
 	{
 	    Exec(sformat("/bin/mkdir -p '%1/PS3'", String::Quote(skel_root)));
 	    Exec(sformat("/bin/mkdir -p '%1/ppc'", String::Quote(skel_root)));
@@ -1473,7 +1559,7 @@ global define boolean  CreateSkeleton () ``{
 			CopyFile(id, 1, "boot/rescue", sformat("%1/boot", skel_root));
 		    }
 		    // Loader, x86 specific
-		    if (Arch::i386() || Arch::x86_64())
+		    if (_arch == "i386" || _arch == "x86_64")
 		    {
 			if (Config["code10"]:false)
 			{
@@ -1489,7 +1575,7 @@ global define boolean  CreateSkeleton () ``{
 			    CopyDirectoryRec(id, 1, "boot/loader", sformat("%1/boot", skel_root));
 			}
 		    }
-		    else if (Arch::ppc() || Arch::ppc64())
+		    else if (_arch == "ppc" || _arch == "ppc64")
 		    {
 			// recursive copy of /boot
 			CopyDirectoryRec(id, 1, "boot", skel_root);
@@ -1503,7 +1589,7 @@ global define boolean  CreateSkeleton () ``{
 		{
 		    CopyDirectoryRec(id, 1, "boot", skel_root);
 
-		    if (Arch::ppc() || Arch::ppc64())
+		    if (_arch == "ppc" || _arch == "ppc64")
 		    {
 			CopyPPCBoot(id, skel_root);
 		    }
@@ -1643,7 +1729,7 @@ global define boolean  CreateSkeleton () ``{
 		}
 
 		// Loader, x86 specific
-		if (Arch::i386() || Arch::x86_64())
+		if (_arch == "i386" || _arch == "x86_64")
 		{
 		    if (Config["code10"]:false)
 		    {
@@ -1659,7 +1745,7 @@ global define boolean  CreateSkeleton () ``{
 			CopyDirectoryRec(base_source, 1, "boot/loader", sformat("%1/boot", skel_root));
 		    }
 		}
-		else if (Arch::ppc() || Arch::ppc64())
+		else if (_arch == "ppc" || _arch == "ppc64")
 		{
 		    CopyPPCBoot(base_source, skel_root);
 
@@ -1676,7 +1762,7 @@ global define boolean  CreateSkeleton () ``{
 	    {
 		CopyDirectoryRec(base_source, 1, "boot", skel_root);
 
-		if (Arch::ppc() || Arch::ppc64())
+		if (_arch == "ppc" || _arch == "ppc64")
 		{
 		    CopyPPCBoot(base_source, skel_root);
 		}
@@ -2268,7 +2354,7 @@ Try again?
 global define boolean CopyMiscFiles() ``{
 
     string cpCmd = "";
-    string arch = Arch::architecture();
+    string arch = GetArch();
     if (arch == "s390_64") arch = "s390x";
     y2debug("isolinux.cfg: %1", Config["bootconfig"]:"" );
     if (Config["bootconfig"]:"" != "") 

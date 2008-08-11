@@ -303,7 +303,7 @@ define boolean ProductCreatorSequence() ``{
     list<string> required_packages = ["inst-source-utils", "mkisofs", "createrepo"];
 
     // add PPC specific packages
-    if (Arch::architecture() == "ppc" || Arch::architecture() == "ppc64")
+    if (ProductCreator::GetArch() == "ppc" || ProductCreator::GetArch() == "ppc64")
     {
 	// /bin/objcopy - binutils
 	// /bin/mkzimage - lilo
