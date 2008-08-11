@@ -16,6 +16,9 @@ Requires:	yast2-packager >= 2.16.20
 # changes in ag_anyxml agent
 Requires:	yast2 >= 2.17.8
 
+# Pkg::SourceForceRefreshNow()
+Requires:	yast2-pkg-bindings >= 2.17.6
+
 # New API of StorageDevices.ycp
 Conflicts:      yast2-storage < 2.16.1
 
