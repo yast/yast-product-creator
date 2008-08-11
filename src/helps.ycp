@@ -91,10 +91,18 @@ creating this CD.
 </p>
 "),
 
-    /* Configure2 dialog help 1/2 */
+    /* Source selection help 1/2 */
     "sourceDialog" : _("<p><b><big>Select Package Sources</big></b><br>
 Select at least one package source.<br></p>
-"),
+")
+    /* Source selection help 2/2 */
+    + _("<p><b><big>Target Architecture</big></b><br>
+It is possible to create a product for different architecture than the architecture of this machine.
+All selected repositories must support the target architecture.<br>
+<b>Note:</b> KIWI does not support different architectures yet, do not change the
+architecture if you intend to create a KIWI image from the current configuration.</p>
+")
+    ,
 
     /* Configure2 dialog help 1/2 */
     "dest" : _("<p><b><big>ISO Directory and Image</big></b><br>

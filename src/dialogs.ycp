@@ -16,7 +16,6 @@
     import "SourceManager";
     import "Report";
     import "URL";
-    import "Arch";
     import "Label";
     import "Popup";
     import "URL";
@@ -25,6 +24,7 @@
     import "CWM";
     import "String";
     import "Package";
+    import "Arch";
 
     include "product-creator/routines.ycp";
     include "product-creator/helps.ycp";
@@ -197,6 +197,13 @@
                 else continue;
             }
             else if(ret == `next ) {
+
+		// set architecture if configured
+		string arch = ProductCreator::Config["arch"]:"";
+		if (arch != nil && arch != "")
+		{
+		    ProductCreator::SetPackageArch(arch);
+		}
 
                 string name = (string)UI::QueryWidget(`id(`name), `Value);
 
@@ -419,6 +426,170 @@
 	return (symbol)ret;
     }
 
+string AskArch(string label, list<string> archs, string preselected)
+{
+    term widget1 = `VBox();
+    term widget2 = `VBox();
+
+    const integer max_lines = 6;
+
+    if (!contains(archs, preselected))
+    {
+	y2warning("The preselected architecture is missing in the list!");
+	// add the missing preselected arch
+	archs = prepend(archs, preselected);
+    }
+
+    integer archsz = size(archs);
+    integer col1num = (archsz > max_lines) ? (archsz + 1) / 2 : archsz;
+    y2milestone("Number of archs in the first column: %1", col1num);
+
+    // preselect the first item
+    foreach(string a, archs,
+	{
+	    if (col1num > 0)
+	    {
+		widget1 = add(widget1, `MinWidth(10, `Left(`RadioButton(`id(a), a, a == preselected))));
+	    }
+	    else
+	    {
+		widget2 = add(widget2, `MinWidth(10, `Left(`RadioButton(`id(a), a, a == preselected))));
+	    }
+
+	    col1num = col1num - 1;
+	}
+    );
+
+    term content = `MarginBox(1, 0.5,
+	`VBox(
+	    `Label(label),
+	    `VSpacing(1),
+	    `Frame(_("Target Architecture"),
+		`RadioButtonGroup(`id(`rb),
+		    `HBox(
+			`Top(widget1),
+			`HStretch(),
+			`Top(widget2),
+			`HStretch()
+		    )
+		)
+	    ),
+	    `VSpacing(1),
+	    `HBox(
+		`HSpacing(`opt(`hstretch), 2),
+		`HWeight(1, `PushButton(`id(`ok), Label::OKButton())),
+		`HSpacing(2),
+		`HWeight(1, `PushButton(`id(`cancel), Label::CancelButton())),
+		`HSpacing(`opt(`hstretch), 2)
+	    )
+	)
+    );
+
+    UI::OpenDialog(content);
+
+    any ui = UI::UserInput();
+    string ret = (string)UI::QueryWidget(`id(`rb), `CurrentButton);
+
+    UI::CloseDialog();
+
+    if (ui == `cancel || ui == `close)
+    {
+	// canceled
+	return nil;
+    }
+    else if (ui == `ok)
+    {
+	y2milestone("Selected architecture: %1", ret);
+	return ret;
+    }
+    else
+    {
+	y2error("Unhandled user input %1", ui);
+	return nil;
+    }
+}
+
+
+boolean CheckArchitecture(integer SrcID)
+{
+    map general_info = Pkg::SourceGeneralData(SrcID);
+    boolean found_architecture = false;
+    list<string> found_archs = [];
+
+    string arch = ProductCreator::GetArch();
+    if (arch == "s390_64") arch = "s390x";
+
+    // architecture check is possible only for YaST sources
+    if (general_info["type"]:"" == "YaST")
+    {
+	// Check architecture
+	map<string,string> read_content = ProductCreator::ReadContentFile(SrcID);
+	y2milestone("content file: %1", read_content);
+
+	foreach(string key, string value, read_content,
+	    {
+		if (key == "ARCH." + arch)
+		{
+		    found_architecture = true;
+		    break;
+		}
+		else
+		{
+		    string found_arch = regexpsub(key, "ARCH\\.(.*)", "\\1");
+
+		    if (found_arch != nil)
+		    {
+			found_archs = add(found_archs, found_arch);
+		    }
+		}
+	    }
+	);
+    }
+    else
+    {
+	y2milestone("Not a YaST source, cannot verify the architecture");
+	found_architecture = true;
+    }
+
+    y2milestone("Architecture %1 is supported: %2", arch, found_architecture);
+
+    if (found_architecture)
+    {
+	return true;
+    }
+    else
+    {
+	y2milestone("Supported architectures: %1", found_archs);
+
+	if (size(found_archs) == 0)
+	{
+	    y2milestone("The repository does not provide architecture data, assuming it is compatible");
+	    return true;
+	}
+
+	// the architecture is different, ask to switch it
+	// %1 is URL of the repository
+	// %2 is name of the architecture (like i386, x86_64, ppc...)
+	string new_arch = AskArch(
+	    sformat(_("Source %1
+does not support the current target architecture (%2).
+Change the target architecture?
+"), general_info["url"]:"", ProductCreator::GetArch()),
+	found_archs, found_archs[0]:"");
+
+	// nil == switch has been canceled
+	if (new_arch != nil)
+	{
+	    // change the architecture
+	    ProductCreator::SetPackageArch(new_arch);
+	    return true;
+	}
+    }
+
+    return false;
+}
+
+
     /**
      * Dialog for selecting the sources
      * @return symbol
@@ -440,12 +611,22 @@
 
 
         term buttons =
-            `HBox(
-                    `PushButton(`id(`select), Label::SelectButton() ),
-                    `PushButton(`id(`remove), Label::RemoveButton() ),
-		    // push button label
-                    `PushButton(`id(`create), _("Cr&eate New..."))
-                 );
+	    `VBox(
+		`HBox(
+		    `ReplacePoint(`id(`rp),
+			`Label(sformat(_("Target architecture: %1"), ProductCreator::GetArch()))
+		    ),
+		    `HSpacing(2),
+		    `PushButton(`id(`arch), Label::EditButton())
+		),
+		`VSpacing(0.3),
+		`HBox(
+			`PushButton(`id(`select), Label::SelectButton() ),
+			`PushButton(`id(`remove), Label::RemoveButton() ),
+			// push button label
+			`PushButton(`id(`create), _("Cr&eate New..."))
+		     )
+	    );
 
 
         term contents =
@@ -489,42 +670,16 @@
             else if (ret == `select)
             {
                 integer SrcID = (integer)UI::QueryWidget(`id(`table), `CurrentItem);
-		map general_info = Pkg::SourceGeneralData(SrcID);
-		boolean found_architecture = false;
 
-		string arch = Arch::architecture ();
-		if (arch == "s390_64") arch = "s390x";
+		boolean repo_ok = CheckArchitecture(SrcID);
 
-		// architecture check is possible only for YaST sources
-		if (general_info["type"]:"" == "YaST")
-		{
-		    // Check architecture
-		    map<string,string> read_content = ProductCreator::ReadContentFile(SrcID);
-		    y2milestone("content file: %1", read_content);
-
-		    foreach(string key, string value, read_content,
-			{
-			    if (key == "ARCH." + arch)
-			    {
-				found_architecture = true;
-				break;
-			    }
-			}
-		    );
-		}
-		else
-		{
-		    y2milestone("Not a YaST source, cannot verify the architecture");
-		    found_architecture = true;
-		}
-
-		y2milestone("Architecture %1 is supported: %2", arch, found_architecture);
-
-		if (found_architecture)
+		if (repo_ok)
 		{
 		    if (!contains(selected_items, SrcID))
 		    {
 			selected_items = add (selected_items, SrcID );
+
+			map general_info = Pkg::SourceGeneralData(SrcID);
 
 			// enable the source
 			if (general_info["enabled"]:false)
@@ -534,12 +689,14 @@
 		    }
 
 		    UI::ChangeWidget(`id(`table), `Item(SrcID, 0) , _("X"));
-		}
-		else
-		{
-		    Report::Error(sformat(_("The source does not support the architecture of this machine (%1).
-Select another source.
-"), arch));
+
+		    // refresh the target architecture if it has been changed
+		    if (ProductCreator::GetPackageArch() != nil)
+		    {
+			UI::ReplaceWidget(`rp,
+			    `Label(sformat(_("Target Architecture: %1"), ProductCreator::GetPackageArch()))
+			);
+		    }
 		}
             }
             else if (ret == `remove)
@@ -597,6 +754,68 @@ Select another source.
                     continue;
                 }
 
+		string arch = ProductCreator::GetPackageArch() ;
+
+		if (arch != nil)
+		{
+		    y2milestone("Target architecture has been changed");
+		    ProductCreator::Config["arch"] = arch;
+
+		    boolean check_ok = true;
+		    boolean arch_changed = false;
+
+		    do
+		    {
+			string ar = ProductCreator::GetPackageArch();
+			check_ok = true;
+			arch_changed = false;
+
+			// all selected sources should be refreshed
+			// check archs onece again (needed after switching architecture multiple times)
+			foreach(integer src, selected_items,
+			    {
+				if (!CheckArchitecture(src))
+				{
+				    check_ok = false;
+				    break;
+				}
+
+				arch_changed = arch_changed || (ar != ProductCreator::GetPackageArch());
+			    }
+			);
+		    }
+		    while(arch_changed);
+
+		    if (!check_ok)
+		    {
+			// error message
+			Report::Error(_("There is a mismatch between the selected
+repositories and the machine architecture.
+
+Either select another repositories or
+change the target architecture."));
+
+			// don't leave the dialog
+			continue;
+		    }
+
+		    // temporarily initialize the target, read trusted GPG keys (needed for refresh)
+		    Pkg::TargetInit("/", false);
+
+		    foreach(integer src, selected_items,
+			{
+			    Pkg::SourceForceRefreshNow(src);
+			}
+		    );
+
+		    // reload repositories
+		    Pkg::SourceFinishAll();
+		    Pkg::SourceStartManager(false);
+
+		    // finish the target
+		    Pkg::TargetFinish();
+		}
+
 		going_back = false;
 
                 break;
@@ -604,6 +823,34 @@ Select another source.
             else if( ret == `back) {
                 break;
             }
+	    else if (ret == `arch)
+	    {
+		// ask for the target architecture
+		string pkg_arch = ProductCreator::GetPackageArch();
+
+		if (pkg_arch == nil)
+		{
+		    pkg_arch = Pkg::SystemArchitecture();
+		}
+
+		string new_arch = AskArch(
+		    _("Select the new target architecture."),
+		    // sort the list according to the current locale
+		    lsort(["i386", "i486", "i586", "i686", "sparc", "sparc64", "mips", "mips64", "ppc", "ppc64", "alpha",
+			"s390", "s390x", "ia64", "x86_64"]),
+		    pkg_arch);
+
+		// nil == switch has been canceled
+		if (new_arch != nil && new_arch != "" && new_arch != pkg_arch)
+		{
+		    // change the architecture
+		    ProductCreator::SetPackageArch(new_arch);
+
+		    UI::ReplaceWidget(`rp,
+			`Label(sformat(_("Target Architecture: %1"), ProductCreator::GetPackageArch()))
+		    );
+		}
+	    }
             else {
                 y2error("unexpected retcode: %1", ret);
                 continue;
@@ -851,8 +1098,8 @@ The created medium will not be bootable.\n"))
 	// while the package manager is initialized
 	UI::ReplaceWidget(`rep,
 			  mode == nil ?
-			  `PackageSelector(`id(`packages )) :
-			  `PackageSelector(`id(`packages ), `opt(mode))
+			  `PackageSelector(`id(`packages)) :
+			  `PackageSelector(`id(`packages), `opt(mode))
 			  );
 
 	symbol result = (symbol) UI::RunPkgSelection(`id(`packages ) );
@@ -1262,19 +1509,33 @@ more <b>add-on</b> selections and packages.
      */
     define symbol packageSelector()
     {
-	string base_pattern = ProductCreator::Config["base"]:"";
-	list<string> patterns = ProductCreator::Config["addons"]:[];
-	list<string> packages = ProductCreator::Config["packages"]:[];
-	list<string> taboo = ProductCreator::Config["taboo"]:[];
+	map<string,any> result = $[];
 
-	map<string,any> result = runPackageSelector(base_pattern, patterns, packages, taboo, `patterns);
+	do
+	{
+	    string base_pattern = ProductCreator::Config["base"]:"";
+	    list<string> patterns = ProductCreator::Config["addons"]:[];
+	    list<string> packages = ProductCreator::Config["packages"]:[];
+	    list<string> taboo = ProductCreator::Config["taboo"]:[];
 
-	ProductCreator::Config["base"] = result["base"]:"";
-	ProductCreator::Config["addons"] = result["addons"]:[];
-	ProductCreator::Config["packages"] = result["packages"]:[];
-	ProductCreator::Config["taboo"] = result["taboo"]:[];
-	ProductCreator::Config["code10"] = result["code10"]:true;
-        ProductCreator::Config["type"] = result["type"]:`patterns;
+	    result = runPackageSelector(base_pattern, patterns, packages, taboo, `patterns);
+
+	    y2debug("Package selector result: %1", result);
+
+	    ProductCreator::Config["base"] = result["base"]:"";
+	    ProductCreator::Config["addons"] = result["addons"]:[];
+	    ProductCreator::Config["packages"] = result["packages"]:[];
+	    ProductCreator::Config["taboo"] = result["taboo"]:[];
+	    ProductCreator::Config["code10"] = result["code10"]:true;
+	    ProductCreator::Config["type"] = result["type"]:`patterns;
+	}
+	while(result["ui"]:`next == `cancel && !ProductCreator::ReallyAbort());
+
+	// the package selector returns `cancel when pressing [Abort]
+	if (result["ui"]:`next == `cancel)
+	{
+	    return `abort;
+	}
 
 	return result["ui"]:`next;
     }
@@ -1361,15 +1622,21 @@ This key is checked when the product is added as a repository.</p>")
 	    GPGWidgets::SetSelectedPrivateKey(ProductCreator::Config["gpg_key"]:"");
 	}
 
-	symbol ret = CWM::ShowAndRun ($[
-	    "widget_names" : ["sign_checkbox", "select_private_key", "create_new_key"],
-	    "widget_descr" : union(GPGWidgets::Widgets(), sign_checkbox_widget()),
-	    "contents" :  GpgDialogContent(),
-	    "caption" : caption,
-	    "back_button" : Label::BackButton (),
-	    "next_button" : Label::NextButton (),
-	    "fallback_functions" : $[]
-	]);
+	symbol ret = nil;
+
+	do
+	{
+	    ret = CWM::ShowAndRun ($[
+		"widget_names" : ["sign_checkbox", "select_private_key", "create_new_key"],
+		"widget_descr" : union(GPGWidgets::Widgets(), sign_checkbox_widget()),
+		"contents" :  GpgDialogContent(),
+		"caption" : caption,
+		"back_button" : Label::BackButton (),
+		"next_button" : Label::NextButton (),
+		"fallback_functions" : $[]
+	    ]);
+	}
+	while(ret == `abort && !ProductCreator::ReallyAbort());
 
 	boolean sign = (boolean)UI::QueryWidget(`id("sign_checkbox"), `Value);
 	y2milestone("Sign the medium: %1", sign);
@@ -1416,6 +1683,16 @@ This key is checked when the product is added as a repository.</p>")
         // summary line
         summary = Summary::AddLine(summary, sformat(_("Selected %1 packages"),
                     size(Pkg::GetPackages(`selected, true))));
+
+	string arch = ProductCreator::Config["arch"]:"";
+	// display the architecture in the summary if it has been changed
+	if (arch != nil && arch != "" && arch != Arch::architecture())
+	{
+	    summary = Summary::AddHeader(summary, _("Architecture") );
+
+	    // summary line, %1 is e.g. i386, x86_64, ppc...
+	    summary = Summary::AddLine(summary, sformat(_("Target architectrure: %1"), arch));
+	}
 
         // summary caption
         summary = Summary::AddHeader(summary,_("Output Directory"));
@@ -1488,6 +1765,12 @@ press Next to continue.
         repeat
         {
             ret = UI::UserInput();
+
+	    if (ret == `abort && !ProductCreator::ReallyAbort())
+	    {
+		// abort canceled
+		ret = `dummy;
+	    }
         }  until (ret == `next || ret == `back || ret == `abort);
         Wizard::CloseDialog();
 
