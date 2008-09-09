@@ -96,7 +96,7 @@ map cmdline_description = $[
 	// TODO provide also for create-iso...?
 	"create_iso"    : $[
 	    // command line help text for 'create_iso' option
-	    "help"      : _("Output should be ISO image instead of directory tree"),
+	    "help"      : _("Output should be an ISO image instead of directory tree"),
 	],
 	"iso_name"      : $[
 	    // command line help text for 'iso_name' option
