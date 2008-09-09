@@ -1405,7 +1405,7 @@ directory."), out_dir));
 	// textentry label
 	"label"		: _("Co&mpression"),
 	// help text
-	"help"		:_("<p>Select the value for image <b>Compression</b>. This will modify the <i>flags</i> value of the image type. Check kiwi manual for the meaning of the available values.</p>"),
+	"help"		:_("<p>Select the value for image <b>Compression</b>. This will modify the <i>flags</i> value of the image type. Check the kiwi manual for the meaning of the available values.</p>"),
 	"init"		: InitCompressionCombo,
 	"store"		: StoreCompressionCombo,
 	"handle"	: HandleCompressionCombo,
@@ -1679,8 +1679,9 @@ directory."), out_dir));
 			    _("GID"))
 	),
 	// help for table with users
-	"help"		: _("<p>For each user, specify <b>Name</b>, <b>Password</b>, <b>Home Directory</b> and group
-to which the users belongs.</p>"),
+	"help"		: _("<p>For each user, specify the <b>Name</b>, <b>Password</b>, <b>Home Directory</b> and group
+to which the users belongs.</p>
+"),
 	"init"		: InitUsersTable,
 	"handle"	: HandleAddEditUser,
     ],
@@ -1799,7 +1800,7 @@ return ret;
     _("<p>Select <b>Output Directory</b> for the created image.</p>") +
 
     // help text for kiwi UI preparation, cont.
-    _("<p>Modify the list of <b>Package Repositories</b> that will be used for creating the image. Use <b>Add From System</b> to add one of current system repository.</p>") +
+    _("<p>Modify the list of <b>Package Repositories</b> that will be used for creating the image. Use <b>Add From System</b> to add one of the current system repositories.</p>") +
 
     // help text for kiwi UI preparation, cont.
     _("<p>Use <b>Next</b> to continue with the configuration.</p>");

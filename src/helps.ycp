@@ -51,7 +51,7 @@ An additional dialog informs whether it is safe to do so.
     /* Ovreview dialog help 1/3 */
     "overview" : _("<p><b><big>Product Creator Configuration Overview</big></b><br>
 Obtain an overview of available configurations. Additionally
-edit those configuration.<br></p>
+edit those configurations.<br></p>
 ") +
 
     /* Ovreview dialog help 2/3 */
@@ -128,8 +128,9 @@ to the skeleton.
 
     /* help text - the base selection dialog 2/4 */
 _("<p>One of the used repositories must be marked as the base product. The base
-product repository should be bootable to ensure the new created product is also
-bootable.</p>") +
+product repository should be bootable to ensure the newly created product is also
+bootable.</p>
+") +
 
     /* help text - the base selection dialog 3/4 */
 _("<p>The other repositories will be used as add-ons for the base repository.</p>")
