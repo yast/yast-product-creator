@@ -2636,6 +2636,15 @@ global define boolean setPackages() ``{
 
     CheckLanguage();
 
+    // mark taboo packages
+    list<string> taboo_packages = Config["taboo"]:[];
+
+    if (size(taboo_packages) > 0)
+    {
+	y2milestone("Setting Taboo packages: %1", taboo_packages);
+	MarkTaboo(taboo_packages);
+    }
+
     boolean ret = Pkg::PkgSolve(false);
 
     return (ret);
