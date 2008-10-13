@@ -462,6 +462,8 @@ global define list<integer> UrlToId(list<string> urls)
 	return id;
     });
 
+    y2milestone("URL to repoid: %1 -> %2", urls, sources);
+
     return sources;
 }
 
@@ -684,7 +686,7 @@ global define list Overview() ``{
  */
 global define list getSourceURLs ( list<integer> ids ) ``{
     list<string> urls = maplist(integer i , ids, ``{
-	map media = Pkg::SourceMediaData(i);
+	map media = Pkg::SourceGeneralData(i);
 
 	return(media["url"]:"");
     });
@@ -2386,7 +2388,7 @@ global boolean CheckUnavailableSources()
     list<integer> selected_items = UrlToId(Config["sources"]:[]);
 
     // remove not found sources (with id = -1)
-    selected_items = filter(integer source_id, selected_items, {return source_id > 0;});
+    selected_items = filter(integer source_id, selected_items, {return source_id >= 0;});
 
     // were all sources found?
     if (size(Config["sources"]:[]) != size(selected_items))
@@ -2542,22 +2544,52 @@ global define boolean setPackages() ``{
         kernels = [
                    "kernel-64k-pagesize",
                    "kernel-bigsmp",
-                   "kernel-pae",
                    "kernel-debug",
                    "kernel-default",
+                   "kernel-smp",
+                   "kernel-sn2",
+		   "kernel-xen",
+                   "kernel-um",
+                   "kernel-vanilla"
+		   ];
+
+	// add architecture dependent kernels
+	// They might be available e.g. on an update source but they shoudln't be
+	// added automatically because they might require unavailable packages
+	// It can happen probably only on x86_64 when kernel-pae (i386 only)
+	// is released on online update source (bnc#421995)
+	string arch = GetArch();
+
+	if (arch == "i386")
+	{
+	    kernels = (list<string>)union(kernels, [
+                   "kernel-pae",
+		   "kernel-xenpae",
+	    ]);
+	}
+	else if (arch == "s390")
+	{
+	    kernels = (list<string>)union(kernels, [
+                   "kernel-s390",
+	    ]);
+	}
+	else if (arch == "s390x")
+	{
+	    kernels = (list<string>)union(kernels, [
+                   "kernel-s390",
+                   "kernel-s390x",
+	    ]);
+	}
+	else if (arch == "ppc64")
+	{
+	    kernels = (list<string>)union(kernels, [
                    "kernel-iseries64",
                    "kernel-pmac64",
                    "kernel-pseries64",
                    "kernel-ppc64",
-                   "kernel-s390",
-                   "kernel-s390x",
-                   "kernel-smp",
-                   "kernel-sn2",
-		   "kernel-xen",
-		   "kernel-xenpae",
-                   "kernel-um",
-                   "kernel-vanilla"
-		   ];
+	    ]);
+	}
+
     } else {
         kernels = add(kernels, kernel);
     }
