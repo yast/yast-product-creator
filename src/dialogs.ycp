@@ -64,6 +64,8 @@
 			     sd["url"]:""
 			     );
 	}
+
+	y2debug("Table item for source %1: %2", source, item);
 	return item;
     }
 
@@ -643,7 +645,7 @@ Change the target architecture?
         list<integer> selected_items = ProductCreator::UrlToId(ProductCreator::Config["sources"]:[]);
 
 	// remove not found sources (with id = -1)
-	selected_items = filter(integer source_id, selected_items, {return source_id > 0;});
+	selected_items = filter(integer source_id, selected_items, {return source_id >= 0;});
 
 	foreach(integer i, selected_items, {
             UI::ChangeWidget(`id(`table), `Item(i, 0) , _("X"));
@@ -876,7 +878,11 @@ change the target architecture."));
         /* dialog caption */
         string caption = _("Base Source Selection");
 
-        integer default_base = ProductCreator::Config["base_repo"]:-1;
+	string base_url = ProductCreator::Config["base_repo"]:"";
+	y2milestone("Base product: %1", base_url);
+
+	// convert the URL to Id
+        integer default_base = ProductCreator::UrlToId([base_url])[0]:-1;
 
 	if (default_base < 0)
 	{
@@ -925,6 +931,11 @@ The created medium will not be bootable.\n"))
 			ret = `again;
 		    }
 		}
+	    }
+
+	    if (ret == `close)
+	    {
+		ret = `abort;
 	    }
 	}
 

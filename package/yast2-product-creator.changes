@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Mon Oct 13 13:22:42 CEST 2008 - lslezak@suse.cz
+
+- fixed source ID checks (0 is a valid ID)
+- do not automatically add kernel-pae (i386 only) package into
+  x86_64 product (bnc#421995)
+- properly convert repo URL to ID
+
+-------------------------------------------------------------------
 Tue Sep  9 11:22:23 CEST 2008 - jsuchome@suse.cz
 
 - merged texts from proofread 
