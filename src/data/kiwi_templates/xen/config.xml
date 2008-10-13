@@ -9,6 +9,7 @@
 		<type boot="xenboot/suse-11.0" filesystem="ext3">xen</type>
 		<version>1.0.0</version>
 		<size unit="M">2000</size>
+		<packagemanager>zypper</packagemanager>
 		<rpm-check-signatures>False</rpm-check-signatures>
 		<rpm-force>True</rpm-force>
 	</preferences>

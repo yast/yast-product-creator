@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Mon Oct 13 13:39:30 CEST 2008 - jsuchome@suse.cz
+
+- Image Creator: include packagemanager in templates (bnc#434692) 
+
+-------------------------------------------------------------------
 Mon Oct 13 13:22:42 CEST 2008 - lslezak@suse.cz
 
 - fixed source ID checks (0 is a valid ID)

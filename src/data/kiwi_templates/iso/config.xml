@@ -13,6 +13,7 @@
     <type boot="oemboot/suse-11.0" filesystem="ext3" flags="unified">oem</type>
     <version>1.0.0</version>
     <size unit="M">2000</size>
+    <packagemanager>zypper</packagemanager>
     <rpm-check-signatures>False</rpm-check-signatures>
     <rpm-force>False</rpm-force>
     <locale>en_US.UTF-8</locale>
