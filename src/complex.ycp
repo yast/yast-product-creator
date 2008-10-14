@@ -292,6 +292,13 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
 	    // progressbar label
 	    progress_descriptions = add(progress_descriptions, _("Signing the source with a GPG key..."));
 	}
+	else
+	{
+	    // label
+	    progress_stages = add(progress_stages, _("Disable signature checks in linuxrc"));
+	    // progressbar label
+	    progress_descriptions = add(progress_descriptions, _("Disabling signature checks in linuxrc..."));
+	}
 
         Progress::New(
                 _("Creating ISO image directory..."),
@@ -352,23 +359,14 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
             return `overview;
         }
 
-	if (gpg_key != "")
+	Progress::NextStage();
+	if (!ProductCreator::SignSourceStep())
 	{
-	    Progress::NextStage();
-	    if (!ProductCreator::SignSourceStep())
-	    {
-		ProductCreator::ResetCallbacks();
-		return `overview;
-	    }
-	}
-	else
-	{
-	    // update content files if the source is not signed (bnc #368146)
-	    ProductCreator::UpdateContentFiles();
+	    ProductCreator::ResetCallbacks();
+	    return `overview;
 	}
 
         integer i = 0;
-
 
         Progress::Title(_("ISO image directory ready"));
         Progress::Finish();

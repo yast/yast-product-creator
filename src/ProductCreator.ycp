@@ -1955,8 +1955,7 @@ global define boolean  CreateSkeleton () ``{
 	    });
 	});
 
-	y2internal ("patterns + dependencies: %1", used_patterns);
-
+	y2milestone("patterns + dependencies: %1", used_patterns);
 
 	list<string> files = (list<string>)SCR::Read(.target.dir, sformat("%1/%2", skel_root, descrDir));
 	if (files == nil)
@@ -2027,11 +2026,24 @@ global define boolean  CreateSkeleton () ``{
     return success;
 }
 
-// see http://en.opensuse.org/Secure_Installation_Sources
+/**
+ * see http://en.opensuse.org/Secure_Installation_Sources
+ * @param gpg_key GPG key ID or empty if the product should be unsigned
+ * @param initrd_file path to the initrd file
+ * @return boolean true on success
+ */
 boolean InsertKeyToInitrd(string gpg_key, string initrd_file)
 {
-    y2milestone("Adding GPG key %1 to initrd %2", gpg_key, initrd_file);
-    // initrd is cpio.gz archive
+    if (gpg_key == "")
+    {
+	y2milestone("Disabling signature checks in initrd %1", initrd_file);
+    }
+    else
+    {
+	y2milestone("Adding GPG key %1 to initrd %2", gpg_key, initrd_file);
+    }
+
+    // initrd is a cpio.gz archive
 
     list<string> parts = splitstring(initrd_file, "/");
     if (size(parts) > 1)
@@ -2041,25 +2053,46 @@ boolean InsertKeyToInitrd(string gpg_key, string initrd_file)
     }
     string base = mergestring(parts, "/");
 
-    boolean ret = GPG::ExportPublicKey(gpg_key, sformat("%1/gpg-%2.gpg", base, gpg_key));
+    // uncompress the initrd
+    y2milestone("Uncompressing initrd: %1", initrd_file);
+    boolean ret = Exec(sformat("cd '%1' && gunzip < '%2' > '%2.cpio'", String::Quote(base), String::Quote(initrd_file)));
     if (!ret) return false;
 
-    // uncompress the archive and add the GPG key
-    string command = sformat("cd '%1' && gunzip < '%2' > '%2.cpio' && echo 'gpg-%3.gpg' | cpio -o -H newc -A -F '%2.cpio'", String::Quote(base), String::Quote(initrd_file), gpg_key);
-    y2milestone("command: %1", command);
+    string new_file = "";
 
-    map out = (map)SCR::Execute(.target.bash_output, command);
-    y2milestone("output: %1", out);
-    ret = out["exit"]:-1 == 0;
+    if (gpg_key == "")
+    {
+	// unpack 'linuxrc.config' file
+	ret = Exec(sformat("cd '%1' && cpio -i -H newc -F '%2.cpio' linuxrc.config",
+	    String::Quote(base), String::Quote(initrd_file)));
+	if (!ret) return false;
+
+	// add 'Insecure: 1' option
+	ret = Exec(sformat("cd '%1' && echo 'Insecure:\t1' >> linuxrc.config", String::Quote(base)));
+	if (!ret) return false;
+
+	// add linuxrc instead of a gpg key
+	new_file = "linuxrc.config";
+    }
+    else
+    {
+	ret = GPG::ExportPublicKey(gpg_key, sformat("%1/gpg-%2.gpg", base, gpg_key));
+	if (!ret) return false;
+
+	// add the exported GPG key
+	new_file = sformat("gpg-%1.gpg", gpg_key);
+    }
+
+    // uncompress the archive and add the GPG key or new linuxrc.config file
+    string command = sformat("cd '%1' && echo '%3' | cpio -o -H newc -A -F '%2.cpio'",
+	String::Quote(base), String::Quote(initrd_file), String::Quote(new_file));
+    ret = Exec(command);
     if (!ret) return false;
 
     // compress the archive, remove the temporary files
-    command = sformat("gzip --best < '%1.cpio' > '%1' && rm -f '%1.cpio' '%2/gpg-%3.gpg'", String::Quote(initrd_file), String::Quote(base), gpg_key);
-    y2milestone("command: %1", command);
-
-    out = (map)SCR::Execute(.target.bash_output, command);
-    y2milestone("output: %1", out);
-    ret = out["exit"]:-1 == 0;
+    command = sformat("gzip --best < '%1.cpio' > '%1' && rm -f '%1.cpio' '%2'",
+	String::Quote(initrd_file), String::Quote(new_file));
+    ret = Exec(command);
 
     return ret;
 }
@@ -2341,6 +2374,14 @@ Try again?
 
 	// insert the key into the installation initrd
 	success = success && InsertKeyToInitrds(gpg_key, skel_root);
+    }
+    else
+    {
+	// add 'Insecure: 1' to linuxrc.config
+	success = success && InsertKeyToInitrds("", skel_root);
+
+	// update content files if the source is not signed (bnc #368146)
+	success = success && UpdateContentFiles();
     }
 
     y2milestone("Source signed: %1", success);
@@ -2712,18 +2753,8 @@ global define string checkPackageAvail() ``{
     toCopy = $[];
     foreach(string package, selectedPackages, ``{
 
-	list<map> package_data_list = Pkg::PkgPropertiesAll(package);
-	map package_data = nil;
-
-	// get the selected package
-	foreach(map pkg_data, package_data_list,
-	    {
-		if (pkg_data["status"]:`unknown == `selected)
-		{
-		    package_data = pkg_data;
-		}
-	    }
-	);
+	list<map> package_data_list = Pkg::ResolvableProperties(package, `package, "");
+	map package_data = package_data_list[0]:$[];
 
 	if (package_data == nil || package_data == $[])
 	{
@@ -2733,8 +2764,8 @@ global define string checkPackageAvail() ``{
 	{
 	    y2debug("package_data: %1", package_data);
 	    string arch =  package_data["arch"]:"noarch";
-	    integer src = package_data["srcid"]:0;
-	    integer medianr = package_data["medianr"]:1;
+	    integer src = package_data["source"]:-1;
+	    integer medianr = package_data["medium_nr"]:1;
 
 	    list<map> pkglist = toCopy[src, medianr]:[];
 
