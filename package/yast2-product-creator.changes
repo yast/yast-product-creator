@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Tue Oct 14 14:18:06 CEST 2008 - lslezak@suse.cz
+
+- use Pkg::ResolvableProperties() instead of
+  Pkg::PkgPropertiesAll() when verifying availablity of all
+  packages, that's much faster
+- add 'Insecure: 1' to linuxrc.config file when the product is not
+  signed (bnc#421571)
+
+-------------------------------------------------------------------
 Mon Oct 13 13:47:35 CEST 2008 - lslezak@suse.cz
 
 - mark taboo packages when creating a product (bnc#421180)
