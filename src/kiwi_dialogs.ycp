@@ -482,6 +482,42 @@
   }
 
   /**
+   * initialize the string value of "preferences" related widget
+   */
+  define void InitPreferences (string id) {
+    UI::ChangeWidget (`id (id), `Value,
+	KiwiConfig["preferences",0,id,0,content_key]:""
+    );
+  }
+
+  /**
+   * store the string value of "preferences" related given widget
+   */
+  define void StorePreferences (string key, map event) {
+    string val	= (string) UI::QueryWidget (`id(key), `Value);
+    if (val == "" && haskey (KiwiConfig["preferences",0]:$[], key))
+    {
+	KiwiConfig["preferences",0]	=
+	    remove (KiwiConfig["preferences",0]:$[], key);
+    }
+    else if (val != "")
+    {
+	KiwiConfig["preferences",0,key]	= [ $[
+	    content_key : UI::QueryWidget (`id(key), `Value)
+	]];
+    }
+  }
+
+  /**
+   * handler for string-value "preferences" related widgets: store on exit/save
+   */
+  define symbol HandlePreferences (string key, map event) {
+    // store the value on exiting
+    if (event["ID"]:nil == `next) StorePreferences (key, event);
+    return nil;
+  }
+
+  /**
    * initialize the table with users
    */
   define void InitUsersTable (string id) {
@@ -1316,9 +1352,19 @@ directory."), out_dir));
 		"contact",
 		`VSpacing (0.2),
 		"specification",
+		`VSpacing (0.6),
+		// frame label
+		`Frame (_("Locale settings"), `HBox (
+		    "locale",
+		    "keytable",
+		    "timezone"
+		)),
 		`VStretch ()
 	    ), `HSpacing (1)),
-	"widget_names" : [ "author", "contact", "specification" ],
+	"widget_names" : [
+	    "author", "contact", "specification", "locale", "keytable",
+	    "timezone"
+	],
     ],
     "users" : $[
 	// tab header
@@ -1654,6 +1700,33 @@ directory."), out_dir));
 	"init"		: InitDescription,
 	"store"		: StoreDescription,
 	"handle"	: HandleDescription,
+	"no_help"	: true,
+    ],
+    "locale" : $[
+	"widget"	: `textentry,
+	// textentry label
+	"label"		: _("&Locale"),
+	"init"		: InitPreferences,
+	"store"		: StorePreferences,
+	"handle"	: HandlePreferences,
+	"no_help"	: true,
+    ],
+    "keytable" : $[
+	"widget"	: `textentry,
+	// textentry label
+	"label"		: _("&Keyboard layout"),
+	"init"		: InitPreferences,
+	"store"		: StorePreferences,
+	"handle"	: HandlePreferences,
+	"no_help"	: true,
+    ],
+    "timezone" : $[
+	"widget"	: `textentry,
+	// textentry label
+	"label"		: _("&Time zone"),
+	"init"		: InitPreferences,
+	"store"		: StorePreferences,
+	"handle"	: HandlePreferences,
 	"no_help"	: true,
     ],
     // ---------------- widgtes for users tab
