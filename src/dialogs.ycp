@@ -1618,6 +1618,9 @@ more <b>add-on</b> selections and packages.
 		"help" : _("<p><big><b>Sign</b></big><br>
 To make it possible for users to verify your product, sign it with a GPG key. 
 This key is checked when the product is added as a repository.</p>")
+		// part of the help text (signing dialog), the URL can be modified to the translated language
+		// (if the page exists in that language, you have to check that!)
+		+ _("<P>If the product is not signed Yast automatically adds option 'Insecure: 1' to the linuxrc configuration file, otherwise linuxrc would deny loading unsigned installation system at boot. See http://en.opensuse.org/Linuxrc for more information.</P>")
 	    ]
 	];
     }
