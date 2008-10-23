@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Thu Oct 23 16:19:49 CEST 2008 - lslezak@suse.cz
+
+- added a help text describing linuxrc option insecure=1
+
+-------------------------------------------------------------------
 Wed Oct 15 10:33:44 CEST 2008 - jsuchome@suse.cz
 
 - Image Creator: added widgets for locale, timezone and keytable
