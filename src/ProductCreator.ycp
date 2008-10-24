@@ -1088,7 +1088,7 @@ boolean CopyPPCBoot(integer srcid, string target)
     {
 	y2milestone("Directory listing may be missing, copying /ppc/bootinfo.txt");
 	Exec(sformat("/bin/mkdir -p '%1/PS3/otheros'", String::Quote(target)));
-	CopyFile(srcid, 1, "/PS3/otheros/otheros.bld", target + "/PS3/otheros");
+	CopyOptionalFile(srcid, 1, "/PS3/otheros/otheros.bld", target + "/PS3/otheros");
     }
 
     ret = ret && r;
