@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Fri Oct 31 16:20:05 CET 2008 - lslezak@suse.cz
+
+- read and set the product name (bnc#440609)
+
+-------------------------------------------------------------------
 Fri Oct 24 13:12:05 CEST 2008 - lslezak@suse.cz
 
 - File "/PS3/otheros/otheros.bld" is optional when creating a PPC
