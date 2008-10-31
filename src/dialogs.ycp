@@ -919,9 +919,11 @@ change the target architecture."));
 		y2internal("Selected base product: %1", base);
 
 		integer base_src_id =  ProductCreator::UrlToId([base])[0]:-1;
+		map<string,any> boot_info = ProductCreator::GetBootInfoRepo(base_src_id);
+		boolean bootable = boot_info["bootable"]:false;
 
 		// is the base source bootable?
-		if (!ProductCreator::isBootSource(base_src_id))
+		if (!bootable)
 		{
 		    y2warning("Selected base product is not bootable");
 
@@ -1028,9 +1030,6 @@ The created medium will not be bootable.\n"))
         string tmp = (string)SCR::Read( .target.tmpdir );
         SCR::Execute(.target.mkdir, tmp + "/tmproot");
         Pkg::TargetInit( tmp + "/tmproot" , true);
-
-	// add code10 flag if the new source type is detected
-	ProductCreator::CheckCode10Source();
 
         boolean  success =  ProductCreator::EnableSource();
 
@@ -1505,9 +1504,6 @@ more <b>add-on</b> selections and packages.
 	// selections or patterns are used in the product
         ret_map["type"] = using_patterns ? `patterns : `selections;
 
-	// add code10 flag if the new source type is detected
-	ret_map["code10"] = ProductCreator::isCode10Source();
-
 	ret_map["ui"] = ret;
 
         Wizard::CloseDialog();
@@ -1537,7 +1533,6 @@ more <b>add-on</b> selections and packages.
 	    ProductCreator::Config["addons"] = result["addons"]:[];
 	    ProductCreator::Config["packages"] = result["packages"]:[];
 	    ProductCreator::Config["taboo"] = result["taboo"]:[];
-	    ProductCreator::Config["code10"] = result["code10"]:true;
 	    ProductCreator::Config["type"] = result["type"]:`patterns;
 	}
 	while(result["ui"]:`next == `cancel && !ProductCreator::ReallyAbort());

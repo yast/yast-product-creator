@@ -279,42 +279,6 @@ global void MarkTaboo(list<string> packages_taboo)
     }
 }
 
-global boolean isCode10Source()
-{
-    boolean code10 = false;
-    string arch	= GetArch();
-    if (arch == "s390_64") arch = "s390x";
-    foreach (string url , ProductCreator::Config["sources"]:[],
-    {
-	integer i = SourceManager::getSourceId(url);
-
-	y2milestone("Downloading %1/boot/directory.yast...", url);
-	string local_directory_yast = Pkg::SourceProvideOptionalFile(i, 1, "/boot/directory.yast");
-
-	if (local_directory_yast != nil && local_directory_yast != "")
-	{
-	    // read directory.yast file
-	    string dir_listing = (string)SCR::Read(.target.string, local_directory_yast);
-
-	    if (dir_listing != nil && dir_listing != "")
-	    {
-		list<string> items = splitstring(dir_listing, "\n");
-
-		code10 = code10 || contains(items, arch + "/");
-	    }
-	}
-    });
-
-    y2milestone("CODE10 source: %1", code10);
-
-    return code10;
-}
-
-global void CheckCode10Source()
-{
-    // add code10 flag - /boot directory layout
-    ProductCreator::Config["code10"] = isCode10Source();
-}
 
 symbol autoyastPackages ()
 {
@@ -331,9 +295,6 @@ symbol autoyastPackages ()
     string tmp = (string)SCR::Read( .target.tmpdir );
     SCR::Execute(.target.mkdir, tmp + "/tmproot");
     Pkg::TargetInit( tmp + "/tmproot" , true);
-
-    // add code10 flag if the new source type is detected
-    CheckCode10Source();
 
     boolean  success =  ProductCreator::EnableSource();
 
@@ -1350,17 +1311,28 @@ global string CreateAddonFile(map<integer,string> products)
 }
 
 
-global boolean isBootSource(integer srcid)
+global list<string> BootFiles(integer srcid)
 {
-    boolean bootable = false;
     y2milestone("Downloading boot/directory.yast from src %1...", srcid);
     string local_directory_yast = Pkg::SourceProvideOptionalFile(srcid, 1, "/boot/directory.yast");
 
-    bootable = local_directory_yast != nil;
-    y2milestone("Source %1 bootable: %2, directory.yast: %3", srcid, bootable, local_directory_yast);
+    y2milestone("directory.yast from src %1: %2", srcid, local_directory_yast);
 
-    return bootable;
+    list<string> ret = [];
+
+    if (local_directory_yast != nil)
+    {
+	string listing = (string)SCR::Read(.target.string, local_directory_yast);
+
+	ret = splitstring(listing, "\n");
+	ret = filter(string f, ret, {return f != "";});
+    }
+
+    y2milestone("Content of boot/directory.yast: %1", ret);
+
+    return ret;
 }
+
 
 /**
  * Write the modified file with pattern definitions
@@ -1431,12 +1403,46 @@ global boolean WritePatternFile (string file_path, list<map> patterns) {
     return ret;
 }
 
+global map<string,any> GetBootInfoRepo(integer repo)
+{
+    list<string> boot_files = ProductCreator::BootFiles(repo);
+    boolean bootable_product = size(boot_files) > 0;
+
+    string arch = ProductCreator::GetArch();
+    // ppc64 has /boot/ppc
+    string boot_architecture = contains(boot_files, arch + "/") ? arch : "";
+
+    // TODO FIXME: add ppc 64 hack
+    // if (arch)== "ppc64") ? "ppc" : arch;
+
+    map<string,any> ret = $[ "bootable" : bootable_product, "boot_architecture" : boot_architecture ];
+
+    y2milestone("Bootinfo: %1", ret);
+
+    return ret;
+}
+
+global map<string,any> GetBootInfo()
+{
+    string base_url = Config["base_repo"]:"";
+
+    y2milestone("Configured base repository: %1", base_url);
+
+    // detect the base source
+    integer base_source = (base_url != "") ? (UrlToId([base_url])[0]:-1) : checkProductDependency();
+
+    map<string,any> ret = GetBootInfoRepo(base_source);
+    ret = add(ret, "base_source", base_source);
+
+    return ret;
+}
+
 /**
  * Create Skeleton
  * @return boolean true on success
  */
-global define boolean  CreateSkeleton () ``{
-
+global define boolean CreateSkeleton(integer base_source, boolean bootable_product, string boot_architecture)
+{
     integer ret = 0;
     boolean success = true;
     boolean savespace = Config["savespace"]:false;
@@ -1445,7 +1451,6 @@ global define boolean  CreateSkeleton () ``{
     integer sles_src = 0;
     string descr_dir = "";
     string arch = GetArch();
-    if (arch == "s390_64") arch = "s390x";
 
     y2milestone("Config: %1", Config);
 
@@ -1453,17 +1458,7 @@ global define boolean  CreateSkeleton () ``{
     skel_root = sformat("%1/%2", Config["iso-directory"]:"", Config["name"]:"");
     SCR::Execute(.target.mkdir, skel_root);
 
-    string base_url = Config["base_repo"]:"";
-    y2milestone("Configured base repository: %1", base_url);
-
-    // detect the base source
-    integer base_source = (base_url != "") ? (UrlToId([base_url])[0]:-1) : checkProductDependency();
-    boolean bootable_product = isBootSource(base_source);
-
-    // ppc64 has /boot/ppc
-    string boot_architecture = (arch == "ppc64") ? "ppc" : arch;
-
-    if (bootable_product && Config["code10"]:false)
+    if (bootable_product)
     {
 	Exec(sformat("/bin/mkdir -p '%1/boot/%2'", String::Quote(skel_root), String::Quote(boot_architecture)));
     }
@@ -1480,17 +1475,11 @@ global define boolean  CreateSkeleton () ``{
     {
 	if (_arch == "i386" || _arch == "x86_64")
 	{
-	    if (Config["code10"]:false)
-	    {
-		Exec(sformat("/bin/mkdir -p '%1/boot/%2/loader'", String::Quote(skel_root), String::Quote(arch)));
-	    }
-	    else
-	    {
-		Exec(sformat("/bin/mkdir -p '%1/boot/loader'", String::Quote(skel_root)));
-	    }
+	    Exec(sformat("/bin/mkdir -p '%1/boot/%2/loader'", String::Quote(skel_root), String::Quote(boot_architecture)));
 	}
 	else if (_arch == "ppc" || _arch == "ppc64")
 	{
+	    // FIXME PS3 is optional
 	    Exec(sformat("/bin/mkdir -p '%1/PS3'", String::Quote(skel_root)));
 	    Exec(sformat("/bin/mkdir -p '%1/ppc'", String::Quote(skel_root)));
 	    Exec(sformat("/bin/mkdir -p '%1/suseboot'", String::Quote(skel_root)));
@@ -1550,32 +1539,17 @@ global define boolean  CreateSkeleton () ``{
 		if (savespace)
 		{
 		    // Installation, rescue images
-		    if (Config["code10"]:false)
-		    {
-			CopyFile(id, 1, sformat("boot/%1/rescue", arch),
-			    sformat("%1/boot/%2", skel_root, arch));
-		    }
-		    else
-		    {
-			// use the old directory
-			CopyFile(id, 1, "boot/rescue", sformat("%1/boot", skel_root));
-		    }
+		    CopyFile(id, 1, sformat("boot/%1/rescue", boot_architecture),
+			sformat("%1/boot/%2", skel_root, boot_architecture));
+
 		    // Loader, x86 specific
 		    if (_arch == "i386" || _arch == "x86_64")
 		    {
-			if (Config["code10"]:false)
-			{
-			    // recursive copy of /boot/$arch/loader/*
-			    CopyDirectoryRec(id, 1, sformat("boot/%1/loader", arch), sformat("%1/boot/%2", skel_root, arch));
+			// recursive copy of /boot/$arch/loader/*
+			CopyDirectoryRec(id, 1, sformat("boot/%1/loader", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
 
-			    // nonrecursive copy of /boot/$arch/*
-			    CopyDirectoryNonRec(id, 1, sformat("boot/%1", arch), sformat("%1/boot", skel_root));
-			}
-			else
-			{
-			    // recursive copy of /boot/loader/*
-			    CopyDirectoryRec(id, 1, "boot/loader", sformat("%1/boot", skel_root));
-			}
+			// nonrecursive copy of /boot/$arch/*
+			CopyDirectoryNonRec(id, 1, sformat("boot/%1", boot_architecture), sformat("%1/boot", skel_root));
 		    }
 		    else if (_arch == "ppc" || _arch == "ppc64")
 		    {
@@ -1631,18 +1605,9 @@ global define boolean  CreateSkeleton () ``{
 	    {
 		if (bootable_product)
 		{
-		    // Installation, rescue images
-		    if (Config["code10"]:false)
-		    {
-			CopyFile(id, 1, sformat("boot/%1/rescue", arch), sformat("%1/boot/%2", skel_root, arch));
-			CopyFile(id, 1, sformat("boot/%1/root", arch), sformat("%1/boot/%2", skel_root, arch));
-			CopyOptionalFile(id, 1, sformat("boot/%1/root.fonts", arch), sformat("%1/boot/%2", skel_root, arch));
-		    }
-		    else
-		    {
-			CopyFile(id, 1, "boot/rescue", sformat("%1/boot", skel_root));
-			CopyFile(id, 1, "boot/root", sformat("%1/boot", skel_root));
-		    }
+		    CopyFile(id, 1, sformat("boot/%1/rescue", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
+		    CopyFile(id, 1, sformat("boot/%1/root", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
+		    CopyOptionalFile(id, 1, sformat("boot/%1/root.fonts", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
 		}
 
 		// copy content* files
@@ -1654,15 +1619,8 @@ global define boolean  CreateSkeleton () ``{
 	    {
 		if (bootable_product)
 		{
-		    if (Config["code10"]:false)
-		    {
-			CopyFile(id, 1, sformat("boot/%1/root", arch), sformat("%1/boot/%2", skel_root, arch));
-			CopyOptionalFile(id, 1, sformat("boot/%1/root.fonts", arch), sformat("%1/boot/%2", skel_root, arch));
-		    }
-		    else
-		    {
-			CopyFile(id, 1, "boot/root", sformat("%1/boot", skel_root));
-		    }
+		    CopyFile(id, 1, sformat("boot/%1/root", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
+		    CopyOptionalFile(id, 1, sformat("boot/%1/root.fonts", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
 		}
 
 		// copy base files, skip all directories
@@ -1717,35 +1675,18 @@ global define boolean  CreateSkeleton () ``{
 	{
 	    if (savespace)
 	    {
-		// Installation, rescue images
-		if (Config["code10"]:false)
-		{
-		    CopyFile(base_source, 1, sformat("boot/%1/rescue", arch), sformat("%1/boot/%2", skel_root, arch));
-		    CopyFile(base_source, 1, sformat("boot/%1/root", arch), sformat("%1/boot/%2", skel_root, arch));
-		    CopyFile(base_source, 1, sformat("boot/%1/root.fonts", arch), sformat("%1/boot/%2", skel_root, arch));
-		}
-		else
-		{
-		    CopyFile(base_source, 1, "boot/rescue", sformat("%1/boot", skel_root));
-		    CopyFile(base_source, 1, "boot/root", sformat("%1/boot", skel_root));
-		}
+		    CopyFile(base_source, 1, sformat("boot/%1/rescue", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
+		    CopyFile(base_source, 1, sformat("boot/%1/root", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
+		    CopyFile(base_source, 1, sformat("boot/%1/root.fonts", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
 
 		// Loader, x86 specific
 		if (_arch == "i386" || _arch == "x86_64")
 		{
-		    if (Config["code10"]:false)
-		    {
-			// recursive copy of /boot/$arch/loader/*
-			CopyDirectoryRec(base_source, 1, sformat("boot/%1/loader", arch), sformat("%1/boot/%2", skel_root, arch));
+		    // recursive copy of /boot/$boot_architecture/loader/*
+		    CopyDirectoryRec(base_source, 1, sformat("boot/%1/loader", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
 
-			// nonrecursive copy of /boot/$arch/*
-			CopyDirectoryNonRec(base_source, 1, sformat("boot/%1", arch), sformat("%1/boot", skel_root));
-		    }
-		    else
-		    {
-			// recursive copy of /boot/loader/*
-			CopyDirectoryRec(base_source, 1, "boot/loader", sformat("%1/boot", skel_root));
-		    }
+		    // nonrecursive copy of /boot/$boot_architecture/*
+		    CopyDirectoryNonRec(base_source, 1, sformat("boot/%1", boot_architecture), sformat("%1/boot", skel_root));
 		}
 		else if (_arch == "ppc" || _arch == "ppc64")
 		{
@@ -1912,7 +1853,7 @@ global define boolean  CreateSkeleton () ``{
     Exec(sformat("/bin/echo %1 >> '%2/media.1/media'", count, String::Quote(skel_root)));
 
     // make the source digitally unsigned (because signed descr/packages file has been modified)
-    if (Config["code10"]:false)
+    if (boot_architecture != "")
     {
 	// remove the key and the checksum
 	Exec(sformat("/bin/rm '%1/content.asc' '%1/content.key'", String::Quote(skel_root)));
@@ -2394,32 +2335,34 @@ Try again?
  * Copy other files to directory tree
  * @return boolean true on success
  */
-global define boolean CopyMiscFiles() ``{
-
+global define boolean CopyMiscFiles(string boot_arch)
+{
     string cpCmd = "";
+
     string arch = GetArch();
     if (arch == "s390_64") arch = "s390x";
+
     y2debug("isolinux.cfg: %1", Config["bootconfig"]:"" );
-    if (Config["bootconfig"]:"" != "") 
+
+    if (Config["bootconfig"]:"" != "")
     {
         y2debug("custom config available");
 
-	string fname = (Config["code10"]:false)
-	    ? sformat("%1/boot/%2/loader/isolinux.cfg", skel_root, arch)
-	    : sformat("%1/boot/loader/isolinux.cfg", skel_root);
+	string fname = sformat("%1/boot/%2/loader/isolinux.cfg", skel_root, boot_arch);
+	y2milestone("Writing isolinux.cfg to %1", fname);
 
         SCR::Write(.target.string, fname, Config["bootconfig"]:"" );
     }
-    cpCmd = (Config["code10"]:false)
-	? sformat("cp -- '%1/product-creator/message' '%2/boot/%3/loader'", String::Quote(Directory::datadir), String::Quote(skel_root), arch)
-	: sformat("cp -- '%1/product-creator/message' '%2/boot/loader'", String::Quote(Directory::datadir), String::Quote(skel_root));
-    SCR::Execute (.target.bash, cpCmd);
 
-    cpCmd = (Config["code10"]:false)
-	? sformat("cp -- '%1/product-creator/options.msg' '%2/boot/%3/loader'", String::Quote(Directory::datadir), String::Quote(skel_root), arch)
-	: sformat("cp -- '%1/product-creator/options.msg' '%2/boot/loader'", String::Quote(Directory::datadir), String::Quote(skel_root));
-    SCR::Execute (.target.bash, cpCmd);
+    cpCmd = sformat("cp -- '%1/product-creator/message' '%2/boot/%3/loader'",
+	String::Quote(Directory::datadir), String::Quote(skel_root), boot_arch);
 
+    Exec(cpCmd);
+
+    cpCmd = sformat("cp -- '%1/product-creator/options.msg' '%2/boot/%3/loader'",
+	String::Quote(Directory::datadir), String::Quote(skel_root), boot_arch);
+
+    Exec(cpCmd);
 
     return true;
 }
