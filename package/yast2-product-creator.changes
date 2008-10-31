@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Oct 31 20:04:05 CET 2008 - jsuchome@suse.cz
+
+- image-creator template: install pattern packages by default
+  (bnc#404022)
+- 2.17.11 
+
+-------------------------------------------------------------------
 Fri Oct 31 16:20:05 CET 2008 - lslezak@suse.cz
 
 - read and set the product name (bnc#440609)
