@@ -862,6 +862,24 @@ change the target architecture."));
         return (symbol)ret;
     }
 
+    string ProductFromRepo(integer repo_id)
+    {
+	map<string,string> read_content = ProductCreator::ReadContentFile(repo_id);
+	string prod_name = read_content["LABEL"]:"";
+
+	y2milestone("Product name: %1", prod_name);
+	return prod_name;
+    }
+
+    string ProductFromURL(string url)
+    {
+        integer src_id = ProductCreator::UrlToId([url])[0]:-1;
+	y2milestone("Reading product name from src %1", src_id);
+	string prod_name = ProductFromRepo(src_id);
+
+	return prod_name;
+    }
+
     define symbol baseProductSelectionDialog()
     {
 	if (size(ProductCreator::Config["sources"]:[]) == 1)
@@ -872,7 +890,14 @@ change the target architecture."));
 	    // remove the option if it exists
 	    if (haskey (ProductCreator::Config, "base_repo"))
 		ProductCreator::Config = remove(ProductCreator::Config, "base_repo");
-	    return going_back ? `back : `next;
+	    symbol ret = going_back ? `back : `next;
+
+	    if (ret == `next)
+	    {
+		ProductCreator::Config["product"] = ProductFromURL((ProductCreator::Config["sources"]:[])[0]:"");
+	    }
+
+	    return ret;
 	}
 
         /* dialog caption */
@@ -944,6 +969,7 @@ The created medium will not be bootable.\n"))
 	if (ret == `next)
 	{
 	    ProductCreator::Config["base_repo"] = base;
+	    ProductCreator::Config["product"] = ProductFromURL(base);
 	}
 
 	return ret;
@@ -1461,6 +1487,7 @@ more <b>add-on</b> selections and packages.
 		// do not return patterns selected by dependencies
 		foreach (map pat, Pkg::ResolvableProperties ("", `pattern, ""),
 		{
+		    y2debug("Processing pattern: %1", pat);
 		    if (pat["status"]:`none == `selected)
 		    {
 			y2milestone ("pat %1 selected by %2" , pat["name"]:"",
