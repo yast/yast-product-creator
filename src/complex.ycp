@@ -319,7 +319,14 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
 	// redirect the download callbacks
 	ProductCreator::RedirectCallbacks();
 
-        if (!ProductCreator::CreateSkeleton())
+	map<string, any> boot_info = ProductCreator::GetBootInfo();
+	y2milestone("Boot info: %1", boot_info);
+
+	boolean bootable = boot_info["bootable"]:false;
+	string boot_arch = boot_info["boot_architecture"]:"";
+	integer base_source = boot_info["base_source"]:-1;
+
+        if (!ProductCreator::CreateSkeleton(base_source, bootable, boot_arch))
         {
             Report::Error(_("Error while creating skeleton."));
 	    ProductCreator::ResetCallbacks();
@@ -335,17 +342,15 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
         Progress::NextStage();
         if (ProductCreator::Config["pkgtype"]:"" == "autoyast")
         {
-            ProductCreator::CopyMiscFiles();
+            ProductCreator::CopyMiscFiles(boot_arch);
         }
-        else 
+        else
         {
            if (ProductCreator::Config["bootconfig"]:"" != "")
             {
                 y2debug("bootconfig available");
-
-		string fname = (ProductCreator::Config["code10"]:false)
-		    ? sformat("%1/boot/%2/loader/isolinux.cfg", ProductCreator::skel_root, ProductCreator::GetArch())
-		    : sformat("%1/boot/loader/isolinux.cfg", ProductCreator::skel_root);
+		string fname = sformat("%1/boot/%2/loader/isolinux.cfg", ProductCreator::skel_root, boot_arch);
+		y2milestone("Writing bootconfig to %1", fname);
 
 		SCR::Write(.target.string, fname, ProductCreator::Config["bootconfig"]:"" );
             }
@@ -401,10 +406,8 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
 		    {
 			Popup::ShowFeedback(_("Creating CD Image..."), _("This may take a while"));
 		    }
-		    string arch = ProductCreator::GetArch();
-		    if (arch == "s390_64") arch = "s390x";
 
-		    string command = sformat("/usr/lib/YaST2/bin/y2mkiso '%1' '%2' '%3'", String::Quote(isodir), String::Quote(isofile), String::Quote((ProductCreator::Config["code10"]:false) ? arch : ""));
+		    string command = sformat("/usr/lib/YaST2/bin/y2mkiso '%1' '%2' '%3'", String::Quote(isodir), String::Quote(isofile), String::Quote(boot_arch));
 		    y2milestone("command: %1", command);
 
                     SCR::Execute (.target.bash, command, $["CD_PUBLISHER": pub, "CD_PREPARER": prep ]);
@@ -581,10 +584,12 @@ Fix the problem and try again.</p>
 
     symbol CheckBootableSrc()
     {
-	integer base_src = ProductCreator::checkProductDependency();
-	if (!ProductCreator::isBootSource(base_src))
+	map<string,any> boot_info = ProductCreator::GetBootInfo();
+	boolean bootable = boot_info["bootable"]:false;
+
+	if (!bootable)
 	{
-	    y2milestone("Base source %1 is not bootable, skipping isolinux.cfg configuration", base_src);
+	    y2milestone("Base source %1 is not bootable, skipping isolinux.cfg configuration", boot_info["base_source"]:-1);
 	    return `skip_isolinux;
 	}
 
