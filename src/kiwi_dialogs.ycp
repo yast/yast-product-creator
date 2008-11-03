@@ -13,8 +13,9 @@
   import "CWMTab";
   import "Directory";
   import "FileUtils";
-  import "Label";
   import "Kiwi";
+  import "Label";
+  import "Message";
   import "Package";
   import "PackageSystem";
   import "Popup";
@@ -2369,6 +2370,7 @@ Continue anyway?"), mergestring (failed_repositories, "\n"))))
 		}
 		if (to_install != "" && !Package::Install (to_install))
 		{
+		    Popup::Error (Message::FailedToInstallPackages ());
 		    continue;
 		}
 	    }
