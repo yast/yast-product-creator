@@ -519,7 +519,13 @@ boolean CheckArchitecture(integer SrcID)
     boolean found_architecture = false;
     list<string> found_archs = [];
 
-    string arch = ProductCreator::GetArch();
+    string arch = ProductCreator::GetPackageArch();
+
+    if (arch == nil)
+    {
+	arch = ProductCreator::GetArch();
+    }
+
     if (arch == "s390_64") arch = "s390x";
 
     string type = general_info["type"]:"";
@@ -787,7 +793,7 @@ Change the target architecture?
 
 		if (arch != nil)
 		{
-		    y2milestone("Target architecture has been changed");
+		    y2milestone("Target architecture has been changed to %1", arch);
 		    ProductCreator::Config["arch"] = arch;
 
 		    boolean check_ok = true;
