@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Tue Nov 11 17:11:36 CET 2008 - lslezak@suse.cz
+
+- fixed architecture check of CODE11 repositories (bnc#438732)
+
+-------------------------------------------------------------------
 Fri Oct 31 20:04:05 CET 2008 - jsuchome@suse.cz
 
 - image-creator template: install pattern packages by default

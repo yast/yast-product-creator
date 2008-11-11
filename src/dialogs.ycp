@@ -515,14 +515,24 @@ string AskArch(string label, list<string> archs, string preselected)
 boolean CheckArchitecture(integer SrcID)
 {
     map general_info = Pkg::SourceGeneralData(SrcID);
+    y2milestone("Checking architecture of repository %1", general_info);
     boolean found_architecture = false;
     list<string> found_archs = [];
 
     string arch = ProductCreator::GetArch();
     if (arch == "s390_64") arch = "s390x";
 
+    string type = general_info["type"]:"";
+
+    // if the type is missing then probe it now
+    if (type == "NONE")
+    {
+	type = Pkg::RepositoryProbe(general_info["url"]:"", general_info["product_dir"]:"/");
+	y2milestone("Probed repository type: %1", type);
+    }
+
     // architecture check is possible only for YaST sources
-    if (general_info["type"]:"" == "YaST")
+    if (type == "YaST")
     {
 	// Check architecture
 	map<string,string> read_content = ProductCreator::ReadContentFile(SrcID);
@@ -534,6 +544,23 @@ boolean CheckArchitecture(integer SrcID)
 		{
 		    found_architecture = true;
 		    break;
+		}
+		if (key == "BASEARCHS")
+		{
+		    y2milestone("BASEARCHS: %1", value);
+		    list<string> arch_list = splitstring(value, " ");
+		    arch_list = filter(string a, arch_list, {return a != nil && a != "";});
+		    y2milestone("Found architectures: %1", arch_list);
+
+		    if (contains(arch_list, arch))
+		    {
+			found_architecture = true;
+			break;
+		    }
+		    else
+		    {
+			found_archs = (list<string>)union(found_archs, arch_list);
+		    }
 		}
 		else
 		{
