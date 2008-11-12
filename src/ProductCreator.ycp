@@ -2003,6 +2003,9 @@ boolean InsertKeyToInitrd(string gpg_key, string initrd_file)
 
     if (gpg_key == "")
     {
+	// remove the old file before unpacking
+	ret = Exec(sformat("rm -rf '%1/linuxrc.config'", String::Quote(base)));
+
 	// unpack 'linuxrc.config' file
 	ret = Exec(sformat("cd '%1' && cpio -i -H newc -F '%2.cpio' linuxrc.config",
 	    String::Quote(base), String::Quote(initrd_file)));
@@ -2011,6 +2014,7 @@ boolean InsertKeyToInitrd(string gpg_key, string initrd_file)
 	// add 'Insecure: 1' option
 	ret = Exec(sformat("cd '%1' && echo 'Insecure:\t1' >> linuxrc.config", String::Quote(base)));
 	if (!ret) return false;
+	y2milestone("Updated linuxrc.config: %1", SCR::Read(.target.string, base + "/linuxrc.config"));
 
 	// add linuxrc instead of a gpg key
 	new_file = "linuxrc.config";
