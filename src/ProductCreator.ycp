@@ -2073,6 +2073,71 @@ string GunzipKernel(string kernel_gz)
     return ret;
 }
 
+string CreateMkzimageCommand()
+{
+    string ret = "";
+
+    if ((ProductCreator::Config["arch"]:"" == "ppc"
+	|| ProductCreator::Config["arch"]:"" == "ppc64")
+	&& !Arch::ppc())
+    {
+	// find the lilo package
+	list<map> ppc_lilo = Pkg::ResolvableProperties("lilo", `package, "");
+	y2milestone("found lilo packages: %1", ppc_lilo);
+
+	map lilo_pkg = ppc_lilo[0]:$[];
+
+	y2milestone("selected lilo package: %1", lilo_pkg);
+
+	if (lilo_pkg == nil || lilo_pkg == $[])
+	{
+	    y2error("lilo package was not found");
+	    return "";
+	}
+
+	// download the package
+	string downloaded_pkg = Pkg::SourceProvideFile(lilo_pkg["source"]:-1, lilo_pkg["medium_nr"]:-1, lilo_pkg["path"]:"lilo");
+
+	y2milestone("Downloaded lilo package: %1", downloaded_pkg);
+
+	if (downloaded_pkg == nil || downloaded_pkg == "")
+	{
+	    y2error("Downloading package lilo failed");
+	    return "";
+	}
+
+	// create a tmpdir
+	string tmp_dir = (string)SCR::Read(.target.tmpdir);
+	string tmp_lilo = tmp_dir + "/lilo-" + lilo_pkg["version"]:"";
+
+	// remove the directory if it already exists (e.g. from the previous run)
+	Exec("rm -rf " + tmp_lilo);
+
+	SCR::Execute(.target.mkdir, tmp_lilo);
+
+	// unpack the package into the tmpdir
+	string unpack_cmd = sformat("cd '%1' && /usr/bin/rpm2cpio '%2' | /usr/bin/cpio -i --make-directories", String::Quote(tmp_lilo), String::Quote(downloaded_pkg));
+
+	if (!Exec(unpack_cmd))
+	{
+	    y2error("Unpacking lilo package failed");
+	    return "";
+	}
+
+	// use the linker from cross-ppc-binutils,
+	// set --objdir option to the unpacked PPC lilo package
+	ret = "PATH=/opt/cross/powerpc-linux/bin:$PATH '" + String::Quote(tmp_lilo) + "/bin/mkzimage' --objdir '"
+	    + String::Quote(tmp_lilo) + "/lib/lilo' --board chrp --vmlinux '%1' --initrd '%2' --output '%3/new_inst' --tmp '%3'";
+    }
+    else
+    {
+	ret = "/bin/mkzimage --board pmac --vmlinux '%1' --initrd '%2' --output '%3/new_inst' --tmp '%3'";
+    }
+
+    y2milestone("mkzimage command template: %1", ret);
+    return ret;
+}
+
 global boolean InsertKeyToInitrds(string gpg_key, string base_dir)
 {
     // get initrd list
@@ -2158,49 +2223,61 @@ global boolean InsertKeyToInitrds(string gpg_key, string base_dir)
 	}
     );
 
-    // put the initrd back to the inst file
-    foreach(string orig_inst, string tmp_initrd, inst_mapping,
+    if (size(inst_mapping) > 0)
+    {
+	// create the template command if needed (download the needed lilo package just once)
+	string mkzimage_template = CreateMkzimageCommand();
+
+	if (mkzimage_template != "")
 	{
-	    y2milestone("%1 -> %2", tmp_initrd, orig_inst);
-
-	    if (orig_inst == "suseboot/inst32" || orig_inst == "suseboot/inst64")
-	    {
-		// extract kernel
-		string gzkernel = DumpKernelFromObjectFile(base_dir + "/" + orig_inst);
-
-		if (gzkernel != "")
+	    // put the initrd back to the inst file
+	    foreach(string orig_inst, string tmp_initrd, inst_mapping,
 		{
-		    // unpack the kernel image - required by mkzimage
-		    string kernel = GunzipKernel(gzkernel);
-		    string tmp_dir = (string)SCR::Read( .target.tmpdir );
+		    y2milestone("%1 -> %2", tmp_initrd, orig_inst);
 
-		    string initrd_copy = sformat("%1/tmp_initrd", tmp_dir);
+		    if (orig_inst == "suseboot/inst32" || orig_inst == "suseboot/inst64")
+		    {
+			// extract kernel
+			string gzkernel = DumpKernelFromObjectFile(base_dir + "/" + orig_inst);
 
-		    // copy the initrd to a temp dir - mkzimage doesn't work properly
-		    // when there is a space in path
-		    ret = ret && Exec(sformat("mv '%1/%2' '%3'", String::Quote(base_dir), tmp_initrd, initrd_copy));
+			if (gzkernel != "")
+			{
+			    // unpack the kernel image - required by mkzimage
+			    string kernel = GunzipKernel(gzkernel);
+			    string tmp_dir = (string)SCR::Read( .target.tmpdir );
 
-		    // create new inst file
-		    // see mk_ppc_installation-images_bootbinaries.sh (installation-images)
-		    command = sformat("/bin/mkzimage --board chrp --vmlinux '%1' --initrd '%2' --output '%3/new_inst' --tmp '%3'",
-			kernel, initrd_copy, tmp_dir);
-		    ret = ret && Exec(command);
+			    string initrd_copy = sformat("%1/tmp_initrd", tmp_dir);
 
-		    // remove the temporary files
-		    command = sformat("rm -f '%1' '%2'", kernel, initrd_copy);
-		    ret = ret && Exec(command);
+			    // copy the initrd to a temp dir - mkzimage doesn't work properly
+			    // when there is a space in path
+			    ret = ret && Exec(sformat("mv '%1/%2' '%3'", String::Quote(base_dir), tmp_initrd, initrd_copy));
 
-		    // move the new file to the target directory
-		    command = sformat("mv '%1/new_inst' '%2/%3'", tmp_dir, String::Quote(base_dir), orig_inst);
-		    ret = ret && Exec(command);
+			    // create new inst file
+			    // see mk_ppc_installation-images_bootbinaries.sh (installation-images)
+			    command = sformat(mkzimage_template, kernel, initrd_copy, tmp_dir);
+			    ret = ret && Exec(command);
+
+			    // remove the temporary files
+			    command = sformat("rm -f '%1' '%2'", kernel, initrd_copy);
+			    ret = ret && Exec(command);
+
+			    // move the new file to the target directory
+			    command = sformat("mv '%1/new_inst' '%2/%3'", tmp_dir, String::Quote(base_dir), orig_inst);
+			    ret = ret && Exec(command);
+			}
+		    }
+		    else
+		    {
+			y2warning("Unsupported inst file: %1", orig_inst);
+		    }
 		}
-	    }
-	    else
-	    {
-		y2warning("Unsupported inst file: %1", orig_inst);
-	    }
+	    );
 	}
-    );
+	else
+	{
+	    y2error("mkzimage command missing, not modifying initrd (%1)", inst_mapping);
+	}
+    }
 
     return ret;
 }

@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Nov 19 17:38:36 CET 2008 - lslezak@suse.cz
+
+- fixed creating cross-arch PPC product (cross-ppc-binutils,
+  updated lilo and util-linux packages are needed) (bnc#443859)
+- 2.17.13
+
+-------------------------------------------------------------------
 Tue Nov 11 17:11:36 CET 2008 - lslezak@suse.cz
 
 - fixed architecture check of CODE11 repositories (bnc#438732)
