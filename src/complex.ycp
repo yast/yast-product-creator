@@ -81,6 +81,21 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
 	return true;
     }
 
+    boolean checkNeededPackages()
+    {
+	// if the target is a PPC product and the system arch is not PPC we need to install
+	// cross-ppc-binutils package to update the initrd
+	if ((ProductCreator::Config["arch"]:"" == "ppc"
+	    || ProductCreator::Config["arch"]:"" == "ppc64")
+	    && !Arch::ppc())
+	{
+	    y2milestone("cross-ppc-binutils is needed");
+	    return Package::InstallAll(["cross-ppc-binutils"]);
+	}
+
+	return true;
+    }
+
     /**
      * Overview dialog
      * @return dialog result
@@ -188,7 +203,8 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
             else if(ret == `create_button) {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem );
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
-                // ProductCreator::EnableSource();
+                // check the needed packages
+		if (!checkNeededPackages()) continue;
                 ret = `create;
                 break;
             }
