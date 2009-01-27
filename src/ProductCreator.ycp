@@ -1071,7 +1071,7 @@ boolean CopyPPCBoot(integer srcid, string target)
 
 	foreach(string f, files,
 	    {
-		CopyFile(srcid, 1, f, target + f);
+		CopyOptionalFile(srcid, 1, f, target + f);
 	    }
 	);
     }
