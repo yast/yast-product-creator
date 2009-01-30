@@ -159,6 +159,8 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
         while(true) {
 	    // reset the current architecture (needed when going back)
 	    ProductCreator::ResetArch();
+	    // unload all active sources (reset the internal state, see bnc#469191)
+	    Pkg::SourceFinishAll();
 
             ret = UI::UserInput();
 
