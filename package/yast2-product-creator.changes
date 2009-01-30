@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Jan 27 13:57:43 CET 2009 - lslezak@suse.cz
+
+- PPC boot files are optional (SLES11 does not contain 'inst32'
+  file) (bnc#469272)
+
+-------------------------------------------------------------------
 Wed Nov 19 17:38:36 CET 2008 - lslezak@suse.cz
 
 - fixed creating cross-arch PPC product (cross-ppc-binutils,
