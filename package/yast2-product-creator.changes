@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Fri Jan 30 09:21:09 CET 2009 - lslezak@suse.cz
+
+- unload all sources after changing a configuration to reset the
+  internal state so the correct "cross-ppc-binutils" package is
+  installed (bnc#469191)
+- 2.17.14
+
+-------------------------------------------------------------------
 Tue Jan 27 13:57:43 CET 2009 - lslezak@suse.cz
 
 - PPC boot files are optional (SLES11 does not contain 'inst32'
