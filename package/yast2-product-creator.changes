@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Wed Feb 11 14:48:37 CET 2009 - coolo@suse.de
+
+- buildrequire yast2-slp to fix build
+
+-------------------------------------------------------------------
 Fri Jan 30 09:21:09 CET 2009 - lslezak@suse.cz
 
 - unload all sources after changing a configuration to reset the
