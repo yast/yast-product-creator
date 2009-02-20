@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu Feb 19 15:46:59 CET 2009 - jsuchome@suse.cz
+
+- Image Creator: use SLES11 as a default target in template
+  (bnc#477645)
+- 2.17.15 
+
+-------------------------------------------------------------------
 Fri Jan 30 09:21:09 CET 2009 - lslezak@suse.cz
 
 - unload all sources after changing a configuration to reset the
