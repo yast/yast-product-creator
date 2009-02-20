@@ -22,6 +22,7 @@
   import "ProductCreator";
   import "SourceDialogs";
   import "SourceManager";
+  import "String";
   import "Summary";
   import "URL";
   import "Wizard";
@@ -1249,33 +1250,19 @@ directory."), out_dir));
 	ProductCreator::Config["taboo"]		= maplist (
 	    map pat, sw_contents["ignore"]:[], ``(pat["name"]:""));
     }
-
     map label2boot	= $[
-	    "openSUSE 10.2"	: "suse-10.2",
-	    "openSUSE 10.3"	: "suse-10.3",
 	    "openSUSE 11.0"	: "suse-11.0",
-	    "SUSE Linux 10.1"	: "suse-10.1",
+	    "openSUSE 11.1"	: "suse-11.1",
 	    "SUSE Linux Enterprise Server 10"	: "suse-SLES10",
 	    "SUSE Linux Enterprise Desktop 10"	: "suse-SLED10",
 	    "SUSE Linux Enterprise Desktop 10 SP2" : "suse-SLED10-SP2",
             "SUSE Linux Enterprise Server 10 SP2" : "suse-SLES10-SP2",
+	    "SUSE Linux Enterprise Server 11"	: "suse-SLES11",
+	    "SUSE Linux Enterprise Desktop 11"	: "suse-SLED11",
     ];
-    map distproduct2boot	= $[
-	"openSUSE-10.2-CD-download"		: "suse-10.2",
-	"openSUSE-10.2-dvd5-download"		: "suse-10.2",
-	"openSUSE-10.3-dvd5-download"		: "suse-10.3",
-	"openSUSE-10.3-CD-download"		: "suse-10.3",
-	"SUSE-Linux-10.1-CD-download-x86"	: "suse-10.1",
-	"SUSE-Linux-Enterprise-Server-i386"	: "suse-SLES10",
-	"SUSE-Linux-Enterprise-Desktop-i386"	: "suse-SLED10",
-	"SUSE-Linux-Enterprise-Server-SP1"	: "suse-SLES10-SP1",
-	"SUSE-Linux-Enterprise-Desktop-SP1"	: "suse-SLED10-SP1",
-	"SUSE-Linux-Enterprise-Server-SP2"      : "suse-SLES10-SP2",
-        "SUSE-Linux-Enterprise-Desktop-SP2"     : "suse-SLED10-SP2",
-    ];
-    string boot_image	= label2boot[content["LABEL"]:""]:"";
-    if (boot_image == "")
-	boot_image	= distproduct2boot[content["DISTPRODUCT"]:""]:"";
+    string contentlabel	= String::CutBlanks (content["LABEL"]:"");
+    string boot_image	= label2boot[contentlabel]:"";
+// FIXME this actually is not used at all, only the one from template... :-(
 
     // guess some default boot image value
     if (kiwi_task == "iso" && !haskey (KiwiConfig, "isoboot") && boot_image != "")

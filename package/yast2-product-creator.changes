@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Fri Feb 20 09:46:56 CET 2009 - jsuchome@suse.cz
+
+- adapted kiwi templates for 11.1 (bnc#477645)
+
+-------------------------------------------------------------------
 Wed Feb 11 14:48:37 CET 2009 - coolo@suse.de
 
 - buildrequire yast2-slp to fix build
