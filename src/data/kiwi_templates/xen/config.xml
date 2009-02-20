@@ -6,7 +6,7 @@
 		<specification>Template for system image configuration</specification>
 	</description>
 	<preferences>
-		<type boot="xenboot/suse-11.0" filesystem="ext3">xen</type>
+		<type boot="xenboot/suse-11.1" filesystem="ext3">xen</type>
 		<version>1.0.0</version>
 		<size unit="M">2000</size>
 		<packagemanager>zypper</packagemanager>
