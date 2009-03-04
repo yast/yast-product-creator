@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Wed Mar  4 13:20:33 CET 2009 - jsuchome@suse.cz
+
+- add GPG key correctly to the installkey.gpg keyring inside initrd
+  (bnc#478975)
+- before signing a file check for its existence (bnc#481838)
+- 2.17.16
+
+-------------------------------------------------------------------
 Thu Feb 19 15:46:59 CET 2009 - jsuchome@suse.cz
 
 - Image Creator: use SLES11 as a default target in template
