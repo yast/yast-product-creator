@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Wed Mar  4 13:30:25 CET 2009 - jsuchome@suse.cz
+
+- add GPG key correctly to the installkey.gpg keyring inside initrd
+  (bnc#478975)
+- before signing a file check for its existence (bnc#481838)
+- 2.18.0
+
+-------------------------------------------------------------------
 Fri Feb 20 09:46:56 CET 2009 - jsuchome@suse.cz
 
 - adapted kiwi templates for 11.1 (bnc#477645)

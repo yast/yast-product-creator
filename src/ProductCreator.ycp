@@ -778,8 +778,11 @@ boolean SignSourceFiles(string keyid, string dir, string passphrase)
     // sign the content file
     boolean ret = GPG::SignAsciiDetached(keyid, dir + "/content", passphrase);
 
-    // sign the product file
-    ret = ret && GPG::SignAsciiDetached(keyid, dir + "/media.1/products", passphrase);
+    // sign the product file if exists
+    if (FileUtils::Exists (dir + "/media.1/products"))
+    {
+	ret = ret && GPG::SignAsciiDetached(keyid, dir + "/media.1/products", passphrase);
+    }
 
     y2milestone("Signed source: %1", ret);
     return ret;
@@ -2033,6 +2036,29 @@ boolean InsertKeyToInitrd(string gpg_key, string initrd_file)
 	String::Quote(base), String::Quote(initrd_file), String::Quote(new_file));
     ret = Exec(command);
     if (!ret) return false;
+
+    if (new_file != "linuxrc.config")
+    {
+	// extract installkey.gpg from cpio archive
+	command = sformat ("cd '%1'; cpio -i -H newc -F '%2.cpio' installkey.gpg",
+	    String::Quote(base), String::Quote(initrd_file));
+
+	ret = Exec(command);
+	if (!ret) return false;
+
+	// add our new key to installkey.gpg keyring
+	command = sformat ("cd '%1'; gpg --no-default-keyring --keyring ./installkey.gpg --import '%2'",
+	    String::Quote(base), String::Quote(new_file));
+	ret = Exec(command);
+	if (!ret) return false;
+
+	// place new installkey.gpg back to the archive
+	command = sformat ("cd '%1' && echo installkey.gpg | cpio -o -H newc -A -F '%2.cpio'",
+	    String::Quote(base), String::Quote(initrd_file));
+
+	ret = Exec(command);
+	if (!ret) return false;
+    }
 
     // compress the archive, remove the temporary files
     command = sformat("gzip --best < '%1.cpio' > '%1' && rm -f '%1.cpio' '%2'",
