@@ -528,6 +528,11 @@ global define list PrepareConfigs() ``{
 
 	    v["sources"] = sources;
 	}
+	string base_repo	= v["base_repo"]:"";
+	if (base_repo != "")
+	{
+	    v["base_repo"]	= String::EscapeTags (base_repo);
+	}
 
 	return(v);
     });
@@ -784,6 +789,12 @@ boolean SignSourceFiles(string keyid, string dir, string passphrase)
 	ret = ret && GPG::SignAsciiDetached(keyid, dir + "/media.1/products", passphrase);
     }
 
+    // sign the add_on_products file
+    if (FileUtils::Exists (dir + "/add_on_products"))
+    {
+	ret = ret && GPG::SignAsciiDetached(keyid, dir + "/add_on_products", passphrase);
+    }
+
     y2milestone("Signed source: %1", ret);
     return ret;
 }
@@ -826,6 +837,16 @@ global boolean UpdateContentFile(string dir, string prod_dir)
 
     string meta_sha1 = SHA1Meta(dir, prod_dir);
     string key_sha1 = SHA1Key(dir);
+
+    // add the sum of add_on_products if it was created
+    if (FileUtils::Exists (dir + "/add_on_products"))
+    {
+	string command = sformat ("cd %1; sha1sum add_on_products", dir);
+	y2milestone ("Generating SHA1 sum for add_on_products: %1", command);
+	map ret = (map)SCR::Execute(.target.bash_output, command);
+	y2milestone("Result: %1", ret);
+	meta_sha1	= meta_sha1 + "HASH SHA1 " + ret["stdout"]:"";
+    }
 
     string command = sformat("/usr/bin/grep -v -e '^KEY ' -e '^META ' '%1/content'", String::Quote(dir));
     map out = (map)SCR::Execute(.target.bash_output, command);
@@ -1017,7 +1038,7 @@ boolean CopyDocu(integer srcid, string target)
 
 	    foreach(string f, files,
 		{
-		    CopyFile(srcid, 1, f, target + f);
+		    CopyOptionalFile (srcid, 1, f, target + f);
 		}
 	    );
 	}
@@ -1678,10 +1699,9 @@ global define boolean CreateSkeleton(integer base_source, boolean bootable_produ
 	{
 	    if (savespace)
 	    {
-		    CopyFile(base_source, 1, sformat("boot/%1/rescue", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
-		    CopyFile(base_source, 1, sformat("boot/%1/root", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
-		    CopyFile(base_source, 1, sformat("boot/%1/root.fonts", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
-
+		CopyFile(base_source, 1, sformat("boot/%1/rescue", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
+		CopyFile(base_source, 1, sformat("boot/%1/root", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
+		CopyOptionalFile (base_source, 1, sformat("boot/%1/root.fonts", boot_architecture), sformat("%1/boot/%2", skel_root, boot_architecture));
 		// Loader, x86 specific
 		if (_arch == "i386" || _arch == "x86_64")
 		{
@@ -1873,7 +1893,6 @@ global define boolean CreateSkeleton(integer base_source, boolean bootable_produ
 	Exec(sformat("/bin/rm -f '%1/directory.yast'; cd '%1'; ls | grep -v -e '^\\.$' -e '^\\.\\.$' > '%1/directory.yast'", String::Quote(skel_root)));
     }
 
-
     // remove unused patterns (they cannot be used due to missing packages)
     if (Config["type"]:`unknown == `patterns)
     {
@@ -1885,18 +1904,20 @@ global define boolean CreateSkeleton(integer base_source, boolean bootable_produ
         }
 	y2milestone("used patterns: %1", used_patterns);
 
+
 	// addons 'doesn't include patterns added via dependency
-	foreach (string pattern, used_patterns, {
-	    list<map> descrs = Pkg::ResolvableDependencies(pattern,`pattern,"");
-            foreach (map descr, descrs, {
-		foreach (map dep, (list<map>)descr["dependencies"]:[], {
-		    if (dep["res_kind"]:"" == "pattern" &&
-			contains (["requires","recommends"],dep["dep_kind"]:""))
-		    {
-			used_patterns	= add (used_patterns, dep["name"]:"");
-		    }
-		});
-	    });
+	// better find the pattern dependencies with solver
+	foreach(string p, used_patterns, {
+	    Pkg::ResolvableInstall (p, `pattern);
+	});
+	Pkg::PkgSolve (true);
+	foreach (map pat, Pkg::ResolvableProperties ("", `pattern, ""),
+	{
+	    if (pat["status"]:`none == `selected)
+	    {
+		used_patterns   = add (used_patterns, pat["name"]:"");
+		y2milestone ("selected pattern: %1", pat);
+	    }
 	});
 
 	y2milestone("patterns + dependencies: %1", used_patterns);
