@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Thu Mar 12 12:31:54 CET 2009 - jsuchome@suse.cz
+
+- escape URL of base product when saving to XML (bnc#482395)
+- copy optional files as optional (bnc#482329)
+- sign and create a checksum for add_on_products file (bnc#481470)
+- bring all required patterns into the final product (bnc#482540)
+- 2.17.17
+
+-------------------------------------------------------------------
 Wed Mar  4 13:20:33 CET 2009 - jsuchome@suse.cz
 
 - add GPG key correctly to the installkey.gpg keyring inside initrd
