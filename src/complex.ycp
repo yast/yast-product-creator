@@ -64,7 +64,7 @@
     // needed for creating kiwi images because kiwi cannot create cross-architecture images
     boolean SameArchitecture()
     {
-	string arch = ProductCreator::Config["arch"]:"";
+	string arch = ProductCreator::GetArch ();
 	string sysarch = Arch::architecture();
 
 	// is the target architecture different than the machine architecture?

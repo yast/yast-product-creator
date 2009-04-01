@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Apr  1 11:08:58 CEST 2009 - jsuchome@suse.cz
+
+- read the configured architecture with GetArch, which merges
+  i586 and i686 to i386 (bnc#464727)
+- 2.18.2
+
+-------------------------------------------------------------------
 Mon Mar 16 14:55:45 CET 2009 - jsuchome@suse.cz
 
 - escape URL of base product when saving to XML (bnc#482395)
