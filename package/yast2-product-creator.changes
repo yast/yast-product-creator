@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Apr 14 15:40:03 CEST 2009 - jsuchome@suse.cz
+
+- Image Creator: install squashfs by default (bnc#485052)
+- 2.18.3
+
+-------------------------------------------------------------------
 Wed Apr  1 11:08:58 CEST 2009 - jsuchome@suse.cz
 
 - read the configured architecture with GetArch, which merges

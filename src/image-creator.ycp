@@ -33,7 +33,7 @@ define boolean ICSequence() {
 	return false;
     }
 
-    if (!Package::InstallAll (["kiwi"]))
+    if (!Package::InstallAll (["kiwi", "squashfs"]))
     {
 	// error popup
         Popup::Error(_("Installation of required packages

@@ -211,7 +211,8 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
                 break;
             }
             else if(ret == `iso_button &&
-		Package::InstallAll (["kiwi", "kiwi-desc-isoboot"])) {
+		Package::InstallAll (["kiwi","squashfs","kiwi-desc-isoboot"]))
+	    {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
 		// check the architecture
@@ -221,7 +222,8 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
                 break;
             }
 	    else if (ret == `xen_button &&
-		Package::InstallAll (["kiwi", "kiwi-desc-xenboot"])) {
+		Package::InstallAll (["kiwi", "squashfs", "kiwi-desc-xenboot"]))
+	    {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
 		// check the architecture
@@ -231,7 +233,8 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
 		break;
 	    }
 	    else if (ret == `usb_button &&
-		Package::InstallAll (["kiwi", "kiwi-desc-usbboot"])) {
+		Package::InstallAll (["kiwi", "squashfs", "kiwi-desc-usbboot"]))
+	    {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
 		// check the architecture
@@ -241,7 +244,8 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
 		break;
 	    }
 	    else if (ret == `vmx_button &&
-		Package::InstallAll (["kiwi", "kiwi-desc-vmxboot"])) {
+		Package::InstallAll (["kiwi", "squashfs", "kiwi-desc-vmxboot"]))
+	    {
                 string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
                 ProductCreator::Config = ProductCreator::Configs[current]:$[];
 		// check the architecture
