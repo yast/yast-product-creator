@@ -53,7 +53,7 @@ define boolean ShortKiwiSequence() {
 
     // not necessary to install all kiwi-descs, but now we don't know
     // which will be needed...
-    if (!Package::InstallAll (["kiwi", "kiwi-desc-isoboot", "kiwi-desc-xenboot", "kiwi-desc-usbboot", "kiwi-desc-vmxboot"]))
+    if (!Package::InstallAll (["kiwi", "kiwi-desc-isoboot", "kiwi-desc-xenboot", "kiwi-desc-usbboot", "kiwi-desc-vmxboot", "squashfs"]))
     {
 	// error popup
         Popup::Error(_("Installation of required packages
