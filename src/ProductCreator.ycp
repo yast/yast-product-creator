@@ -695,13 +695,18 @@ global define string Readisolinux() ``{
 	if (arch == "s390_64") arch = "s390x";
 	bootconfig_path = sformat("boot/%1/loader/isolinux.cfg", arch);
 
-	list<integer> srcids = [checkProductDependency()];
+
+	list<integer> srcids	= [];
+	if (Config["base_repo"]:"" == "")
+	    srcids = [checkProductDependency()];
+	else
+	    srcids	= UrlToId ([Config["base_repo"]:""]);
 
 	foreach(integer srcid, srcids,
 	    {
 		y2milestone("Downloading %1 from source %2", bootconfig_path, srcid);
 		bootconfig_path = Pkg::SourceProvideOptionalFile(srcids[0]:0, 1, bootconfig_path);
-		y2debug("bootconfig_path: %1", bootconfig_path);
+		y2debug ("bootconfig_path: %1", bootconfig_path);
 
 		if (bootconfig_path == nil)
 		{
