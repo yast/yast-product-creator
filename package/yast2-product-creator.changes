@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Apr 22 08:03:46 CEST 2009 - jsuchome@suse.cz
+
+- look primary into base product for isolinux.cfg (bnc#496263)
+- 2.18.4 
+
+-------------------------------------------------------------------
 Tue Apr 14 15:40:03 CEST 2009 - jsuchome@suse.cz
 
 - Image Creator: install squashfs by default (bnc#485052)
