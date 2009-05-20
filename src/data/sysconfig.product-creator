@@ -30,3 +30,15 @@ IMAGE_CONFIGURATIONS="/var/lib/YaST2/product-creator/images"
 #
 #
 SUPPORTED_BOOT_IMAGES=""
+
+## Path:	System/Yast2/Product-creator
+## Description:	YaST2 Product Creator
+## Type:	string(template)
+## Default:	none
+#
+# Default (preselected) architecture to build taget images for. If not specified,
+# the default is the architeture of the build machine.
+# Currently it has only sense to set "i386" on x86_64 machines.
+#
+#
+DEFAULT_IMAGE_ARCHITECTURE=""

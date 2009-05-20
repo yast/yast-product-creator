@@ -30,6 +30,7 @@
     <package name="glibc-locale"/>
     <package name="kernel-default"/>
     <package name="udev"/>
+    <package name="openssl-certs"/>
   </packages>
   <split>
     <temporary>

@@ -1,4 +1,53 @@
 -------------------------------------------------------------------
+Wed May 20 23:21:19 CEST 2009 - jsuchome@suse.cz
+
+- added openssl-certs to default bootstrap section, so Update repos
+  can work (bnc#491475)
+- look primary into base product for isolinux.cfg (bnc#496263)
+- read the configured architecture with GetArch, which merges
+  i586 and i686 to i386 (bnc#464727)
+- 2.17.18
+
+-------------------------------------------------------------------
+Thu May 14 11:59:26 CEST 2009 - jsuchome@suse.cz
+
+- read the whole kiwi process output (bnc#488799)
+
+-------------------------------------------------------------------
+Wed May 13 11:56:52 CEST 2009 - jsuchome@suse.cz
+
+- make content file optional (for empty repos, bnc#500527)
+
+-------------------------------------------------------------------
+Wed May  6 11:15:17 CEST 2009 - jsuchome@suse.cz
+
+- correct check for configuration type and version in templates
+  (bnc#498439)
+- during configuration, do not throw away target image desctination
+  (bnc#499489)
+
+-------------------------------------------------------------------
+Tue Apr  7 11:38:45 CEST 2009 - jsuchome@suse.cz
+
+- updated sysconfig template (DEFAULT_IMAGE_ARCHITECTURE) 
+
+-------------------------------------------------------------------
+Thu Apr  2 14:33:57 CEST 2009 - jsuchome@suse.cz
+
+- added option to specify "additive" attribute to size (fate#305327)
+
+-------------------------------------------------------------------
+Wed Mar 25 14:47:40 CET 2009 - jsuchome@suse.cz
+
+- detect and report conflicts in selected and deleted package lists
+  (fate#305254)
+
+-------------------------------------------------------------------
+Thu Mar 19 10:47:18 CET 2009 - jsuchome@suse.cz
+
+- allow building i386 images on x86_64 system (fate#305327)
+
+-------------------------------------------------------------------
 Thu Mar 12 12:31:54 CET 2009 - jsuchome@suse.cz
 
 - escape URL of base product when saving to XML (bnc#482395)
