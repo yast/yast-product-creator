@@ -435,7 +435,8 @@ global map<string,string> ReadContentFile(integer srcid) {
 	return content_cache[srcid]:$[];
     }
 
-    string content = Pkg::SourceProvideFile(srcid, 1, "content");
+    // make content file optional (for empty repos, bnc#500527)
+    string content = Pkg::SourceProvideOptionalFile(srcid, 1, "content");
     map<string,string> contentmap = (map<string,string>)SCR::Read(.content_file, content);
     if (contentmap == nil)
 	contentmap	= $[];
@@ -695,13 +696,19 @@ global define string Readisolinux() ``{
 	if (arch == "s390_64") arch = "s390x";
 	bootconfig_path = sformat("boot/%1/loader/isolinux.cfg", arch);
 
-	list<integer> srcids = [checkProductDependency()];
+
+	list<integer> srcids	= [];
+	// bnc#496263
+	if (Config["base_repo"]:"" == "")
+	    srcids = [checkProductDependency()];
+	else
+	    srcids	= UrlToId ([Config["base_repo"]:""]);
 
 	foreach(integer srcid, srcids,
 	    {
 		y2milestone("Downloading %1 from source %2", bootconfig_path, srcid);
 		bootconfig_path = Pkg::SourceProvideOptionalFile(srcids[0]:0, 1, bootconfig_path);
-		y2debug("bootconfig_path: %1", bootconfig_path);
+		y2debug ("bootconfig_path: %1", bootconfig_path);
 
 		if (bootconfig_path == nil)
 		{
