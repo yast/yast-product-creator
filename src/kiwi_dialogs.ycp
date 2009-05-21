@@ -9,6 +9,7 @@
 {
   textdomain "product-creator";
 
+  import "Arch";
   import "CWM";
   import "CWMTab";
   import "Directory";
@@ -398,6 +399,14 @@
   }
 
   /**
+   * initialize the value of 'additive'
+   */
+  define void InitAdditiveCheckBox (string id) {
+    boolean additive	= KiwiConfig["preferences",0,"size",0,"additive"]:"" == "true";
+    UI::ChangeWidget (`id (id), `Value, additive);
+  }
+
+  /**
    * initialize the value of version
    */
   define void InitSize (string id) {
@@ -412,7 +421,9 @@
   define void StoreSize (string key, map event) {
     KiwiConfig["preferences",0,"size"]	= [ $[
 	content_key	: sformat ("%1", UI::QueryWidget(`id(key), `Value)),
-	"unit"		:  UI::QueryWidget (`id ("sizeunit"), `Value)
+	"unit"		: UI::QueryWidget (`id ("sizeunit"), `Value),
+	"additive"	: ((boolean) UI::QueryWidget (`id ("additive"), `Value))
+	    ? "true" : "false"
     ]];
   }
 
@@ -946,6 +957,47 @@ Try again."));
   define boolean CreateImage (string key, map event) {
     if (event["ID"]:nil != `next)
 	return true;
+
+    // check the conflicts between packages selected and marked for deletion (fate#305254)
+    y2milestone ("checking list of selected packages...");
+    map to_delete	= $[];
+    foreach (map pmap, KiwiConfig["packages"]:[], {
+	string type	= pmap["type"]:"";
+	if (type == "delete")
+	{
+	    to_delete	= listmap (map pacmap, pmap["package"]:[], ``(
+		$[ pacmap["name"]:"" : true ])
+	    );
+	}
+    });
+    boolean conflicting	= false;
+    if (size (to_delete) > 0)
+    {
+	foreach (map package, Pkg::ResolvableProperties("", `package, ""), {
+	    if (conflicting)
+		break;
+	    if (package["status"]:nil == `selected)
+	    {
+		symbol transact_by	= package["transact_by"]:`none;
+		string name		= package["name"]:"";
+		if (transact_by == `solver || transact_by == `user)
+		{
+		    if (haskey (to_delete, name))
+		    {
+			y2milestone ("packege %1 selected by %2 is present in the delete list",
+			    name, transact_by);
+			conflicting	= true;
+		    }
+		}
+	    }
+	});
+    }
+    // yes/no popup
+    if (conflicting && !Popup::YesNo (_("Some of the packages that are selected for installation
+are also included in the list for deletion.
+Continue anyway?")))
+	return false;
+
     boolean ret	= true;
     map question	= $[
 	// popup question
@@ -1201,6 +1253,14 @@ directory."), out_dir));
 // FIXME check if boot directories match current product (-> enable building
 // for product different from installed one)
 	}
+	else
+	{
+	    // existing defaultdestination needs to be used as iso-dirctory as well
+	    // (correct iso-directory was replaced on import (bnc#499489)
+	    string dest     = get_preferences (KiwiConfig, "defaultdestination", "");
+	    if (dest != "")
+		KiwiConfig["iso-directory"]     = dest;
+	}
 	boolean primary_included	= false;
 	string boot_dir			= "";
 	// set the primary building target according to kiwi_task
@@ -1306,7 +1366,11 @@ directory."), out_dir));
 		`VSpacing (0.2),
 		`HBox (
 		    `HWeight (2, `HBox (
-			"version", "size", "sizeunit"
+			"version", "size", "sizeunit",
+			`VBox (
+			    `Label (""),
+			    "additive"
+			)
 		    )),
 		    `HWeight (1, "compression")
 		),
@@ -1323,7 +1387,7 @@ directory."), out_dir));
 	    ), `HSpacing(1)),
 	"widget_names" : [
 	    "version",
-	    "size", "sizeunit", "compression",
+	    "size", "sizeunit", "additive", "compression",
 	    "sw_selection",
 	    "rt_sw", "configure_sw",
 	    "delete_sw",
@@ -1511,15 +1575,19 @@ directory."), out_dir));
     ],
     "sizeunit" : $[
 	"widget"	: `combobox,
-	// textentry label
+	// combo box label (MB/GB values)
 	"label"		: _("&Unit"),
 	"no_help"	: true,
 	"items"		: [],
 	"init"		: InitSizeUnitCombo,
-	/*
-	"store"		: StoreGeneric,
-	"handle"	: HandleGeneric,
-	*/
+	// stored and handled by "size"
+    ],
+    "additive" : $[
+	"widget"	: `checkbox,
+	// check box label
+	"label"		: _("Additive"),
+	"no_help"	: true,// FIXME the meaning of size is different...!
+	"init"		: InitAdditiveCheckBox,
     ],
     // ---------------- widgtes for directory structure
     "general_scripts"	: $[
@@ -2009,9 +2077,21 @@ return ret;
     list template_items	= maplist (string dir, map template, Kiwi::Templates, {
 	return `item (`id (dir), sformat (
 	    // combo box item, %1 is name, %2 version
-	    _("%1, version %2"), template["name"]:"", template["version"]:"")
+	    _("%1, version %2"), template["name"]:"", get_preferences (template, "version", ""))
 	);
     });
+
+    term arch_term	= `VBox ();
+
+    if (Arch::architecture () == "x86_64")
+    {
+	arch_term	= `VBox (
+	    // checkbox label
+	    `CheckBox (`id (`i386), `opt (`hstretch), _("&32bit Architecture Image"),
+		Kiwi::image_architecture == "i386"),
+	    `VSpacing (0.2)
+	);
+    }
 
     term contents	= `VBox (
 	new_configuration ?
@@ -2062,6 +2142,7 @@ return ret;
 	    )
 	),
 	`VSpacing (0.2),
+	arch_term,
 	`Table (`id(`repositories), `opt (`notify), `header (
 	    // table header
 	    _("Package Repository"))
@@ -2290,6 +2371,16 @@ Choose a different one."), name));
 
 	    list<string> failed_repositories	= [];
 	    map<string,map> new_repositories    = $[];
+
+	    ProductCreator::ResetArch();
+
+	    if (Arch::architecture () == "x86_64" &&
+		UI::QueryWidget (`id (`i386), `Value) == true)
+	    {
+		Kiwi::image_architecture	= "i386";
+		ProductCreator::SetPackageArch ("i386");
+	    }
+
 	    if (size (repositories) > 0)
 	    {
 		map<string,integer> current_sources	= $[];
@@ -2306,8 +2397,12 @@ Choose a different one."), name));
 			url		= "dir://" + url;
 		    if (haskey (current_sources, url))
 		    {
+//			integer srcid	= current_sources[url]:-1;
 			current_sources	= remove (current_sources, url);
 			return true;
+			// TODO is it correct to check architecture now?
+			// but why not to list repositories that won't be used...
+//			return CheckArchitecture (srcid);
 		    }
 		    integer source_ret	= -1;
 		    string full_url	= url;
@@ -2322,7 +2417,13 @@ Choose a different one."), name));
 			failed_repositories = add (failed_repositories, url);
 			return false;
 		    }
-		    else return true;
+		    return true;
+		    /* see above...
+		    if (CheckArchitecture (source_ret))
+			return true;
+		    else
+			return false;
+		    */
 		});
 		foreach (string url, integer srcid, current_sources, {
 		    Pkg::SourceDelete (srcid);

@@ -11,12 +11,14 @@
 
   textdomain "product-creator";
 
+  import "Arch";
   import "Directory";
   import "FileUtils";
   import "Label";
   import "Message";
   import "Package";
   import "Popup";
+  import "ProductCreator";
   import "Progress";
   import "Report";
   import "Security";
@@ -41,6 +43,9 @@
 
   // bug 331733
   global string supported_boot_images	= "";
+
+  // target architecture of image (can be only i386 if different from current one)
+  global string image_architecture	= "";
 
   // directories with user-made templated
   global list<string> templates_dirs	= [];
@@ -446,7 +451,10 @@
 	    UI::ChangeWidget (`id(`errlog), `LastLine, err + "\n");
     }
 
-    string cmd	= sformat ("ZYPP_READONLY_HACK=1 kiwi --nocolor --root %1 --prepare %2 --logfile terminal", chroot_dir, config_dir);
+    string linux32	= "";
+    if (Arch::architecture () == "x86_64" && ProductCreator::GetArch () == "i386")
+	linux32		= "linux32";
+    string cmd	= sformat ("ZYPP_READONLY_HACK=1 %3 kiwi --nocolor --root %1 --prepare %2 --logfile terminal", chroot_dir, config_dir, linux32);
     if (selected_profiles != "" && selected_profiles != nil)
 	cmd = cmd + selected_profiles;
 
@@ -462,6 +470,13 @@
 	if (SCR::Read(.process.running, id) != true)
 	{
 	    update_output ();
+	    // explicitely check the process buffer after exit (bnc#488799)
+	    string buf   = (string) SCR::Read (.process.read, id);
+	    string err_buf	= (string) SCR::Read (.process.read_stderr, id);
+	    if (buf != nil && buf != "")
+		UI::ChangeWidget (`id(`log), `LastLine, buf + "\n");
+	    if (err_buf != nil && err_buf != "")
+		UI::ChangeWidget (`id(`errlog), `LastLine, err_buf + "\n");
 
 	    integer status	= (integer) SCR::Read (.process.status, id);
 	    if (status != 0)
@@ -481,7 +496,8 @@
 
 		// now continue with creating
 		UI::ChangeWidget (`id(`log), `LastLine, "\n");
-		cmd	= sformat ("ZYPP_READONLY_HACK=1 kiwi --nocolor --create %1 -d %2 --logfile terminal", chroot_dir, out_dir);
+		cmd	= sformat ("ZYPP_READONLY_HACK=1 %3 kiwi --nocolor --create %1 -d %2 --logfile terminal",
+		    chroot_dir, out_dir, linux32);
 		y2milestone ("calling '%1'", cmd);
 		// label
 		UI::ReplaceWidget (`id (`rpl), `Left (`Label (_("Creating Image"))));
@@ -618,10 +634,10 @@
 	    if (config != nil && config != $[])
 	    {
 		string name	= config["name"]:"";
-		string ver	= config["version"]:"";
-		if (config["image_type"]:"" != "system")
+		string ver	= get_preferences (config, "version", "");
+		if (config["description",0,"type"]:"" != "system")
 		    y2warning ("%1 not a 'system' image type, skipping", name);
-		else if (name_version[name]:"" == ver)
+		else if (name_version[name]:nil == ver)
 		    y2warning ("template %1,%2 already imported", name, ver);
 		else
 		{
@@ -647,6 +663,13 @@
 	(string) SCR::Read (.sysconfig.product-creator.SUPPORTED_BOOT_IMAGES);
     if (supported_boot_images == nil)
 	supported_boot_images	= "";
+    string architecture	=
+	(string) SCR::Read (.sysconfig.product-creator.DEFAULT_IMAGE_ARCHITECTURE);
+    if (architecture == "" || architecture == nil)
+	architecture	= ProductCreator::GetArch ();
+    if (architecture != "x86_64") // all i[456]86 are i386...
+	architecture	= "i386";
+    image_architecture	= architecture;
     return ReadImageTemplates ();
   }
 }

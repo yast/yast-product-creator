@@ -435,7 +435,8 @@ global map<string,string> ReadContentFile(integer srcid) {
 	return content_cache[srcid]:$[];
     }
 
-    string content = Pkg::SourceProvideFile(srcid, 1, "content");
+    // make content file optional (for empty repos, bnc#500527)
+    string content = Pkg::SourceProvideOptionalFile(srcid, 1, "content");
     map<string,string> contentmap = (map<string,string>)SCR::Read(.content_file, content);
     if (contentmap == nil)
 	contentmap	= $[];
