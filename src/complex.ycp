@@ -261,10 +261,6 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
                 y2error("unexpected retcode: %1", ret);
                 continue;
             }
-
-	    if (ret == `kiwi)
-	    {
-	    }
         }
 
         return (symbol)ret;
@@ -662,10 +658,15 @@ define symbol ImagesOverviewDialog() {
 		string name	= config["name"]:d;
 		// index by order, so we can handle more configs with same name
 		Configurations[i]	= config;
+		string unit	= config["preferences",0,"size",0,"unit"]:"M";
+		string i_size	= get_preferences (config, "size", 0) + unit;
+		// with "additive", "size" has a different meaning
+		if (config["preferences",0,"size",0,"additive"]:"" == "true")
+		    i_size	= "+" + i_size;
 		overview = add (overview, `item (
 		    `id (i), name,
 		    get_preferences (config, "version", "1.0.0"),
-		    get_preferences (config, "size", 0)
+		    i_size
 		));
 		i	= i + 1;
 	    }

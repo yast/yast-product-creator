@@ -1,4 +1,23 @@
 -------------------------------------------------------------------
+Thu May 21 09:46:38 CEST 2009 - jsuchome@suse.cz
+
+- merged changes from CODE11:
+- added openssl-certs to default bootstrap section, so Update repos
+  can work (bnc#491475)
+- read the whole kiwi process output (bnc#488799)
+- make content file optional (for empty repos, bnc#500527)
+- correct check for configuration type and version in templates
+  (bnc#498439)
+- during configuration, do not throw away target image desctination
+  (bnc#499489)
+- updated sysconfig template (DEFAULT_IMAGE_ARCHITECTURE) 
+- added option to specify "additive" attribute to size (fate#305327)
+- detect and report conflicts in selected and deleted package lists
+  (fate#305254)
+- allow building i386 images on x86_64 system (fate#305327)
+- 2.18.5
+
+-------------------------------------------------------------------
 Wed Apr 22 08:03:46 CEST 2009 - jsuchome@suse.cz
 
 - look primary into base product for isolinux.cfg (bnc#496263)
