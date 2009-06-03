@@ -1567,7 +1567,9 @@ directory."), out_dir));
 	"opt"		: [ `hstretch ],
 	// textentry label
 	"label"		: _("&Size"),
-	"help"		: _("<p>Set the image <b>Size</b> in the specified <b>Unit</b>.</p>"),
+	// help text for "Size" field and "Additive" checkbox
+	"help"		: _("<p>Set the image <b>Size</b> in the specified <b>Unit</b>.
+If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is the minimal free space available on the image.</p>"),
 	"init"		: InitSize,
 	"store"		: StoreSize,
 	"handle"	: HandleSize,
@@ -1585,7 +1587,7 @@ directory."), out_dir));
 	"widget"	: `checkbox,
 	// check box label
 	"label"		: _("Additive"),
-	"no_help"	: true,// FIXME the meaning of size is different...!
+	"no_help"	: ,// FIXME the meaning of size is different...!
 	"init"		: InitAdditiveCheckBox,
     ],
     // ---------------- widgtes for directory structure
