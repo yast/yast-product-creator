@@ -1587,7 +1587,7 @@ If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is th
 	"widget"	: `checkbox,
 	// check box label
 	"label"		: _("Additive"),
-	"no_help"	: ,// FIXME the meaning of size is different...!
+	"no_help"	: true,
 	"init"		: InitAdditiveCheckBox,
     ],
     // ---------------- widgtes for directory structure
