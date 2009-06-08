@@ -64,9 +64,20 @@
     // needed for creating kiwi images because kiwi cannot create cross-architecture images
     boolean SameArchitecture()
     {
-	string arch = ProductCreator::GetArch ();
-	string sysarch = Arch::architecture();
+        // current config's arch
+	string arch = ProductCreator::Config["arch"]:"";
+	if (contains(["i486", "i586", "i686"], arch))
+	    arch        = "i386";
+	// system's arch
+	string sysarch = ProductCreator::GetArch ();
 
+	// possible combination
+	if (arch == "i386" && sysarch == "x86_64")
+	{
+	    // Kiwi.ycp asks if GetArch is i386
+	    ProductCreator::SetPackageArch ("i386");
+	    return true;
+	}
 	// is the target architecture different than the machine architecture?
 	if (arch != nil && arch != "" && arch != sysarch)
 	{

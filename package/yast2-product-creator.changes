@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon Jun  8 12:49:38 CEST 2009 - jsuchome@suse.cz
+
+- updated help texts
+- fixed cross-architecture checks (bnc#503906)
+- 2.17.19
+
+-------------------------------------------------------------------
 Wed May 20 23:21:19 CEST 2009 - jsuchome@suse.cz
 
 - added openssl-certs to default bootstrap section, so Update repos
