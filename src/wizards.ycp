@@ -148,6 +148,8 @@ symbol InitSources () {
  */
 symbol InitRepositories () {
 
+    // finish sources before next start, so 32bit and 64bit don't get mangled (bnc#510971)
+    Pkg::SourceFinishAll ();
     Kiwi::initial_repositories	= Kiwi::InitCurrentRepositories ();
     Kiwi::Read ();
     return `next;
@@ -209,7 +211,7 @@ define symbol ImageCreatorSequence() {
 	],
 	"kiwi": $[
 	    `abort	: `abort,
-	    `next	: "images_overview",
+	    `next	: "init_repositories",
 	],
     ];
 

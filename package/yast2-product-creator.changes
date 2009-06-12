@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Thu Jun 11 16:37:39 CEST 2009 - jsuchome@suse.cz
+
+- do not forget to close opened windows on error (bnc#511436)
+- correctly set target 32bit architecture on x86_64 (bnc#510971)
+- with "additive", do not count the packages size (bnc#512358)
+- 2.17.20
+
+-------------------------------------------------------------------
 Mon Jun  8 12:49:38 CEST 2009 - jsuchome@suse.cz
 
 - updated help texts
