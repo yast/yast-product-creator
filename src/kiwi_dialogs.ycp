@@ -229,6 +229,9 @@
 	if (UI::QueryWidget (`id ("sizeunit"), `Value) == "G")
 	    mbytes	= mbytes * 1024;
 	ProductCreator::max_size_mb	= mbytes;
+	// no size check for "additive" (bnc#512358)
+	if (UI::QueryWidget (`id ("additive"), `Value) == true)
+	    ProductCreator::max_size_mb	= 999 * 1024 * 1024;
 
 	map<string,any> ret_map	= runPackageSelector ("",
 	    maplist (map pat, sw_contents["opensusePattern"]:[],
@@ -2323,6 +2326,8 @@ without having %1 package installed"),
 		continue;
 	    repositories	= remove (repositories, selected);
 	    update_repo_table ();
+	    if (size (repositories) > 0)
+		UI::SetFocus (`id (`repositories));
 	}
 	else if (ret == `browse)
 	{
@@ -2380,7 +2385,9 @@ Choose a different one."), name));
 		UI::QueryWidget (`id (`i386), `Value) == true)
 	    {
 		Kiwi::image_architecture	= "i386";
-		ProductCreator::SetPackageArch ("i386");
+		ProductCreator::SetPackageArch ("i686");
+		// closing sources, so they are created again with correct arch (bnc#510971)
+		Pkg::SourceFinishAll ();
 	    }
 
 	    if (size (repositories) > 0)
@@ -2399,12 +2406,8 @@ Choose a different one."), name));
 			url		= "dir://" + url;
 		    if (haskey (current_sources, url))
 		    {
-//			integer srcid	= current_sources[url]:-1;
 			current_sources	= remove (current_sources, url);
 			return true;
-			// TODO is it correct to check architecture now?
-			// but why not to list repositories that won't be used...
-//			return CheckArchitecture (srcid);
 		    }
 		    integer source_ret	= -1;
 		    string full_url	= url;
@@ -2420,12 +2423,6 @@ Choose a different one."), name));
 			return false;
 		    }
 		    return true;
-		    /* see above...
-		    if (CheckArchitecture (source_ret))
-			return true;
-		    else
-			return false;
-		    */
 		});
 		foreach (string url, integer srcid, current_sources, {
 		    Pkg::SourceDelete (srcid);
