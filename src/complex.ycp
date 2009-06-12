@@ -75,7 +75,7 @@
 	if (arch == "i386" && sysarch == "x86_64")
 	{
 	    // Kiwi.ycp asks if GetArch is i386
-	    ProductCreator::SetPackageArch ("i386");
+	    ProductCreator::SetPackageArch ("i686");
 	    return true;
 	}
 	// is the target architecture different than the machine architecture?
