@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Tue Jun 16 14:27:48 CEST 2009 - mvidner@suse.cz
+
+- Using autodocs-ycp.ami, which contains a fix for automake 1.11.
+
+-------------------------------------------------------------------
 Fri Jun 12 14:29:07 CEST 2009 - jsuchome@suse.cz
 
 - do not forget to close opened windows on error (bnc#511436)
