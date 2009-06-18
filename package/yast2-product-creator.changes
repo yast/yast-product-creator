@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Thu Jun 18 09:25:16 CEST 2009 - jsuchome@suse.cz
+
+- 2.18.8 
+
+-------------------------------------------------------------------
 Tue Jun 16 14:27:48 CEST 2009 - mvidner@suse.cz
 
 - Using autodocs-ycp.ami, which contains a fix for automake 1.11.
