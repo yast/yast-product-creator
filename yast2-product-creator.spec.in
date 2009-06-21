@@ -24,7 +24,7 @@ Conflicts:      yast2-storage < 2.16.1
 
 BuildArchitectures:	noarch
 
-Summary:	Create a new product
+Summary:	YaST2 - Module for Creating New Products
 
 %description
 -
