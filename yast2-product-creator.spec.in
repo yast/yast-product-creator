@@ -27,7 +27,8 @@ BuildArchitectures:	noarch
 Summary:	YaST2 - Module for Creating New Products
 
 %description
--
+A wizard for creating your own product (installation images, live ISO,
+XEN images etc.), based on existing installation sources.
 
 @PREP@
 
