@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Jun 22 11:28:49 CEST 2009 - jsuchome@suse.cz
+
+- do not show "compression" widget for ext3 filesystems (bnc#510833)
+- 2.18.9
+
+-------------------------------------------------------------------
 Thu Jun 18 09:25:16 CEST 2009 - jsuchome@suse.cz
 
 - 2.18.8 
