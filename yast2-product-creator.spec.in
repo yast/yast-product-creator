@@ -1,7 +1,7 @@
 @HEADER-COMMENT@
 
 @HEADER@
-BuildRequires:	perl-XML-Writer update-desktop-files yast2-devtools yast2-testsuite yast2-packager autoyast2-installation yast2-security yast2-add-on-creator yast2
+BuildRequires:	perl-XML-Writer update-desktop-files yast2-devtools yast2-testsuite yast2-packager autoyast2-installation yast2-security yast2-add-on-creator yast2 yast2-slp
 
 PreReq:         %fillup_prereq
 
@@ -24,10 +24,11 @@ Conflicts:      yast2-storage < 2.16.1
 
 BuildArchitectures:	noarch
 
-Summary:	Create a new product
+Summary:	YaST2 - Module for Creating New Products
 
 %description
--
+A wizard for creating your own product (installation images, live ISO,
+XEN images etc.), based on existing installation sources.
 
 @PREP@
 

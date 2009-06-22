@@ -1359,7 +1359,18 @@ directory."), out_dir));
   // it is a function, to be able to adapt to actual state)
   map tabs_descr () {
 
-    return $[
+    boolean show_compression	= true;
+
+    // compression not allowed in most cases (bnc#510833)
+    foreach (map typemap, (list<map>)KiwiConfig["preferences",0,"type"]:[], {
+	if (typemap[content_key]:"" == kiwi_task)
+	{
+	    if (typemap["filesystem"]:"" == "ext3")
+		show_compression	= false;
+	}
+    });
+
+    map ret	= $[
       "config.xml" : $[
 	// tab header
 	"header"	: _("Image Configuration"),
@@ -1374,7 +1385,7 @@ directory."), out_dir));
 			    "additive"
 			)
 		    )),
-		    `HWeight (1, "compression")
+		    show_compression ? `HWeight (1, "compression") : `HBox ()
 		),
 		`HBox (
 		    `HWeight (2, `VBox (
@@ -1389,7 +1400,7 @@ directory."), out_dir));
 	    ), `HSpacing(1)),
 	"widget_names" : [
 	    "version",
-	    "size", "sizeunit", "additive", "compression",
+	    "size", "sizeunit", "additive",
 	    "sw_selection",
 	    "rt_sw", "configure_sw",
 	    "delete_sw",
@@ -1477,6 +1488,10 @@ directory."), out_dir));
 	],
       ],
     ];
+    if (show_compression)
+	ret["config.xml","widget_names"]	= add (
+	    ret["config.xml","widget_names"]:[], "compression");
+    return ret;
   }
 
   map<string, map> get_widget_description () {
