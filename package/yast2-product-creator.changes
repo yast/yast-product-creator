@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Jul  1 09:46:11 CEST 2009 - jsuchome@suse.cz
+
+- yast2-slp not needed in BuildRequires (reverting unintended
+  previous change)
+- 2.17.22
+
+-------------------------------------------------------------------
 Mon Jun 22 11:28:49 CEST 2009 - jsuchome@suse.cz
 
 - do not show "compression" widget for ext3 filesystems (bnc#510833)
