@@ -2395,13 +2395,17 @@ Choose a different one."), name));
 
 	    ProductCreator::ResetArch();
 
-	    if (Arch::architecture () == "x86_64" &&
-		UI::QueryWidget (`id (`i386), `Value) == true)
+	    if (Arch::architecture () == "x86_64")
 	    {
-		Kiwi::image_architecture	= "i386";
-		ProductCreator::SetPackageArch ("i686");
-		// closing sources, so they are created again with correct arch (bnc#510971)
-		Pkg::SourceFinishAll ();
+		Kiwi::image_architecture	= "x86_64";
+		if (UI::QueryWidget (`id (`i386), `Value) == true)
+		{
+		    Kiwi::image_architecture	= "i386";
+		    // closing sources, so they are created again with correct arch (bnc#510971)
+		    Pkg::SourceFinishAll ();
+		    Pkg::SourceStartManager(false);
+		    ProductCreator::SetPackageArch ("i686");
+		}
 	    }
 
 	    if (size (repositories) > 0)
