@@ -150,6 +150,8 @@ symbol InitRepositories () {
 
     // finish sources before next start, so 32bit and 64bit don't get mangled (bnc#510971)
     Pkg::SourceFinishAll ();
+    Pkg::SourceStartManager(false);
+
     Kiwi::initial_repositories	= Kiwi::InitCurrentRepositories ();
     Kiwi::Read ();
     return `next;
