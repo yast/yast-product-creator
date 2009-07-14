@@ -590,6 +590,7 @@
     */
    global map <string,map> InitCurrentRepositories () {
 
+	current_repositories	= $[];
 	Pkg::SourceRestore ();
 	foreach (map source, Pkg::SourceEditGet (), {
 	    integer srcid       = source["SrcId"]:-1;
