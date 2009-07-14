@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Jul 14 14:56:33 CEST 2009 - jsuchome@suse.cz
+
+- do not create i386 version of initrd for s390 (bnc#498464) 
+- Image Creator: help texts for locale configuration (bnc#515551)
+- 2.17.24
+
+-------------------------------------------------------------------
 Fri Jul 10 13:11:25 CEST 2009 - lslezak@suse.cz
 
 - fixed cross-architecture problems (bnc#510971)

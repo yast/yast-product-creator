@@ -2256,10 +2256,17 @@ global boolean InsertKeyToInitrds(string gpg_key, string base_dir)
 	    }
 	}
     }
-
+    string arch	= GetArch ();
     list<string> initrds = splitstring(find_output, "\n");
     // remove empty strings
-    initrds = filter(string initrd, initrds, {return initrd != "";});
+    initrds = filter (string initrd, initrds, {
+	if (initrd == "")
+	    return false;
+	// workaround for bnc#498464
+	if (arch == "s390x" && issubstring (initrd, "boot/i386/"))
+	    return false;
+	return true;
+    });
     y2milestone("Found initrds: %1", initrds);
 
     boolean ret = true;

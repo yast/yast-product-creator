@@ -1784,7 +1784,10 @@ If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is th
 	"init"		: InitPreferences,
 	"store"		: StorePreferences,
 	"handle"	: HandlePreferences,
-	"no_help"	: true,
+	// help text for locale (heading)
+	"help"		: _("<p><b>Locale Settings</b></p>") +
+	// help text for locale
+	_("<p>The value of <b>Locale</b> (e.g. <tt>en_US</tt>) defines the contents of the RC_LANG variable in <t>/etc/sysconfig/language</tt>.</p>"),
     ],
     "keytable" : $[
 	"widget"	: `textentry,
@@ -1793,7 +1796,8 @@ If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is th
 	"init"		: InitPreferences,
 	"store"		: StorePreferences,
 	"handle"	: HandlePreferences,
-	"no_help"	: true,
+	// help text for keytable
+	"help"		: _("<p><b>Keyboard layout</b> specifies the name of the console keymap to use. The value (e.g. <tt>us</tt>) corresponds to a map file in <tt>/usr/share/kbd/keymaps</tt>.</p>"),
     ],
     "timezone" : $[
 	"widget"	: `textentry,
@@ -1802,7 +1806,8 @@ If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is th
 	"init"		: InitPreferences,
 	"store"		: StorePreferences,
 	"handle"	: HandlePreferences,
-	"no_help"	: true,
+	// help text for timezone
+	"help"		: _("<p>It is also possible to set a specific <b>Time zone</b>. Available time zones are located in the <tt>/usr/share/zoneinfo</tt> directory.</p>"),
     ],
     // ---------------- widgtes for users tab
     "general_users"	: $[
