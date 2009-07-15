@@ -660,7 +660,7 @@ Try again."));
 	    // ok, now update the structures
 	    user_map	= $[
 		"pwd"		: pwd,
-		"encrypted"	: false,
+		"encrypted"	: user_map["encrypted"]:false && pwd == user_map["pwd"]:"",
 		"name"		: username,
 	    ];
 	    foreach (string key, ["home", "realname", "id"], {
