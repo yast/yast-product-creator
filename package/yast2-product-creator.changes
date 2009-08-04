@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Mon Aug  3 15:32:25 CEST 2009 - jsuchome@suse.cz
+
+- give kiwi more time to finish (bnc#525986)
+- show the warning when package management is locked (bnc#526338)
+- show error if removing old chroot failed (bnc#525993)
+- delete wrong examlple from the help text (bnc#527150)
+- probe repositories of NONE type (bnc#527198)
+- 2.17.26
+
+-------------------------------------------------------------------
 Wed Jul 15 12:08:31 CEST 2009 - jsuchome@suse.cz
 
 - do not re-crypt user password already crypted (bnc#521887)
