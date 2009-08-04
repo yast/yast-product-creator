@@ -18,6 +18,7 @@
   import "Label";
   import "Message";
   import "Package";
+  import "PackageLock";
   import "PackageSystem";
   import "Popup";
   import "ProductCreator";
@@ -1797,7 +1798,7 @@ If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is th
 	"store"		: StorePreferences,
 	"handle"	: HandlePreferences,
 	// help text for keytable
-	"help"		: _("<p><b>Keyboard layout</b> specifies the name of the console keymap to use. The value (e.g. <tt>us</tt>) corresponds to a map file in <tt>/usr/share/kbd/keymaps</tt>.</p>"),
+	"help"		: _("<p><b>Keyboard layout</b> specifies the name of the console keymap to use. The value corresponds to a map file in <tt>/usr/share/kbd/keymaps</tt>.</p>"),
     ],
     "timezone" : $[
 	"widget"	: `textentry,
@@ -2360,6 +2361,8 @@ without having %1 package installed"),
 	}
 	else if (ret == `next)
 	{
+	    y2internal ("package lock check returned %1", PackageLock::Check ());
+
 	    name	= (string) UI::QueryWidget (`id (`config), `Value);
 	    if (name == "")
 	    {
