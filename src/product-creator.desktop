@@ -14,6 +14,7 @@ X-SuSE-YaST-RootOnly=true
 X-SuSE-YaST-AutoInst=
 X-SuSE-YaST-Geometry=
 X-SuSE-YaST-SortKey=
+X-SuSE-YaST-Keywords=product,repository
 
 Icon=yast-cd-creator
 Exec=/sbin/yast2 product-creator 

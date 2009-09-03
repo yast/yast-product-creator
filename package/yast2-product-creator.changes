@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Sep  3 14:17:26 CEST 2009 - jsuchome@suse.cz
+
+- added keywords to desktop files
+- 2.18.10 
+
+-------------------------------------------------------------------
 Mon Jun 22 11:28:49 CEST 2009 - jsuchome@suse.cz
 
 - do not show "compression" widget for ext3 filesystems (bnc#510833)
