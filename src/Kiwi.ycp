@@ -131,6 +131,8 @@
 	string url	= data["url"]:"";
 	if (url == source || url == adapt_source_path (source))
 	{
+	    if (data["type"]:"" == "NONE")
+		data["type"]	= Pkg::RepositoryProbe (url, "");
 	    if (data["type"]:"" == "Plaindir")
 		type	= "rpm-dir";
 	    if (data["type"]:"" == "YUM")
@@ -391,6 +393,19 @@
     return substring (full_path, 0, findlastof (full_path, "/"));
   }
 
+  // wait until process is really done or kill -9 it after minute
+  void give_kiwi_time_to_finish (integer pid) {
+    integer count = 0;
+    while (SCR::Read(.process.running, pid) == true)
+    {
+	sleep(100);
+	count = count + 1;
+	if (count > 600) break;
+    }
+    if (SCR::Read(.process.running, pid) == true) SCR::Execute (.process.kill, pid);
+  }
+
+
   /**
    * run kiwi to finally create the selected image
    * @param out_dir output directory for the result
@@ -410,7 +425,13 @@
     if (FileUtils::Exists (chroot_dir))
     {
 	y2milestone ("%1 directory is present, removing...", chroot_dir);
-	SCR::Execute (.target.bash, sformat ("rm -rf %1", chroot_dir));
+	map out = (map) SCR::Execute (.target.bash_output, sformat ("rm -rf %1", chroot_dir));
+	if (out["exit"]:0 != 0)
+	{
+	    y2warning ("cmd output: %1", out);
+	    Report::Error (_("Removing old chroot directory failed.") + "\n\n" + out["stderr"]:"");
+	    return false;
+	}
     }
     // create path to chroot_dir if it does not exist (#406731)
     FileUtils::CheckAndCreatePath (path_to_dir (chroot_dir));
@@ -523,13 +544,13 @@
 	if (ret == `cancel)
 	{
 	    SCR::Execute (.process.kill, id, 15);
-	    sleep (100);
-	    SCR::Execute (.process.kill, id);
+	    give_kiwi_time_to_finish (id);
 	}
 	sleep (100);
     } while (ret == nil);
 
-    SCR::Execute (.process.kill, id);
+    give_kiwi_time_to_finish (id);
+
     UI::CloseDialog ();
     return ret == `ok;
   }
@@ -590,6 +611,7 @@
     */
    global map <string,map> InitCurrentRepositories () {
 
+	current_repositories	= $[];
 	Pkg::SourceRestore ();
 	foreach (map source, Pkg::SourceEditGet (), {
 	    integer srcid       = source["SrcId"]:-1;

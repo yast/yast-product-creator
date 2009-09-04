@@ -1,4 +1,18 @@
 -------------------------------------------------------------------
+Fri Sep  4 15:17:06 CEST 2009 - jsuchome@suse.cz
+
+- merge changes from SLE11:
+  fixed cross-architecture problems (bnc#510971)
+  Image Creator: help texts for locale configuration (bnc#515551)
+  do not create i386 version of initrd for s390 (bnc#498464)
+  do not re-crypt user password already crypted (bnc#521887)
+  show the warning when package management is locked (bnc#526338) 
+  give kiwi more time to finish (bnc#525986)
+  probe repositories of NONE type (bnc#527198)
+  show error if removing old chroot failed (bnc#525993)
+- 2.18.11
+
+-------------------------------------------------------------------
 Thu Sep  3 14:17:26 CEST 2009 - jsuchome@suse.cz
 
 - added keywords to desktop files
