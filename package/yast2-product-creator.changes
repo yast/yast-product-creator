@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Dec 22 15:31:27 CET 2009 - jsuchome@suse.cz
+
+- use menubutton for both iso image and directory tree (bnc#438223)
+- check for presence of autoyast profile (bnc#503047)
+- 2.19.0 
+
+-------------------------------------------------------------------
 Fri Sep  4 15:17:06 CEST 2009 - jsuchome@suse.cz
 
 - merge changes from SLE11:

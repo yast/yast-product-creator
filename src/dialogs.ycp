@@ -11,6 +11,7 @@
 
     textdomain "product-creator";
 
+    import "FileUtils";
     import "ProductCreator";
     import "Wizard";
     import "SourceManager";
@@ -231,8 +232,15 @@
 
                 if (rb  == `autoyast)
                 {
+		    string profile_loc	= (string)UI::QueryWidget(`id(`profile_loc), `Value);
+		    if (!FileUtils::Exists (profile_loc))
+		    {
+			// error message
+			Report::Error (sformat (_("The file '%1' does not exist. Choose a correct one."), profile_loc));
+			continue;
+		    }
                     ProductCreator::Config["pkgtype"] = "autoyast";
-                    ProductCreator::Config["profile"] = (string)UI::QueryWidget(`id(`profile_loc), `Value);
+                    ProductCreator::Config["profile"] = profile_loc;
                     ProductCreator::Config["copy_profile"] = (boolean)UI::QueryWidget(`id(`copyprofile), `Value);
                 }
                 else  {
@@ -256,7 +264,8 @@
                 continue;
             }
             else {
-                y2error("unexpected retcode: %1", ret);
+		if (ret != `autoyast && ret != `pkgmgr)
+		    y2error("unexpected retcode: %1", ret);
                 continue;
             }
         }
