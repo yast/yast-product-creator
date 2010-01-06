@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Wed Jan  6 13:52:43 CET 2010 - jsuchome@suse.cz
+
+- do not remove directory that can be resused (patch from varkoly,
+  bnc#568298)
+- adapt to new paths of kiwi-config-openSUSE, changed template
+- 2.19.1 
+
+-------------------------------------------------------------------
 Tue Dec 22 15:31:27 CET 2009 - jsuchome@suse.cz
 
 - use menubutton for both iso image and directory tree (bnc#438223)

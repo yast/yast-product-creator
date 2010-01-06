@@ -2814,7 +2814,7 @@ Remove directory %1?") , isodir)))
 	}
         else
 	{
-            return false;
+	    y2milestone("Directory %1 won't be removed", isodir);
 	}
     }
 
