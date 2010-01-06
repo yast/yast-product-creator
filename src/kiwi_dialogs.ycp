@@ -1132,11 +1132,8 @@ directory."), out_dir));
     kiwi_task	= Kiwi::kiwi_task;
 
 
-    // path to definition of openSUSE live CD (used if kiwi-config-openSUSE-kde,
-    // resp. kiwi-config-openSUSE-gnome is installed)
-    string kiwi_dir	= "/usr/share/openSUSE/kiwi-config-kde";
-    if (!FileUtils::Exists (kiwi_dir))
-	kiwi_dir	= "/usr/share/openSUSE/kiwi-config-gnome";
+    // path to definition of openSUSE live CD (used if kiwi-config-openSUSE is installed)
+    string kiwi_dir	= "/usr/share/openSUSE-kiwi/livecd-x11";
 
     // read the information from the base product
     integer src_id	= ProductCreator::checkProductDependency ();
