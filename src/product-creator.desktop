@@ -17,9 +17,8 @@ X-SuSE-YaST-SortKey=
 X-SuSE-YaST-Keywords=product,repository
 
 Icon=yast-cd-creator
-Exec=/sbin/yast2 product-creator 
+Exec=xdg-su -c "/sbin/yast2 product-creator"
 
 Name=Product Creator
 GenericName=Create new products from existing repositories
-X-KDE-SubstituteUID=true
 StartupNotify=true

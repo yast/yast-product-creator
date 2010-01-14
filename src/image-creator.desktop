@@ -17,9 +17,8 @@ X-SuSE-YaST-SortKey=
 X-SuSE-YaST-Keywords=product,appliance,kiwi
 
 Icon=yast-kiwi
-Exec=/sbin/yast2 image-creator
+Exec=xdg-su -c "/sbin/yast2 image-creator"
 
 Name=Image Creator
 GenericName=Create the Live CD, USB or XEN image
-X-KDE-SubstituteUID=true
 StartupNotify=true
