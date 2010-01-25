@@ -1342,7 +1342,20 @@ more <b>add-on</b> selections and packages.
 	    {
 		foreach(string p, packages,
 		{
-		    y2milestone("selecting package for installation: %1 -> %2", p, Pkg::PkgInstall(p));
+		    boolean selected	= Pkg::PkgInstall(p);
+		    y2milestone("selecting package for installation: %1 -> %2", p, selected);
+		    if (!selected)
+		    {
+			list <list> provides	= Pkg::PkgQueryProvides (p);
+			provides	= filter (list l, provides, {
+			    return l[1]:`NONE != `NONE;
+			});
+			string pp	= provides[0,0]:"";
+			if (pp != "")
+			{
+			    y2milestone("selecting first package providing %1: %2 -> %3", p, pp, Pkg::PkgInstall (pp));
+			}
+		    }
 		});
 	    }
 

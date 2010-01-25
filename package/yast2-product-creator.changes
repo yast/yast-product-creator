@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Mon Jan 25 19:39:12 CET 2010 - jsuchome@suse.cz
+
+- when package cannot be installed, look if it is not provided
+  by something else (bnc#571694)
+- if primary tag for the boot images is not defined, take the first
+  one (bnc#572727)
+- 2.17.28
+
+-------------------------------------------------------------------
 Tue Dec 22 15:43:41 CET 2009 - jsuchome@suse.cz
 
 - use menubutton for both iso image and directory tree (bnc#438223)
