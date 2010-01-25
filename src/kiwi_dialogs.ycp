@@ -2075,14 +2075,12 @@ return ret;
 	    UI::ChangeWidget(`id(`out_dir), `Value, Config["iso-directory"]:"");
 	update_repo_table ();
 	list type_its = supported_images != "template" ? default_type_items: [];
-	boolean primary	= false;
 
+	kiwi_task	= "";
 	foreach (map typemap, (list<map>) Config["preferences",0,"type"]:[], {
 	    string type	= typemap[content_key]:"";
-	    if (!primary)
+	    if (typemap["primary"]:"false" == "true" || kiwi_task == "")
 		kiwi_task	= type;
-	    if (typemap["primary"]:"false" == "true")
-		primary		= true;
 	    if ((supported_images == "" && !contains (present_types, type)) ||
 		supported_images == "template")
 	    {
@@ -2091,6 +2089,11 @@ return ret;
 		present_types	= union (present_types, [type]);
 	    }
 	});
+	if (kiwi_task == "")
+	{
+	    kiwi_task	= "iso";
+	    y2warning ("no task found, setting to 'iso'");
+	}
 	UI::ChangeWidget (`id (`type), `Items, type_its);
 	UI::ChangeWidget (`id (`type), `Value, kiwi_task);
 	return true;
