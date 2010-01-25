@@ -38,12 +38,20 @@ map<string,any> save_preferences (map<string,any> config, string key, string val
 // get the primary value of image type to be built ('type' from 'preferences')
 string get_current_task (map config) {
 
-    string task	= "iso";
+    string task	= "";
     foreach (map typemap, (list<map>) config["preferences",0,"type"]:[], {
-	task   = typemap[Kiwi::content_key]:task;
+	if (task == "") // take the 1st one if none is default
+	    task   = typemap[Kiwi::content_key]:task;
 	if (typemap["primary"]:"false" == "true")
+	{
+	    task   = typemap[Kiwi::content_key]:task;
 	    break;
+	}
     });
+    if (task == "")
+    {
+	y2milestone ("no task found, setting to 'iso'");
+    }
     return task;
 }
 
