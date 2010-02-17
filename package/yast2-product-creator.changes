@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Feb 17 10:22:43 CET 2010 - jsuchome@suse.cz
+
+- recommend installation of package with up-to-date templates 
+- 2.19.3
+
+-------------------------------------------------------------------
 Mon Jan 25 19:41:02 CET 2010 - jsuchome@suse.cz
 
 - when package cannot be installed, look if it is not provided

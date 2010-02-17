@@ -24,6 +24,9 @@ Requires:	yast2-pkg-bindings >= 2.17.6
 # New API of StorageDevices.ycp
 Conflicts:      yast2-storage < 2.16.1
 
+# prefer to install package with real templates
+Recommends:	kiwi-config-openSUSE
+
 BuildArchitectures:	noarch
 
 Summary:	YaST2 - Module for Creating New Products
