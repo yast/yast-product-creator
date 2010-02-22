@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Feb 22 15:43:36 CET 2010 - jsuchome@suse.cz
+
+- enable saving kiwi logs on demand (fate#306937)
+- 2.17.29 
+
+-------------------------------------------------------------------
 Mon Jan 25 19:39:12 CET 2010 - jsuchome@suse.cz
 
 - when package cannot be installed, look if it is not provided

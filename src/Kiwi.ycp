@@ -72,6 +72,9 @@
   // map with image templates (to base new projects on)
   global map<string,map> Templates		= $[];
 
+  string stdout_file	= "/tmp/image_creator.stdout";
+  string stderr_file	= "/tmp/image_creator.stderr";
+
   /**
    * crypt given user password with current encryption algorithm
    */
@@ -405,6 +408,32 @@
     if (SCR::Read(.process.running, pid) == true) SCR::Execute (.process.kill, pid);
   }
 
+  /**
+   * ask user where to save kiwi log files
+   */
+  boolean save_logs_popup () {
+
+    UI::OpenDialog (`opt(`decorated), `HBox(`HSpacing(1.5), `VBox (
+	`VSpacing (0.2),
+	`TextEntry (`id (`stdout_file), _("Path to file with standard output"), stdout_file),
+	`TextEntry (`id (`stderr_file), _("Path to file with error output"), stderr_file),
+	`PushButton (`id (`ok), Label::SaveButton ()),
+	`VSpacing (0.2)
+    ), `HSpacing(1.5)));
+
+    UI::UserInput ();
+
+    stdout_file	= (string) UI::QueryWidget (`id (`stdout_file), `Value);
+    stderr_file	= (string) UI::QueryWidget (`id (`stderr_file), `Value);
+
+    UI::CloseDialog ();
+
+    if (FileUtils::CheckAndCreatePath (path_to_dir (stdout_file)))
+	SCR::Write (.target.string, stdout_file, (string) UI::QueryWidget (`id (`log), `Value));
+    if (FileUtils::CheckAndCreatePath (path_to_dir (stderr_file)))
+	SCR::Write (.target.string, stderr_file, (string) UI::QueryWidget (`id (`errlog), `Value));
+    return true;
+  }
 
   /**
    * run kiwi to finally create the selected image
@@ -452,13 +481,19 @@
 	    `VSpacing(0.5),
 	    `LogView (`id (`errlog), "", 8, 0),
 	    `VSpacing(0.5),
-	    `ReplacePoint (`id (`rp),
-		`PushButton (`id(`cancel),`opt(`key_F9), Label::CancelButton ())
+	    `HBox (
+		`ReplacePoint (`id (`rp),
+		    `PushButton (`id(`cancel),`opt(`key_F9), Label::CancelButton ())
+		),
+		// button label
+		`PushButton (`id(`save), _("Save logs"))
 	    ),
 	    `VSpacing(0.5)
 	))
     ), `HSpacing(1.5)
     ));
+
+    UI::ChangeWidget (`id (`save), `Enabled, false);
 
     integer id	= -1;
 
@@ -507,7 +542,12 @@
 		    `Label (`opt (`boldFont), _("Image creation failed.")),
 		    `PushButton (`id(`close), Label::CloseButton ())
 		));
-		ret	= (symbol) UI::UserInput ();
+		UI::ChangeWidget (`id (`save), `Enabled, true);
+		repeat
+		{
+		    ret	= (symbol) UI::UserInput ();
+		    if (ret == `save) save_logs_popup ();
+		} until (ret == `close);
 		break;
 	    }
 	    else if (!creating)
@@ -533,7 +573,12 @@
 		    `Label (`opt (`boldFont), _("Image creation succeeded.")),
 		    `PushButton (`id(`ok), Label::OKButton ())
 		));
-		ret	= (symbol) UI::UserInput ();
+		UI::ChangeWidget (`id (`save), `Enabled, true);
+		repeat
+		{
+		    ret	= (symbol) UI::UserInput ();
+		    if (ret == `save) save_logs_popup ();
+		} until (ret == `ok);
 		break;
 	    }
 	}
@@ -543,8 +588,21 @@
 	}
 	if (ret == `cancel)
 	{
+	    UI::ReplaceWidget (`id (`rp), `HBox (
+		// label (command result)
+		`Label (`opt (`boldFont), _("Image creation canceled.")),
+		`PushButton (`id(`close), Label::CloseButton ())
+	    ));
 	    SCR::Execute (.process.kill, id, 15);
 	    give_kiwi_time_to_finish (id);
+	    UI::ChangeWidget (`id (`save), `Enabled, true);
+	    repeat
+	    {
+		ret	= (symbol) UI::UserInput ();
+		if (ret == `save)
+		    save_logs_popup ();
+	    } until (ret == `close);
+	    break;
 	}
 	sleep (100);
     } while (ret == nil);
