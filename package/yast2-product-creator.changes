@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Feb 26 16:32:02 CET 2010 - jsuchome@suse.cz
+
+- do not escape path to local sources (bnc#561612)
+- 2.17.30
+
+-------------------------------------------------------------------
 Mon Feb 22 15:43:36 CET 2010 - jsuchome@suse.cz
 
 - enable saving kiwi logs on demand (fate#306937)
