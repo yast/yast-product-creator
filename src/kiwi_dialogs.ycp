@@ -2301,6 +2301,12 @@ without having %1 package installed"),
 		if (haskey (repositories, url))
 		    continue;
 
+		map parsed = URL::Parse(url);
+		if (parsed["scheme"]:"" == "dir")
+		{
+		    url	= parsed["path"]:url;
+		    y2milestone ("un-escaping local directory path: %1", url);
+		}
 		boolean plaindir = SourceDialogs::IsPlainDir();
 
 		repositories[url]	= $[
