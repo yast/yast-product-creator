@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Mar  8 15:27:43 CET 2010 - jsuchome@suse.cz
+
+- enhanced "save logs" dialog (bnc#583783)
+- 2.19.6
+
+-------------------------------------------------------------------
 Fri Feb 26 16:33:06 CET 2010 - jsuchome@suse.cz
 
 - do not escape path to local sources (bnc#561612
