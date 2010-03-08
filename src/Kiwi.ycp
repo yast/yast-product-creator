@@ -72,8 +72,9 @@
   // map with image templates (to base new projects on)
   global map<string,map> Templates		= $[];
 
-  string stdout_file	= "/tmp/image_creator.stdout";
-  string stderr_file	= "/tmp/image_creator.stderr";
+  string stdout_file   = "image_creator.stdout";
+  string stderr_file   = "image_creator.stderr";
+  string logs_directory	= "/tmp";
 
   /**
    * crypt given user password with current encryption algorithm
@@ -413,25 +414,81 @@
    */
   boolean save_logs_popup () {
 
+    string dir	= logs_directory;
+
     UI::OpenDialog (`opt(`decorated), `HBox(`HSpacing(1.5), `VBox (
 	`VSpacing (0.2),
-	`TextEntry (`id (`stdout_file), _("Path to file with standard output"), stdout_file),
-	`TextEntry (`id (`stderr_file), _("Path to file with error output"), stderr_file),
-	`PushButton (`id (`ok), Label::SaveButton ()),
+	`HBox (
+	    // text box label
+	    `InputField (`id (`out_dir), `opt (`hstretch), _("Path to directory to store the log files"), dir),
+	    `VBox (
+		`Label (""),
+		`PushButton (`id (`browse), Label::BrowseButton ())
+	    )
+	),
+	// text box label
+	`InputField (`id (`stdout_file), `opt (`hstretch), _("Standard output file name"), stdout_file),
+	// text box label
+	`InputField (`id (`stderr_file), `opt (`hstretch), _("Error output file name"), stderr_file),
+	`VSpacing (0.2),
+	`ButtonBox (
+	    `PushButton (`id (`ok), Label::SaveButton ()),
+	    `PushButton (`id (`cancel), Label::CancelButton ())
+	),
 	`VSpacing (0.2)
     ), `HSpacing(1.5)));
 
-    UI::UserInput ();
+    any ret = `cancel;
+    string full_stdout	= dir + "/" + stdout_file;
+    string full_stderr	= dir + "/" + stderr_file;
+
+    while (true)
+    {
+	ret = UI::UserInput ();
+	if (ret == `cancel)
+	{
+	    UI::CloseDialog ();
+	    break;
+	}
+	if (ret == `browse)
+	{
+	    string selected = UI::AskForExistingDirectory (dir, "");
+            if (selected != nil)
+		UI::ChangeWidget (`id(`out_dir), `Value, selected);
+	}
+	if (ret == `ok)
+	{
+	    dir	= (string) UI::QueryWidget (`id (`out_dir), `Value);
+	    full_stdout	= dir + "/" + (string) UI::QueryWidget (`id (`stdout_file), `Value);
+	    full_stderr	= dir + "/" + (string) UI::QueryWidget (`id (`stderr_file), `Value);
+	    if (FileUtils::Exists (full_stdout) &&
+		!Popup::YesNo (sformat (_("File %1 already exists.
+Rewrite?"), full_stdout)))
+		continue;
+	    if (FileUtils::Exists (full_stderr) &&
+		!Popup::YesNo (sformat (_("File %1 already exists.
+Rewrite?"), full_stderr)))
+		continue;
+	    break;
+	}
+    }
+
+    if (ret == `cancel) return false;
 
     stdout_file	= (string) UI::QueryWidget (`id (`stdout_file), `Value);
     stderr_file	= (string) UI::QueryWidget (`id (`stderr_file), `Value);
 
+
     UI::CloseDialog ();
 
-    if (FileUtils::CheckAndCreatePath (path_to_dir (stdout_file)))
-	SCR::Write (.target.string, stdout_file, (string) UI::QueryWidget (`id (`log), `Value));
-    if (FileUtils::CheckAndCreatePath (path_to_dir (stderr_file)))
-	SCR::Write (.target.string, stderr_file, (string) UI::QueryWidget (`id (`errlog), `Value));
+    if (FileUtils::CheckAndCreatePath (dir))
+	SCR::Write (.target.string, full_stdout, (string) UI::QueryWidget (`id (`log), `Value));
+    else return false;
+
+    SCR::Write (.target.string, full_stderr, (string) UI::QueryWidget (`id (`errlog), `Value));
+
+    logs_directory = dir;
+
     return true;
   }
 
