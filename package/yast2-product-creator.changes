@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Mar 11 11:11:21 CET 2010 - jsuchome@suse.cz
+
+- remember logs directory (bnc#587012)
+- 2.19.7 
+
+-------------------------------------------------------------------
 Mon Mar  8 15:27:43 CET 2010 - jsuchome@suse.cz
 
 - enhanced "save logs" dialog (bnc#583783)
