@@ -452,6 +452,7 @@
 	}
 	if (ret == `browse)
 	{
+	    dir	= (string) UI::QueryWidget (`id (`out_dir), `Value);
 	    string selected = UI::AskForExistingDirectory (dir, "");
             if (selected != nil)
 		UI::ChangeWidget (`id(`out_dir), `Value, selected);
