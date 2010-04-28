@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Apr 28 16:55:50 CEST 2010 - jsuchome@suse.cz
+
+- better check for URLs of local repositories, so local repository
+  is saved with correct 'rpm-dir' flag (bnc#599221)
+- 2.19.8   
+
+-------------------------------------------------------------------
 Thu Mar 11 11:11:21 CET 2010 - jsuchome@suse.cz
 
 - remember logs directory (bnc#587012)

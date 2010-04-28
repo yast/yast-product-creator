@@ -133,7 +133,7 @@
 	integer srcid	= sourcemap["SrcId"]:-1;
         map data	= Pkg::SourceGeneralData (srcid);
 	string url	= data["url"]:"";
-	if (url == source || url == adapt_source_path (source))
+	if (adapt_source_path (url) == adapt_source_path (source))
 	{
 	    if (data["type"]:"" == "NONE")
 		data["type"]	= Pkg::RepositoryProbe (url, "");
