@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Apr 29 18:02:40 CEST 2010 - jsuchome@suse.cz
+
+- remember the directory of the saved configuration (bnc#600922)
+- 2.19.10
+
+-------------------------------------------------------------------
 Thu Apr 29 13:24:34 CEST 2010 - jsuchome@suse.cz
 
 - check availability of selected packages and report problem

@@ -1870,7 +1870,7 @@ to which the users belongs.</p>
  */
 define boolean CheckForAvailablePackages () {
 
-    UI::BusyCursor ();
+    Popup::ShowFeedback (_("Checking packages availability..."), _("Please wait..."));
     foreach (map pmap, KiwiConfig["packages"]:[], {
 	string type	= pmap["type"]:"";
 	if (type != "delete")
@@ -1892,7 +1892,7 @@ define boolean CheckForAvailablePackages () {
 	    }
 	}
     });
-    UI::NormalCursor ();
+    Popup::ClearFeedback ();
     return true;
 }
 
