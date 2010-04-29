@@ -40,6 +40,12 @@
 
   string content_key	= Kiwi::content_key;
 
+  map section_type_label	= $[
+    "image"	: _("Packages for Image"),
+    "bootstrap"	: _("Bootstrap"),
+    "xen"	: _("Xen Specific Packages")
+  ];
+
   // read available the images under /usr/share/kiwi/image/ directory
   list<term> GetAvailableImages (string subdir) {
 
@@ -1861,12 +1867,46 @@ to which the users belongs.</p>
     ];
   }
 
+/**
+ * Check if selected packages are available (some of them may not after
+ * deleting some repository)
+ */
+define boolean CheckForAvailablePackages () {
+
+    UI::BusyCursor ();
+    foreach (map pmap, KiwiConfig["packages"]:[], {
+	string type	= pmap["type"]:"";
+	if (type != "delete")
+	{
+	    list<string> n_a	= [];
+	    foreach (map p, pmap["package"]:[], {
+		if (p["name"]:"" != "" && !Package::Available (p["name"]:""))
+		    n_a	= add (n_a, p["name"]:"");
+	    });
+	    if (size (n_a) > 0)
+	    {
+		string type_label	= section_type_label[type]:type;
+		// popup headline
+		Popup::LongText (_("Missing packages"),
+		    // popup text
+		    `RichText (sformat (_("<p>These packages from section '%1' are not available with selected repositories:</p>
+<p>%2.</p>
+<p>Check the list of packages and package repositories.</p>"), type_label, mergestring (sort (n_a), "<br>"))), 70, 25);
+	    }
+	}
+    });
+    UI::NormalCursor ();
+    return true;
+}
+
   /**
    * Main dialog for Kiwi image configuration
    */
 define symbol KiwiDialog () {
 
 InitImageConfiguration ();
+
+CheckForAvailablePackages ();
 
 map<string, map> widget_descr	= get_widget_description ();
 widget_descr["tab"] = CWMTab::CreateWidget($[
