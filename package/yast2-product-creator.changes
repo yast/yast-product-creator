@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu Apr 29 12:51:36 CEST 2010 - jsuchome@suse.cz
+
+- check availability of selected packages and report problem
+  (bnc#599952)
+- 2.17.34
+
+-------------------------------------------------------------------
 Wed Apr 28 16:05:42 CEST 2010 - jsuchome@suse.cz
 
 - better check for URLs of local repositories, so local repository
