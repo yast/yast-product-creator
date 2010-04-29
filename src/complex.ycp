@@ -678,6 +678,7 @@ define symbol ImagesOverviewDialog() {
 		}
 		string task	= get_current_task (config);
 
+		config["original_directory"]	= d;
 		config["kiwi_configuration_" + task] = images_dir + "/" + d;
 		config["current_task"]	= task;
 

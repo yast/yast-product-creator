@@ -352,7 +352,7 @@
 %2</image>", image_tag, image_contents);
 
 
-    config_dir	= tmp_dir + "/" + KiwiConfig["name"]:"";
+    config_dir	= tmp_dir + "/" + KiwiConfig["original_directory"]:KiwiConfig["name"]:"";
     SCR::Execute (.target.mkdir, config_dir);
     SCR::Write (.target.string, config_dir + "/config.xml", write_string);
     // config.xml may contain password, do not let other users read it
