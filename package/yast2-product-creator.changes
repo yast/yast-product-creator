@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu Aug  5 13:20:49 CEST 2010 - jsuchome@suse.cz
+
+- command line mode fixes: initialize the sources, automatically
+  import GPG keys (bnc#626512)
+- 2.20.1 
+
+-------------------------------------------------------------------
 Thu Aug  5 13:16:26 CEST 2010 - jsuchome@suse.cz
 
 - save config.xml after changing the package list (bnc#599952)
