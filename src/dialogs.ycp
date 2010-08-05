@@ -1246,6 +1246,25 @@ more <b>add-on</b> selections and packages.
 	return result;
     }
 
+    boolean InstallPackageOrProvider (string p) {
+
+		    boolean selected	= Pkg::PkgInstall(p);
+		    y2milestone("selecting package for installation: %1 -> %2", p, selected);
+		    if (!selected)
+		    {
+			list <list> provides	= Pkg::PkgQueryProvides (p);
+			provides	= filter (list l, provides, {
+			    return l[1]:`NONE != `NONE;
+			});
+			string pp	= provides[0,0]:"";
+			if (pp != "")
+			{
+			    y2milestone("selecting first package providing %1: %2 -> %3", p, pp, Pkg::PkgInstall (pp));
+			}
+		    }
+
+    }
+
     /**
      * Display package selection dialog with preselected packages.
      * @param base_pattern base pattern to install, can be empty ("") if there is no base pattern
@@ -1342,20 +1361,7 @@ more <b>add-on</b> selections and packages.
 	    {
 		foreach(string p, packages,
 		{
-		    boolean selected	= Pkg::PkgInstall(p);
-		    y2milestone("selecting package for installation: %1 -> %2", p, selected);
-		    if (!selected)
-		    {
-			list <list> provides	= Pkg::PkgQueryProvides (p);
-			provides	= filter (list l, provides, {
-			    return l[1]:`NONE != `NONE;
-			});
-			string pp	= provides[0,0]:"";
-			if (pp != "")
-			{
-			    y2milestone("selecting first package providing %1: %2 -> %3", p, pp, Pkg::PkgInstall (pp));
-			}
-		    }
+		    InstallPackageOrProvider (p);
 		});
 	    }
 
@@ -1512,7 +1518,7 @@ more <b>add-on</b> selections and packages.
         y2milestone("Selected packages: %1 ", size(Pkg::GetPackages(`selected, true)));
 
 	// activate the selections
-        boolean solved = Pkg::PkgSolve(true);
+        boolean solved = (ret == `cancel || Pkg::PkgSolve(true));
 
 	if (!solved)
 	{
@@ -1531,7 +1537,7 @@ more <b>add-on</b> selections and packages.
 
         list seladd = [];
         list selbase = [];
-        if ( ret != `back )
+        if ( ret != `back && ret != `cancel)
         {
 	    if (!using_patterns)
 	    {
