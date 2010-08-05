@@ -223,14 +223,12 @@
     UI::ChangeWidget (`id (id), `Value, pat + pac + ign);
   }
 
+
   /**
-   * Handler for software selection
+   * open package selector with given set of packages, return modified set
+   * or nil on cancel
    */
-  define symbol HandleSWSelection (string key, map event) {
-    if (event["ID"]:nil == key)
-    {
-	integer package_set	= KiwiConfig["package_set"]:0;
-	map sw_contents		= KiwiConfig["packages",package_set]:$[];
+  define map modifyPackageSelection (map sw_contents) {
 
 	integer mbytes	= (integer) UI::QueryWidget (`id ("size"), `Value);
 	if (UI::QueryWidget (`id ("sizeunit"), `Value) == "G")
@@ -249,7 +247,7 @@
 		``(pat["name"]:"")),
 	    `packages
 	);
-	if (ret_map["ui"]:nil == `cancel)
+	if (ret_map["ui"]:nil == `cancel || ret_map["ui"]:nil == `failed)
 	    return nil;
 	sw_contents["opensusePattern"]	= maplist (string name,
 	    ret_map["addons"]:[], ``($[ "name" : name]));
@@ -257,7 +255,20 @@
 	    ret_map["packages"]:[], ``($[ "name" : name]));
 	sw_contents["ignore"]	= maplist (string name,
 	    ret_map["taboo"]:[], ``($[ "name" : name]));
-	KiwiConfig["packages",package_set]	= sw_contents;
+
+    return sw_contents;
+  }
+
+  /**
+   * Handler for software selection
+   */
+  define symbol HandleSWSelection (string key, map event) {
+    if (event["ID"]:nil == key)
+    {
+	integer package_set	= KiwiConfig["package_set"]:0;
+	map sw_contents		= modifyPackageSelection (KiwiConfig["packages",package_set]:$[]);
+	if (sw_contents != nil)
+	    KiwiConfig["packages",package_set]	= sw_contents;
 	InitSWRichText ("rt_sw");
     }
     return nil;
@@ -962,6 +973,128 @@ Try again."));
   }
 
   /**
+   * Check if selected packages are available (some of them may not after
+   * deleting some repository)
+   * return true if there was no conflict
+   */
+  define symbol CheckForAvailablePackages (boolean ignore_allowed) {
+
+    list<map> packages_section	= KiwiConfig["packages"]:[];
+    integer index		= 0;
+    symbol ret			= `ok;
+    foreach (map pmap, packages_section, {
+	string type	= pmap["type"]:"";
+	if (type != "delete")
+	{
+	    Popup::ShowFeedback (_("Checking packages availability..."), _("Please wait..."));
+	    list<string> n_a	= [];
+	    foreach (map p, pmap["package"]:[], {
+		if (p["name"]:"" != "" && !Pkg::IsAvailable (p["name"]:""))
+		    n_a	= add (n_a, p["name"]:"");
+	    });
+	    Popup::ClearFeedback ();
+	    if (size (n_a) > 0)
+	    {
+		ret			= `missing;
+		string type_label	= section_type_label[type]:type;
+
+		UI::OpenDialog (`opt (`decorated), `HBox (`VSpacing (25),
+		    `VBox (
+			`HSpacing (70),
+			`Left(`Heading (_("Missing packages"))),
+			`VSpacing(0.2),
+			// popup text
+			`RichText (sformat (_("<p>These packages from section '%1' are not available with selected repositories:</p>
+<p>%2.</p>
+<p>
+You can remove the packages from the section, check the detailed package selection or ignore the situation.</p>
+<p>
+Going to detailed package selection and accepting the view without any further changes results in removal of problematic packages from the section.
+</p>"), type_label, mergestring (sort (n_a), "<br>"))),
+			`HBox (
+			    // button label
+			    `PushButton (`id (`remove), `opt (`default), _("Remove the packages")),
+			    // button label
+			    `PushButton (`id (`selection), _("Check package selection")),
+			    // button label
+			    `PushButton (`id (`ignore), ignore_allowed ? _("Ignore") : _("Cancel")) 
+			)
+		    )
+		));
+		any r	= UI::UserInput ();
+		UI::CloseDialog ();
+		if (r == `remove)
+		{
+		    KiwiConfig["packages",index,"package"]	= filter (map p, pmap["package"]:[], {
+			return !contains (n_a, p["name"]:"");
+		    });
+		    ret	= `removed;
+		}
+		if (r == `selection)
+		{
+		    map sw_contents		= modifyPackageSelection (KiwiConfig["packages",index]:$[]);
+		    if (sw_contents != nil)
+		    {
+			KiwiConfig["packages",index]	= sw_contents;
+			ret	= `selection;
+		    }
+		}
+	    }
+	}
+	index	= index + 1;
+    });
+
+    return ret;
+  }
+
+  /**
+   * Check if all selected packages and patterns can be installed
+   * If dependency problem was found, open package selector.
+   * Return false if package selector was canceled
+   */
+  define boolean CheckPackageDependencies () {
+
+    boolean ret	= true;
+
+    list<map> packages_section	= KiwiConfig["packages"]:[];
+    integer index		= 0;
+    foreach (map pmap, packages_section, {
+	string type	= pmap["type"]:"";
+	if (type != "delete")
+	{
+	    Pkg::ResolvableNeutral ("", `package, true);
+	    Pkg::ResolvableNeutral ("", `pattern, true);
+
+	    foreach (map pat, pmap["opensusePattern"]:[], {
+		Pkg::ResolvableInstall(pat["name"]:"", `pattern);
+	    });
+
+	    ProductCreator::MarkTaboo (maplist (map i, pmap["ignore"]:[], ``(i["name"]:"")));
+
+	    foreach (map p, KiwiConfig["packages",index,"package"]:[], {
+		InstallPackageOrProvider (p["name"]:"");
+	    });
+
+	    boolean solved = Pkg::PkgSolve (true);
+	    if (!solved)
+	    {
+		map sw_contents		= modifyPackageSelection (KiwiConfig["packages",index]:$[]);
+		if (sw_contents != nil)
+		{
+		    KiwiConfig["packages",index]	= sw_contents;
+		}
+		else
+		{
+		    ret	= false;
+		}
+	    }
+	}
+	index	= index + 1;
+    });
+    return ret;
+  }
+
+  /**
    * handler for main action: create the iso image with kiwi
    */
   define boolean CreateImage (string key, map event) {
@@ -1040,7 +1173,6 @@ directory."),
 directory."),
     ];
 
-    Kiwi::WriteConfigXML (KiwiConfig, kiwi_task);
     boolean create_image_now	= false;
     string selected_profiles	= "";
     if (size (KiwiConfig["profiles"]:[]) > 0)
@@ -1095,6 +1227,21 @@ directory."),
     }
     if (create_image_now)
     {
+	if (CheckForAvailablePackages (false) == `missing)
+	{
+	    y2milestone ("there were missing packages, not going to build");
+	    InitSWRichText ("rt_sw");
+	    return false;
+	}
+	if (!CheckPackageDependencies ())
+	{
+	    y2milestone ("there was unresolved dependency problem, not going to build");
+	    InitSWRichText ("rt_sw");
+	    return false;
+	}
+	// write XML now, after possible modification of the package list
+	Kiwi::WriteConfigXML (KiwiConfig, kiwi_task);
+
 	    string out_dir	= KiwiConfig["iso-directory"]:"";
 	    if (FileUtils::CheckAndCreatePath (out_dir) &&
 		Kiwi::PrepareAndCreate (out_dir, selected_profiles))
@@ -1121,6 +1268,11 @@ directory."), out_dir));
 		ret	= false;
 	    }
     }
+    else
+    {
+	Kiwi::WriteConfigXML (KiwiConfig, kiwi_task);
+    }
+
     string dir	= Kiwi::SaveConfiguration (KiwiConfig, kiwi_task);
     if (dir != nil && dir != "")
     {
@@ -1201,8 +1353,8 @@ directory."), out_dir));
     });
     KiwiConfig["import_files"]	= import_files;
 
-
     map<string,any> read_config	= Kiwi::ReadConfigXML (kiwi_configuration);
+
     if (!KiwiConfig["_imported"]:false)
     {
 	// "type" had different meaning in ProductCreator::Config...
@@ -1864,37 +2016,6 @@ to which the users belongs.</p>
     ];
   }
 
-/**
- * Check if selected packages are available (some of them may not after
- * deleting some repository)
- */
-define boolean CheckForAvailablePackages () {
-
-    Popup::ShowFeedback (_("Checking packages availability..."), _("Please wait..."));
-    foreach (map pmap, KiwiConfig["packages"]:[], {
-	string type	= pmap["type"]:"";
-	if (type != "delete")
-	{
-	    list<string> n_a	= [];
-	    foreach (map p, pmap["package"]:[], {
-		if (p["name"]:"" != "" && !Package::Available (p["name"]:""))
-		    n_a	= add (n_a, p["name"]:"");
-	    });
-	    if (size (n_a) > 0)
-	    {
-		string type_label	= section_type_label[type]:type;
-		// popup headline
-		Popup::LongText (_("Missing packages"),
-		    // popup text
-		    `RichText (sformat (_("<p>These packages from section '%1' are not available with selected repositories:</p>
-<p>%2.</p>
-<p>Check the list of packages and package repositories.</p>"), type_label, mergestring (sort (n_a), "<br>"))), 70, 25);
-	    }
-	}
-    });
-    Popup::ClearFeedback ();
-    return true;
-}
 
   /**
    * Main dialog for Kiwi image configuration
@@ -1903,7 +2024,10 @@ define symbol KiwiDialog () {
 
 InitImageConfiguration ();
 
-CheckForAvailablePackages ();
+if (CheckForAvailablePackages (true) != `selection)
+{
+    CheckPackageDependencies ();
+}
 
 map<string, map> widget_descr	= get_widget_description ();
 widget_descr["tab"] = CWMTab::CreateWidget($[
