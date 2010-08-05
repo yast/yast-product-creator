@@ -13,8 +13,14 @@
     import "Progress";
     import "ProductCreator";
     import "RichText";
+    import "SourceManager";
 
     textdomain "product-creator";
+
+    // dummy function to return true when callback is invoked (from AutoInstall.ycp)
+    define boolean callbackTrue_boolean_map_integer(map<string,any> dummy_map, integer dummy) {
+	return true;
+    }
 
     void ProcessConfigFileOption(map params)
     {
@@ -154,6 +160,20 @@
 	{
 	    ProductCreator::Config["bootconfig"]	=
 		ProductCreator::Readisolinux();
+	}
+
+	if (action != "show")
+	{
+	    // initialize the sources before commiting configuration
+
+	    ProductCreator::ResetArch();
+	    // unload all active sources (reset the internal state, see bnc#469191)
+	    Pkg::SourceFinishAll();
+
+	    SourceManager::ReadSources();
+
+	    // automatically import GPG keys when adding repository
+	    Pkg::CallbackImportGpgKey (callbackTrue_boolean_map_integer);
 	}
 
 	// save the new configuration into global map, parse autoyast profile
