@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Oct 12 13:32:37 UTC 2010 - lslezak@suse.cz
+
+- don't use obsoleted inst_packages.ycp client, use PackagesUI.ycp
+  module instead (bnc#471490)
+- 2.20.2
+
+-------------------------------------------------------------------
 Thu Aug  5 13:20:49 CEST 2010 - jsuchome@suse.cz
 
 - command line mode fixes: initialize the sources, automatically
