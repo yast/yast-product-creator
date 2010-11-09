@@ -47,6 +47,9 @@
   // target architecture of image (can be only i386 if different from current one)
   global string image_architecture	= "";
 
+  // if target architecture should be i586 instead of i686
+  global boolean target_i586		= false;
+
   // directories with user-made templated
   global list<string> templates_dirs	= [];
 
@@ -566,9 +569,16 @@ Rewrite?"), full_stderr)))
     }
 
     string linux32	= "";
+    string target_arch  = ""; // rather set target_arch only in one specific case
     if (Arch::architecture () == "x86_64" && ProductCreator::GetArch () == "i386")
+    {
 	linux32		= "linux32";
-    string cmd	= sformat ("ZYPP_READONLY_HACK=1 %3 kiwi --nocolor --root %1 --prepare %2 --logfile terminal", chroot_dir, config_dir, linux32);
+    }
+    if (ProductCreator::GetArch () == "i386" && target_i586)
+    {
+        target_arch     = "--target-arch i586";
+    }
+    string cmd	= sformat ("ZYPP_READONLY_HACK=1 %3 kiwi --nocolor --root %1 --prepare %2 --logfile terminal %4", chroot_dir, config_dir, linux32, target_arch);
     if (selected_profiles != "" && selected_profiles != nil)
 	cmd = cmd + selected_profiles;
 
@@ -615,8 +625,8 @@ Rewrite?"), full_stderr)))
 
 		// now continue with creating
 		UI::ChangeWidget (`id(`log), `LastLine, "\n");
-		cmd	= sformat ("ZYPP_READONLY_HACK=1 %3 kiwi --nocolor --create %1 -d %2 --logfile terminal",
-		    chroot_dir, out_dir, linux32);
+		cmd	= sformat ("ZYPP_READONLY_HACK=1 %3 kiwi --nocolor --create %1 -d %2 --logfile terminal %4",
+		    chroot_dir, out_dir, linux32, target_arch);
 		y2milestone ("calling '%1'", cmd);
 		// label
 		UI::ReplaceWidget (`id (`rpl), `Left (`Label (_("Creating Image"))));

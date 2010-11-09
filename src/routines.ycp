@@ -45,12 +45,15 @@ string get_current_task (map config) {
 	if (typemap["primary"]:"false" == "true")
 	{
 	    task   = typemap[Kiwi::content_key]:task;
+	    if (task == "" && typemap["image"]:"" != "")
+		task	= typemap["image"]:"";
 	    break;
 	}
     });
     if (task == "")
     {
 	y2milestone ("no task found, setting to 'iso'");
+	task	= "iso";
     }
     return task;
 }
