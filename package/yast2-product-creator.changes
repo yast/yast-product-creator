@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Nov  9 14:37:48 CET 2010 - jsuchome@suse.cz
+
+- added option to build i586 images on i686 system (bnc#644895)
+- 2.20.3 
+
+-------------------------------------------------------------------
 Tue Oct 12 13:32:37 UTC 2010 - lslezak@suse.cz
 
 - don't use obsoleted inst_packages.ycp client, use PackagesUI.ycp
