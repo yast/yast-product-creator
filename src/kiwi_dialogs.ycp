@@ -2279,11 +2279,15 @@ return ret;
     {
 	arch_term	= `VBox (
 	    // checkbox label
-	    `CheckBox (`id (`i386), `opt (`hstretch), _("&32bit Architecture Image"),
+	    `CheckBox (`id (`i386), `opt (`notify, `hstretch), _("&32bit Architecture Image"),
 		Kiwi::image_architecture == "i386"),
 	    `VSpacing (0.2)
 	);
     }
+    arch_term	= add (arch_term,
+	// checkbox label
+	`CheckBox (`id (`i586), `opt (`hstretch), _("Target is i586 only"), Kiwi::target_i586));
+    arch_term	= add (arch_term, `VSpacing (0.2));
 
     term contents	= `VBox (
 	new_configuration ?
@@ -2370,6 +2374,10 @@ return ret;
 	UI::ChangeWidget (`id (`import), `Enabled, false);
 	UI::ChangeWidget (`id (`config), `ValidChars, String::CAlnum ()+".-_");
     }
+    if (Arch::architecture () == "x86_64")
+    {
+	UI::ChangeWidget (`id (`i586), `Enabled, Kiwi::image_architecture == "i386");
+    }
     any ret = nil;
     while (true)
     {
@@ -2397,6 +2405,10 @@ return ret;
 	{
 	    UI::ChangeWidget (`id (`template), `Enabled, false);
 	    UI::ChangeWidget (`id (`import), `Enabled, false);
+	}
+	if (ret == `i386)
+	{
+	    UI::ChangeWidget (`id (`i586), `Enabled, UI::QueryWidget (`id (`i386), `Value));
 	}
 	if (ret == `import)
 	{
@@ -2588,6 +2600,8 @@ Choose a different one."), name));
 		    ProductCreator::SetPackageArch ("i686");
 		}
 	    }
+
+	    Kiwi::target_i586   = Kiwi::image_architecture == "i386" && (boolean) UI::QueryWidget (`id (`i586), `Value);
 
 	    if (size (repositories) > 0)
 	    {
