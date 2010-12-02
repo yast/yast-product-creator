@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu Dec  2 14:01:55 UTC 2010 - lslezak@suse.cz
+
+- adapted to changed signature of SourceManager::AskForCD()
+  function (bnc#652134)
+- 2.13.33
+
+-------------------------------------------------------------------
 Thu Apr  3 14:30:16 CEST 2008 - jsuchome@suse.cz
 
 - write the full URL into config.xml for https sources (bnc#376666)
