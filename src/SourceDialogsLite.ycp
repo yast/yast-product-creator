@@ -805,7 +805,7 @@ boolean SelectValidate (string key, map event) {
 	string msg = selected == `cd
 	    ? _("Insert the add-on product CD")
 	    : _("Insert the add-on product DVD");
-	if (! SourceManager::AskForCD (msg))
+	if (! SourceManager::AskForCD(msg)["continue"]:false)
 	    return false;
     }
     return true;
