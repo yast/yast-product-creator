@@ -529,6 +529,14 @@
    */
   define void StorePreferences (string key, map event) {
     string val	= (string) UI::QueryWidget (`id(key), `Value);
+
+    // split .UTF-8 endings from locale (bnc#675101)
+    if (key == "locale")
+    {
+	list<string> split = splitstring (val, ".");
+	val	= split[0]:val;
+	UI::ChangeWidget (`id (key), `Value, val);
+    }
     if (val == "" && haskey (KiwiConfig["preferences",0]:$[], key))
     {
 	KiwiConfig["preferences",0]	=
@@ -2122,14 +2130,22 @@ return ret;
 
     list basic_type_items	= [
 	    // combo box item
-	    `item (`id ("iso"), _("Live ISO Image"), kiwi_task == "iso"),
-	    // combo box item
 	    `item (`id ("xen"), _("Xen Image"), kiwi_task == "xen"),
 	    // combo box item
 	    `item (`id ("usb"), _("USB Stick Image"), kiwi_task == "usb"),
 	    // combo box item
 	    `item (`id ("vmx"), _("Virtual Disk Image"), kiwi_task == "vmx")
     ];
+
+    // build Live iso only for x86_64 and i386 (bnc#675101)
+    if (Arch::architecture () == "x86_64" || ProductCreator::GetArch () == "i386")
+    {
+	basic_type_items	= prepend (basic_type_items,
+	    // combo box item
+	    `item (`id ("iso"), _("Live ISO Image"), kiwi_task == "iso")
+	);
+    }
+
     map task2label	= $[
 	// combo box item
 	"pxe"	: _("Network Boot Image"),
