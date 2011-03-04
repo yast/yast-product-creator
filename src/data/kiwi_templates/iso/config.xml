@@ -16,7 +16,7 @@
     <packagemanager>zypper</packagemanager>
     <rpm-check-signatures>False</rpm-check-signatures>
     <rpm-force>False</rpm-force>
-    <locale>en_US.UTF-8</locale>
+    <locale>en_US</locale>
   </preferences>
   <users group="users">
     <user name="linux" pwd="" home="/home/linux" realname="Live-CD User"/>

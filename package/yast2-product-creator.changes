@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Mar  4 13:58:08 CET 2011 - jsuchome@suse.cz
+
+- strip UTF-8 ending from locale string (bnc#675101)
+- allow live iso creation only for x86/x86_64 (bnc#675101)
+- 2.17.38.1
+
+-------------------------------------------------------------------
 Tue Nov  9 14:19:59 CET 2010 - jsuchome@suse.cz
 
 - added option to build i586 images on i686 system (bnc#644895)
