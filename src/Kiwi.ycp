@@ -276,6 +276,14 @@
 	    ret["preferences",0,"defaultdestination",0,content_key]:"";
     }
 
+    if (haskey (ret["preferences",0]:$[], "locale"))
+    {
+	// remove .UTF-8 endings from locale (bnc#675101)
+	string lang	= get_preferences (ret, "locale", "");
+	list<string> split = splitstring (lang, ".");
+	ret	= save_preferences (ret, "locale", split[0]:lang);
+    }
+
     return ret;
   }
 

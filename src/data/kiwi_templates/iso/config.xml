@@ -17,7 +17,7 @@
     <boot-theme>openSUSE</boot-theme>
     <rpm-check-signatures>false</rpm-check-signatures>
     <rpm-force>false</rpm-force>
-    <locale>en_US.UTF-8</locale>
+    <locale>en_US</locale>
     <oem-swap>false</oem-swap>
     <oem-boot-title>USB</oem-boot-title>
     <rpm-excludedocs>false</rpm-excludedocs>
