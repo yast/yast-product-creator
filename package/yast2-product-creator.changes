@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Mar 11 15:07:59 CET 2011 - jsuchome@suse.cz
+
+- allow live iso creation only for x86/x86_64 (bnc#678145)
+- show repository names in package selector (bnc#618251)
+- 2.21.1
+
+-------------------------------------------------------------------
 Fri Mar  4 14:26:18 CET 2011 - jsuchome@suse.cz
 
 - strip UTF-8 ending from locale string (bnc#675101)
