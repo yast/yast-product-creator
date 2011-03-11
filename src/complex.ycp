@@ -134,6 +134,23 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
                 `header(_("Name"), _("Product"), _("Image"), _("GPG Key")),
                 overview, nil, nil, nil, nil );
 
+	list<term> menubutton_items	= [
+		    // push button label
+		    `item(`id(`xen_button), _("Xen Image")),
+		    // push button label
+		    `item(`id(`usb_button), _("USB Stick Image")),
+		    // push button label
+		    `item(`id(`vmx_button), _("Virtual Disk Image")),
+	];
+	// build Live iso only for x86_64 and i386 (bnc#675101)
+	if (Arch::architecture () == "x86_64" || ProductCreator::GetArch () == "i386")
+	{
+	    menubutton_items	= prepend (menubutton_items,
+		// push box item
+		`item(`id(`iso_button), _("Live ISO Image"))
+	    );
+	}
+
         term contents2 = `VBox(
             contents,
 	    `HBox (
@@ -145,16 +162,7 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
 		    `item(`id(`create_tree_button), _("Directory Tree"))
 		]),
 		// menu button label
-		`MenuButton (`id (`kiwi), _("Cre&ate Image with KIWI..."), [
-		    // push button label
-		    `item(`id(`iso_button), _("Live ISO Image")),
-		    // push button label
-		    `item(`id(`xen_button), _("Xen Image")),
-		    // push button label
-		    `item(`id(`usb_button), _("USB Stick Image")),
-		    // push button label
-		    `item(`id(`vmx_button), _("Virtual Disk Image")),
-		])
+		`MenuButton (`id (`kiwi), _("Cre&ate Image with KIWI..."), menubutton_items)
 	    )
         );
 

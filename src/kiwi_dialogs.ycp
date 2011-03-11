@@ -2507,6 +2507,7 @@ without having %1 package installed"),
 		repositories[url]	= $[
 		    "url"		: url,
 		    "plaindir"		: plaindir,
+		    "name"		: SourceDialogs::GetRepoName ()
 		];
 		update_repo_table ();
 	    }
@@ -2535,7 +2536,8 @@ without having %1 package installed"),
 	    plaindir	= SourceDialogs::IsPlainDir();
 	    repositories[url]	= $[
 		"url"		: url,
-		"plaindir"	: plaindir
+		"plaindir"	: plaindir,
+		"name"		: SourceDialogs::GetRepoName ()
 	    ];
 	    update_repo_table ();
 	}
@@ -2627,8 +2629,16 @@ Choose a different one."), name));
 		    integer srcid       = source["SrcId"]:-1;
 		    map data = Pkg::SourceGeneralData (srcid);
 		    string url	= data["url"]:"";
+		    // there can be more sources with same url, leave there only one
+		    if (current_sources[url]:srcid != srcid)
+		    {
+			y2milestone ("deleting extra source %1 for %2", current_sources[url]:srcid, url);
+			Pkg::SourceDelete (current_sources[url]:srcid);
+		    }
 		    current_sources[url]	= srcid;
 		});
+		// map of new repo aliases
+		map<string,integer> aliases	= $[];
 		// initialize new repos now
 		new_repositories = filter (string url, map repo, repositories, {
 		    if (substring (url, 0, 1) == "/")
@@ -2642,10 +2652,26 @@ Choose a different one."), name));
 		    string full_url	= url;
 		    if (repo["full_url"]:"" != "" && repo["full_url"]:"" != url)
 			full_url	= repo["full_url"]:"";
+
+		    string alias = mergestring (splitstring (repo["name"]:full_url, " "), "_");
+		    if (aliases[alias]:0 > 0)
+		    {
+			alias	= sformat ("%1%2", alias, aliases[alias]:0);
+		    }
+		    aliases[alias]	= aliases[alias]:0 + 1;
+
+		    map<string,any> repo_map	= $[
+			    "name"	: repo["name"]:alias,
+			    "alias"	: alias,
+			    "base_urls"	: [ full_url ],
+		    ];
+
 		    if (repo["plaindir"]:false)
-			source_ret = Pkg::SourceCreateType (full_url, "", "Plaindir");
-		    else
-			source_ret	= Pkg::SourceCreate (full_url, "");
+		    {
+			repo_map["type"]	= "Plaindir";
+		    }
+		    source_ret = Pkg::RepositoryAdd (repo_map);
+
 		    if (source_ret == -1)
 		    {
 			failed_repositories = add (failed_repositories, url);
