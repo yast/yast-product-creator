@@ -14,6 +14,7 @@
   import "CWMTab";
   import "Directory";
   import "FileUtils";
+  import "Keyboard";
   import "Kiwi";
   import "Label";
   import "Message";
@@ -513,6 +514,73 @@
     // store the value on exiting
     if (event["ID"]:nil == `next) StoreDescription (key, event);
     return nil;
+  }
+
+  /**
+   * initialize the list value of "locale" combo box
+   */
+  define void InitLocaleCombo (string id) {
+
+    string lang	= KiwiConfig["preferences",0,id,0,content_key]:"";
+    list items		= [];
+
+    if (Kiwi::all_locales == [])
+    {
+	map out = (map) SCR::Execute (.target.bash_output, "/usr/bin/locale -a");
+	Kiwi::all_locales	= filter (string s, splitstring (out["stdout"]:"", "\n"), {
+	    return s != "";
+	});
+    }
+    foreach (string line, Kiwi::all_locales, {
+	string code = splitstring (line, ".@")[0]:line;
+	items	= add (items, `item (`id (code), code, lang == code));
+    });
+
+    UI::ChangeWidget (`id (id), `Items, items);
+  }
+
+  /**
+   * initialize the list value of "keytable" combo box
+   */
+  define void InitKeytableCombo (string id) {
+
+    string kb = KiwiConfig["preferences",0,id,0,content_key]:"";
+
+    list items		= [];
+    boolean kb_present	= false;
+
+    foreach (string name, string yast, Keyboard::keymap2yast (), {
+	items	= add (items, `item (`id (name), name, kb == name));
+	if (kb == name) kb_present = true;
+    });
+    if (!kb_present)
+    {
+	items       = add (items, `item (`id (kb), kb, true));
+    }
+    UI::ChangeWidget (`id (id), `Items, items);
+  }
+
+  /**
+   * initialize the list value of "timezone" combo box
+   */
+  define void InitTimezoneCombo (string id) {
+
+    string tz = KiwiConfig["preferences",0,id,0,content_key]:"";
+
+    if (Kiwi::all_timezones == [])
+    {
+	map out = (map) SCR::Execute (.target.bash_output,
+	    "grep -v '#' /usr/share/zoneinfo/zone.tab | cut -f 3 | sort", $["LANG":"C"]);
+	Kiwi::all_timezones	= filter (string t, splitstring (out["stdout"]:"", "\n"), {
+	    return t != "";
+	});
+    }
+
+    list items		= maplist (string zone, Kiwi::all_timezones, {
+	return `item (`id (zone), zone, tz == zone);
+    });
+
+    UI::ChangeWidget (`id (id), `Items, items);
   }
 
   /**
@@ -1942,10 +2010,12 @@ If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is th
 	"no_help"	: true,
     ],
     "locale" : $[
-	"widget"	: `textentry,
+	"widget"	: `combobox,
+	"opt"		: [ `hstretch, `notify ],
+	"items"		: [],
 	// textentry label
 	"label"		: _("&Locale"),
-	"init"		: InitPreferences,
+	"init"		: InitLocaleCombo,
 	"store"		: StorePreferences,
 	"handle"	: HandlePreferences,
 	// help text for locale (heading)
@@ -1954,20 +2024,23 @@ If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is th
 	_("<p>The value of <b>Locale</b> (e.g. <tt>en_US</tt>) defines the contents of the RC_LANG variable in <t>/etc/sysconfig/language</tt>.</p>"),
     ],
     "keytable" : $[
-	"widget"	: `textentry,
+	"widget"	: `combobox,
+	"opt"		: [ `hstretch, `notify, `editable ],
 	// textentry label
 	"label"		: _("&Keyboard layout"),
-	"init"		: InitPreferences,
+	"init"		: InitKeytableCombo,
 	"store"		: StorePreferences,
 	"handle"	: HandlePreferences,
 	// help text for keytable
 	"help"		: _("<p><b>Keyboard layout</b> specifies the name of the console keymap to use. The value corresponds to a map file in <tt>/usr/share/kbd/keymaps</tt>.</p>"),
     ],
     "timezone" : $[
-	"widget"	: `textentry,
+	"widget"	: `combobox,
+	"opt"		: [ `hstretch, `notify ],
+	"items"		: [],
 	// textentry label
 	"label"		: _("&Time zone"),
-	"init"		: InitPreferences,
+	"init"		: InitTimezoneCombo,
 	"store"		: StorePreferences,
 	"handle"	: HandlePreferences,
 	// help text for timezone
