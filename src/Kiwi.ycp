@@ -79,6 +79,12 @@
   string stderr_file   = "image_creator.stderr";
   string logs_directory	= "/tmp";
 
+  // all available locales
+  global list<string> all_locales	= [];
+
+  // all available time zones
+  global list<string> all_timezones	= [];
+
   /**
    * crypt given user password with current encryption algorithm
    */

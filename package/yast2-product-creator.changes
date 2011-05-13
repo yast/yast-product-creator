@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri May 13 09:59:46 CEST 2011 - jsuchome@suse.cz
+
+- better UI for locale related settings (fate#311734)
+- 2.21.2 
+
+-------------------------------------------------------------------
 Fri Mar 11 15:07:59 CET 2011 - jsuchome@suse.cz
 
 - allow live iso creation only for x86/x86_64 (bnc#678145)
