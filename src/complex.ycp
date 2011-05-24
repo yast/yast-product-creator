@@ -697,10 +697,12 @@ define symbol ImagesOverviewDialog() {
 		string name	= config["name"]:d;
 		// index by order, so we can handle more configs with same name
 		Configurations[i]	= config;
-		string unit	= config["preferences",0,"size",0,"unit"]:"M";
-		string i_size	= get_preferences (config, "size", 0) + unit;
+		map size_map	= get_current_size_map (config, task);
+		string unit	= size_map["unit"]:"M";
+		string i_size	= size_map[Kiwi::content_key]:"0" + unit;
+
 		// with "additive", "size" has a different meaning
-		if (config["preferences",0,"size",0,"additive"]:"" == "true")
+		if (size_map["additive"]:"" == "true")
 		    i_size	= "+" + i_size;
 		overview = add (overview, `item (
 		    `id (i), name,

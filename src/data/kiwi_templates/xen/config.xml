@@ -1,31 +1,31 @@
-<?xml version="1.0"?>
-<image schemeversion="2.0" name="kiwi-xen-image-template">
+<?xml version="1.0" encoding="utf-8"?>
+
+<image schemaversion="5.2" name="kiwi-xen-image-template">
 	<description type="system">
-		<author></author>
-		<contact></contact>
+		<author/>
+		<contact/>
 		<specification>Template for system image configuration</specification>
 	</description>
 	<preferences>
-		<type boot="xenboot/suse-11.1" filesystem="ext3">xen</type>
+		<type boot="vmxboot/suse-11.1" filesystem="ext3" image="vmx" bootkernel="xenk" bootprofile="xen">2000</type>
 		<version>1.0.0</version>
-		<size unit="M">2000</size>
 		<packagemanager>zypper</packagemanager>
-		<rpm-check-signatures>False</rpm-check-signatures>
-		<rpm-force>True</rpm-force>
+		<rpm-check-signatures>false</rpm-check-signatures>
+		<rpm-force>true</rpm-force>
 	</preferences>
 	<users group="users">
-	    <user home="/home/linux" name="linux"/>
-	    <user home="/root" name="root"/>
+		<user home="/home/linux" name="linux"/>
+		<user home="/root" name="root"/>
 	</users>
 	<packages type="image">
-	    <package name="OpenIPMI"/>
+		<package name="OpenIPMI"/>
 		<package name="lvm2"/>
 		<package name="aaa_base"/>
 		<package name="aaa_skel"/>
 		<package name="acl"/>
 		<package name="acpid"/>
 		<package name="attr"/>
-		<!-- for x86_64 only -->
+<!-- for x86_64 only -->
 		<package name="linux32" arch="x86_64"/>
 		<package name="bash"/>
 		<package name="bc"/>
@@ -167,7 +167,7 @@
 		<package name="portmap"/>
 		<package name="cron"/>
 	</packages>
-	<packages type="xen" memory="512" disk="/dev/sda">
+	<packages type="xen">
 		<package name="kernel-xen"/>
 		<package name="xen"/>
 	</packages>

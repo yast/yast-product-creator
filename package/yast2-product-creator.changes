@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue May 24 10:11:06 CEST 2011 - jsuchome@suse.cz
+
+- updated to new kiwi version (fate#311430 "Update kiwi to 4.8") 
+- 2.21.3
+
+-------------------------------------------------------------------
 Fri May 13 09:59:46 CEST 2011 - jsuchome@suse.cz
 
 - better UI for locale related settings (fate#311734)
