@@ -1,44 +1,43 @@
-<?xml version="1.0"?>
-<image schemeversion="2.0" name="kiwi-image-template">
-  <description type="system">
-    <author></author>
-    <contact></contact>
-    <specification>Template for system image configuration</specification>
-  </description>
-  <preferences>
-    <type primary="true" boot="isoboot/suse-SLES11" flags="compressed">iso</type>
-    <type boot="vmxboot/suse-SLES11" filesystem="ext3" format="vmdk">vmx</type>
-    <type boot="usbboot/suse-SLES11" filesystem="ext3">usb</type>
-    <type boot="xenboot/suse-SLES11" filesystem="ext3">xen</type>
-    <type boot="oemboot/suse-SLES11" filesystem="ext3" flags="unified">oem</type>
-    <version>1.0.0</version>
-    <size unit="M">2000</size>
-    <packagemanager>zypper</packagemanager>
-    <rpm-check-signatures>False</rpm-check-signatures>
-    <rpm-force>False</rpm-force>
-    <locale>en_US</locale>
-  </preferences>
-  <users group="users">
-    <user name="linux" pwd="" home="/home/linux" realname="Live-CD User"/>
-    <user name="root" pwd="" home="/root"/>
-  </users>
-  <packages type="image" patternType="plusRecommended" patternPackageType="plusRecommended">
-    <opensusePattern name="Minimal"/>
-  </packages>
-  <packages type="bootstrap">
-    <package name="filesystem"/>
-    <package name="glibc-locale"/>
-    <package name="kernel-default"/>
-    <package name="udev"/>
-    <package name="openssl-certs"/>
-  </packages>
-  <split>
-    <temporary>
-      <!-- allow read/write access to: -->
-      <file name="/var"/>
-      <file name="/var/*"/>
-      <file name="/etc"/>
-      <file name="/etc/*"/>
-    </temporary>
-  </split>
+<?xml version="1.0" encoding="utf-8"?>
+
+<image schemaversion="5.2" name="kiwi-image-template">
+	<description type="system">
+		<author/>
+		<contact/>
+		<specification>Template for system image configuration</specification>
+	</description>
+	<preferences>
+		<type image="iso" primary="true" boot="isoboot/suse-SLES11" flags="compressed">
+			<size unit="M">2000</size>
+		</type>
+		<type image="vmx" boot="vmxboot/suse-SLES11" filesystem="ext3" format="vmdk">
+			<size unit="M">2000</size>
+		</type>
+		<type image="usb" boot="usbboot/suse-SLES11" filesystem="ext3">
+			<size unit="M">2000</size>
+		</type>
+		<type boot="vmxboot/suse-SLES11" filesystem="ext3" image="vmx" bootkernel="xenk" bootprofile="xen">2000</type>
+		<type image="oem" boot="oemboot/suse-SLES11" filesystem="ext3" flags="unified">
+			<size unit="M">2000</size>
+		</type>
+		<version>1.0.0</version>
+		<packagemanager>zypper</packagemanager>
+		<rpm-check-signatures>false</rpm-check-signatures>
+		<rpm-force>false</rpm-force>
+		<locale>en_US</locale>
+	</preferences>
+	<users group="users">
+		<user name="linux" pwd="" home="/home/linux" realname="Live-CD User"/>
+		<user name="root" pwd="" home="/root"/>
+	</users>
+	<packages type="image" patternType="plusRecommended">
+		<opensusePattern name="Minimal"/>
+	</packages>
+	<packages type="bootstrap">
+		<package name="filesystem"/>
+		<package name="glibc-locale"/>
+		<package name="kernel-default"/>
+		<package name="udev"/>
+		<package name="openssl-certs"/>
+	</packages>
 </image>
