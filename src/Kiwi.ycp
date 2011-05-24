@@ -233,10 +233,22 @@
 	y2warning ("no such file %1/config.xml", base_path);
 	return ret;
     }
+    string file_path	=  base_path + "/config.xml";
+    if (FileUtils::Exists ("/usr/share/kiwi/xsl/master.xsl"))
+    {
+	file_path	= Directory::tmpdir + "/transformed-config.xml";
+	map out = (map) SCR::Execute (.target.bash_output, sformat (
+	    "xsltproc /usr/share/kiwi/xsl/master.xsl %1/config.xml > %2",
+	    base_path, file_path));
+	if (out["exit"]:0 != 0)
+	{
+	    y2error ("xslt transformation failed: %1", out);
+	}
+    }
 
     // read rest of config.xml using more generic agent
     map anyxml		= (map) SCR::Read (.anyxml, $[
-	"file"	: base_path + "/config.xml",
+	"file"	: file_path,
 	"args"	: $[
 	    "ForceArray"	: 1,
             "KeepRoot"		: 1,
@@ -249,7 +261,7 @@
 
     // attributes of 'image' tag:
     ret["name"]		= image["name"]:"";
-    ret["schemeversion"]= image["schemeversion"]:"2.0";
+    ret["schemaversion"]= image["schemaversion"]:"5.2";
     if (haskey (image, "inherit"))
 	ret["inherit"]	= image["inherit"]:"";
 
@@ -289,7 +301,6 @@
 	list<string> split = splitstring (lang, ".");
 	ret	= save_preferences (ret, "locale", split[0]:lang);
     }
-
     return ret;
   }
 
@@ -310,8 +321,8 @@
 	KiwiConfig	= save_preferences(KiwiConfig,"defaultroot",chroot_dir);
     }
 
-    string image_tag	= sformat ("<image name=\"%1\" schemeversion=\"%2\"%3>",
-	KiwiConfig["name"]:"", KiwiConfig["schemeversion"]:"2.0",
+    string image_tag	= sformat ("<image name=\"%1\" schemaversion=\"%2\"%3>",
+	KiwiConfig["name"]:"", KiwiConfig["schemaversion"]:"5.2",
 	(KiwiConfig["inherit"]:"" == "" ?
 	    "" :
 	    sformat (" inherit=\"%1\"", KiwiConfig["inherit"]:"")
