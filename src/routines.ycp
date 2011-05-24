@@ -41,12 +41,10 @@ string get_current_task (map config) {
     string task	= "";
     foreach (map typemap, (list<map>) config["preferences",0,"type"]:[], {
 	if (task == "") // take the 1st one if none is default
-	    task   = typemap[Kiwi::content_key]:task;
-	if (typemap["primary"]:"false" == "true")
+	    task   = typemap["image"]:task;
+	if (tolower (typemap["primary"]:"false") == "true")
 	{
-	    task   = typemap[Kiwi::content_key]:task;
-	    if (task == "" && typemap["image"]:"" != "")
-		task	= typemap["image"]:"";
+	    task   = typemap["image"]:task;
 	    break;
 	}
     });
@@ -58,12 +56,24 @@ string get_current_task (map config) {
     return task;
 }
 
+// return the size info for current image type
+map get_current_size_map (map config, string task) {
+
+    map	ret	= $[];
+    foreach (map typemap, (list<map>) config["preferences",0,"type"]:[], {
+	if (task == typemap["image"]:"")
+	    ret = typemap["size",0]:$[];
+    });
+    return ret;
+}
+
+
 // get the value of boot image directory
 string get_bootdir (map config, string task) {
 
     string dir	= "";
     foreach (map typemap, (list<map>) config["preferences",0,"type"]:[], {
-	if (task == typemap[Kiwi::content_key]:"")
+	if (task == typemap["image"]:"")
 	{
 	    dir	= typemap["boot"]:"";
 	    break;

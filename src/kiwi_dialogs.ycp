@@ -73,7 +73,7 @@
 
     string current_method	= "none";
     foreach (map typemap, (list<map>)KiwiConfig["preferences",0,"type"]:[], {
-	if (typemap[content_key]:"" == kiwi_task)
+	if (typemap["image"]:"" == kiwi_task)
 	{
 	    current_method	= typemap["flags"]:current_method;
 	}
@@ -98,7 +98,7 @@
     KiwiConfig["preferences",0,"type"]	= maplist (map typemap,
 	(list<map>)KiwiConfig["preferences",0,"type"]:[],
     {
-	if (typemap[content_key]:"" == kiwi_task)
+	if (typemap["image"]:"" == kiwi_task)
 	{
 	    if (selected == "none")
 	    {
@@ -361,29 +361,6 @@
   }
 
   /**
-   * initialize the value of compress checkbox
-   */
-  define void InitCompressCheckBox (string id) {
-    UI::ChangeWidget (`id (id), `Enabled, false);
-    UI::ChangeWidget (`id (id), `Value, KiwiConfig["compressed"]:false);
-  }
-
-  /**
-   * store the value of compress checkbox
-   */
-  define void StoreCompressCheckBox (string key, map event) {
-      KiwiConfig["compressed"]	= (boolean) UI::QueryWidget(`id(key), `Value);
-  }
-  /**
-   * handler for compress checkbox
-   */
-  define symbol HandleCompressCheckBox (string key, map event) {
-    // store the value on exiting
-    if (event["ID"]:nil == `next) StoreCompressCheckBox (key, event);
-    return nil;
-  }
-
-  /**
    * initialize the value of version
    */
   define void InitVersion (string id) {
@@ -411,42 +388,40 @@
   }
 
   /**
-   * initialize the value of size unit
+   * initialize the values of "size", "sizeunit" and "additive" widgets
    */
-  define void InitSizeUnitCombo (string id) {
-    string unit	= KiwiConfig["preferences",0,"size",0,"unit"]:"M";
-    UI::ChangeWidget (`id (id), `Items, maplist (string u, [ "M", "G" ], ``(
-	`item (`id (u), u + "B", unit == u))
+  define void InitSize (string id) {
+
+    map size_map    = get_current_size_map (KiwiConfig, kiwi_task);
+
+    integer siz	= tointeger (size_map[Kiwi::content_key]:"0");
+    if (siz == nil) siz	= 0;
+    UI::ChangeWidget (`id ("size"), `Value, siz);
+    UI::ChangeWidget (`id ("additive"), `Value, size_map["additive"]:"" == "true");
+    UI::ChangeWidget (`id ("sizeunit"), `Items, maplist (string u, [ "M", "G" ], ``(
+	`item (`id (u), u + "B", size_map["unit"]:"M" == u))
     ));
   }
 
   /**
-   * initialize the value of 'additive'
-   */
-  define void InitAdditiveCheckBox (string id) {
-    boolean additive	= KiwiConfig["preferences",0,"size",0,"additive"]:"" == "true";
-    UI::ChangeWidget (`id (id), `Value, additive);
-  }
-
-  /**
-   * initialize the value of version
-   */
-  define void InitSize (string id) {
-    integer siz	= tointeger (get_preferences (KiwiConfig, "size", "2000"));
-    if (siz == nil) siz	= 2000;
-    UI::ChangeWidget (`id (id), `Value, siz);
-  }
-
-  /**
-   * store the size value
+   * store the values of "size", "sizeunit" and "additive" widgets
    */
   define void StoreSize (string key, map event) {
-    KiwiConfig["preferences",0,"size"]	= [ $[
-	content_key	: sformat ("%1", UI::QueryWidget(`id(key), `Value)),
-	"unit"		: UI::QueryWidget (`id ("sizeunit"), `Value),
-	"additive"	: ((boolean) UI::QueryWidget (`id ("additive"), `Value))
-	    ? "true" : "false"
-    ]];
+
+    KiwiConfig["preferences",0,"type"]	= maplist (map typemap,
+	(list<map>)KiwiConfig["preferences",0,"type"]:[],
+    {
+	if (typemap["image"]:"" == kiwi_task)
+	{
+	    typemap["size"]	=	[ $[
+		content_key	: sformat ("%1", UI::QueryWidget(`id(key), `Value)),
+		"unit"		: UI::QueryWidget (`id ("sizeunit"), `Value),
+		"additive"	: ((boolean) UI::QueryWidget (`id ("additive"), `Value)) ? "true" : "false",
+	    ] ];
+	}
+	return typemap;
+    });
+
   }
 
   /**
@@ -1322,22 +1297,10 @@ directory."),
 	    if (FileUtils::CheckAndCreatePath (out_dir) &&
 		Kiwi::PrepareAndCreate (out_dir, selected_profiles))
 	    {
-		if (kiwi_task == "usb" && false)
-		{
-		    // additional question (yes/no)
-		    if (Popup::YesNo (sformat (success[kiwi_task]:"", out_dir) + _("
-Save the image to the stick now?")))
-		    {
-			NotImplementedHandler ("", $[ "ID" : ""]);
-		    }
-		}
-		else
-		{
-		    // default popup message, %1 is a dir
-		    Popup::Message (sformat (success[kiwi_task]:_("Image successfully created in
+		// default popup message, %1 is a dir
+		Popup::Message (sformat (success[kiwi_task]:_("Image successfully created in
 %1
 directory."), out_dir));
-		}
 	    }
 	    else
 	    {
@@ -1502,8 +1465,8 @@ directory."), out_dir));
 	KiwiConfig["preferences",0,"type"]	= maplist (
 	    map typemap, (list<map>)pref[0,"type"]:[],
 	{
-	    string type	= typemap[content_key]:"";
-	    if (typemap["primary"]:"false" == "true" && type != kiwi_task)
+	    string type	= typemap["image"]:"";
+	    if (tolower (typemap["primary"]:"false") == "true" && type != kiwi_task)
 		typemap	= remove (typemap, "primary");
 	    else if (type == kiwi_task)
 	    {
@@ -1527,7 +1490,7 @@ directory."), out_dir));
 	    map<string,any> def_map = Kiwi::ReadConfigXML (default_dir);
 	    foreach (map typemap, (list<map>)def_map["preferences",0,"type"]:[],
 	    {
-		if (typemap[content_key]:"" == kiwi_task)
+		if (typemap["image"]:"" == kiwi_task)
 		{
 		    KiwiConfig["preferences",0,"type"]	= add (
 			KiwiConfig["preferences",0,"type"]:[], typemap);
@@ -1595,7 +1558,7 @@ directory."), out_dir));
 
     // compression not allowed in most cases (bnc#510833)
     foreach (map typemap, (list<map>)KiwiConfig["preferences",0,"type"]:[], {
-	if (typemap[content_key]:"" == kiwi_task)
+	if (typemap["image"]:"" == kiwi_task)
 	{
 	    if (typemap["filesystem"]:"" == "ext3")
 		show_compression	= false;
@@ -1735,16 +1698,6 @@ directory."), out_dir));
 	"validate_function"	: CreateImage,
 	"no_help"	: true,
     ],
-    // widgets for config.xml tab
-    "compressed" : $[
-	"widget"	: `checkbox,
-	// textentry label
-	"label"		: _("Co&mpress"),
-	"help"		: _("<p>Check <b>Compress</b> if the final image should be based \non the squashfs compressed file system."),
-	"init"		: InitCompressCheckBox,
-	"store"		: StoreCompressCheckBox,
-	"handle"	: HandleCompressCheckBox,
-    ],
     "compression" : $[
 	"widget"	: `combobox,
 	"opt"		: [ `hstretch, `notify ],
@@ -1830,7 +1783,6 @@ If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is th
 	"label"		: _("&Unit"),
 	"no_help"	: true,
 	"items"		: [],
-	"init"		: InitSizeUnitCombo,
 	// stored and handled by "size"
     ],
     "additive" : $[
@@ -1838,7 +1790,6 @@ If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is th
 	// check box label
 	"label"		: _("Additive"),
 	"no_help"	: true,
-	"init"		: InitAdditiveCheckBox,
     ],
     // ---------------- widgtes for directory structure
     "general_scripts"	: $[
@@ -2256,7 +2207,7 @@ return ret;
 	list type_its	= [];
 	//solve `back here (=no import)
 	foreach (map typemap, (list<map>) Config["preferences",0,"type"]:[], {
-	    string type	= typemap[content_key]:"";
+	    string type	= typemap["image"]:"";
 	    type_its	= add (type_its,
 		`item (`id (type), task2label[type]:type, type == kiwi_task));
 	});
@@ -2331,8 +2282,8 @@ return ret;
 
 	kiwi_task	= "";
 	foreach (map typemap, (list<map>) Config["preferences",0,"type"]:[], {
-	    string type	= typemap[content_key]:"";
-	    if (typemap["primary"]:"false" == "true" || kiwi_task == "")
+	    string type	= typemap["image"]:"";
+	    if (tolower (typemap["primary"]:"false") == "true" || kiwi_task == "")
 		kiwi_task	= type;
 	    if ((supported_images == "" && !contains (present_types, type)) ||
 		supported_images == "template")
