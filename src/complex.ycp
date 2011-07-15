@@ -784,7 +784,7 @@ define symbol ImagesOverviewDialog() {
 	    string version	= get_preferences (config, "version", "");
 	    if (Popup::YesNo (
 // yes/no popup
-sformat (_("Delete configutation %1 (%2) now?"), config["name"]:"", version)))
+sformat (_("Delete configuration %1 (%2) now?"), config["name"]:"", version)))
 	    {
 		string dir	=
 		    config["kiwi_configuration_"+ config["current_task"]:""]:"";
