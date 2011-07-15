@@ -1790,7 +1790,7 @@ This key is checked when the product is added as a repository.</p>")
 	    summary = Summary::AddHeader(summary, _("Architecture") );
 
 	    // summary line, %1 is e.g. i386, x86_64, ppc...
-	    summary = Summary::AddLine(summary, sformat(_("Target architectrure: %1"), arch));
+	    summary = Summary::AddLine(summary, sformat(_("Target architecture: %1"), arch));
 	}
 
         // summary caption
