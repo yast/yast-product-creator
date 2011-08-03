@@ -83,8 +83,8 @@ Select an AutoYaST profile with the software configuration.
 </p>
 ") +
     /* Configure1 dialog help 3/4 */
-_("<b>Package Manager</b><p>
-Use the package manager without any preselected packages. All
+_("<b>Software Manager</b><p>
+Use the software manager without any preselected packages. All
 packages that would be automatically selected during installation must be
 selected manually based on the hardware and architecture for which you are
 creating this CD.
