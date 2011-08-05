@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Aug  5 16:13:24 CEST 2011 - jsuchome@suse.cz
+
+- added support for 'bootinclude' tag (fate#310978)
+- 2.21.6 
+
+-------------------------------------------------------------------
 Fri Aug  5 12:34:40 CEST 2011 - tgoettlicher@suse.de
 
 - fixed .desktop file (bnc #681249)
