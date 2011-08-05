@@ -47,6 +47,12 @@
     "xen"	: _("Xen Specific Packages")
   ];
 
+  // map indexes of packages sets to their names
+  // (package set is indexed in the sets list)
+  map<integer,string> index2package_set	= $[];
+
+  map<string,integer> package_set2index	= $[];
+
   // read available the images under /usr/share/kiwi/image/ directory
   list<term> GetAvailableImages (string subdir) {
 
@@ -203,6 +209,21 @@
     string pac	= "";
     string ign	= "";
 
+    if (index2package_set[package_set]:"" == "bootinclude")
+    {
+	package_set	= package_set2index["image"]:0;
+
+	if (size (packages[package_set,"package"]:[]) > 0)
+	// richtext header
+	    pac	= Summary::AddHeader ("", _("Packages"));
+	foreach (map pacmap, packages[package_set,"package"]:[], {
+	    if (pacmap["bootinclude"]:"" == "true")
+		pac	= Summary::AddListItem (pac, pacmap["name"]:"");
+	});
+	UI::ChangeWidget (`id (id), `Value, pat + pac + ign);
+	return;
+    }
+
     if (size (packages[package_set,"opensusePattern"]:[]) > 0)
 	// richtext header
 	pat     = Summary::AddHeader ("", _("Patterns"));
@@ -213,7 +234,8 @@
 	// richtext header
 	pac	= Summary::AddHeader ("", _("Packages"));
     foreach (map pacmap, packages[package_set,"package"]:[], {
-	pac	= Summary::AddListItem (pac, pacmap["name"]:"");
+	if (pacmap["bootinclude"]:"" != "true")
+	    pac	= Summary::AddListItem (pac, pacmap["name"]:"");
     });
     if (size (packages[package_set,"ignore"]:[]) > 0)
 	ign	= Summary::AddHeader ("",
@@ -261,15 +283,74 @@
   }
 
   /**
+   * Popup for modifying the list of 'bootinclude' packages
+   */
+  define list modifyBootIncludePackages (list packages) {
+
+    UI::OpenDialog (`opt(`decorated), `HBox (`HSpacing (0.5), `VSpacing (20), `VBox (
+	`HSpacing (70),
+	`VSpacing (0.5),
+	`MultiLineEdit (`id (`bootinclude), _("Packages to be included in Boot Image"),
+	    mergestring ((list<string>) maplist (map p, (list<map>) packages, ``(p["name"]:"")), "\n")
+	),
+	`ButtonBox (
+	    `PushButton (`id(`ok),`opt(`default,`key_F10),Label::OKButton()),
+	    `PushButton (`id(`cancel),`opt (`key_F9), Label::CancelButton())
+	)
+    ), `HSpacing (0.5)));
+    any ret	= UI::UserInput ();
+    string value= (string)UI::QueryWidget (`id (`bootinclude), `Value);
+    list retlist= maplist (string name, filter (string p, splitstring (value, "\n"), ``(p != "")), {
+	return $[
+	    "name"		: name,
+	    "bootinclude"	: "true"
+	];
+    });
+
+    UI::CloseDialog ();
+    if (ret == `cancel)
+	return nil;
+    return retlist;
+  }
+
+  /**
    * Handler for software selection
    */
   define symbol HandleSWSelection (string key, map event) {
     if (event["ID"]:nil == key)
     {
 	integer package_set	= KiwiConfig["package_set"]:0;
-	map sw_contents		= modifyPackageSelection (KiwiConfig["packages",package_set]:$[]);
-	if (sw_contents != nil)
-	    KiwiConfig["packages",package_set]	= sw_contents;
+	boolean bootinclude	= false;
+	if (index2package_set[package_set]:"" == "bootinclude")
+	{
+	    package_set	= package_set2index["image"]:0;
+	    bootinclude		= true;
+	}
+
+	map sw_contents		= KiwiConfig["packages",package_set]:$[];
+
+	// separate bootinclude packages from normal ones
+	list bi_packages	= [];
+	sw_contents["package"]	= filter (map p, sw_contents["package"]:[], {
+	    if (p["bootinclude"]:"" == "true")
+		bi_packages	= add (bi_packages, p);
+	    return p["bootinclude"]:"" != "true";
+	});
+
+	if (bootinclude)
+	{
+	    bi_packages	= modifyBootIncludePackages (bi_packages);
+	}
+	else
+	{
+	    sw_contents	= modifyPackageSelection (sw_contents);
+	}
+
+	if (sw_contents != nil && bi_packages != nil)
+	{
+		sw_contents["package"]  = union (sw_contents["package"]:[], bi_packages);
+		KiwiConfig["packages",package_set]	= sw_contents;
+	}
 	InitSWRichText ("rt_sw");
     }
     return nil;
@@ -293,6 +374,8 @@
 	    i		= i + 1; // index to list must be increased
 	    return; // delete is handled by different widgets
 	}
+	index2package_set[i]	= type;
+	package_set2index[type]	= i;
 	if (type == "bootstrap")
 	    // combo box label
 	    label	= _("Bootstrap");
@@ -310,6 +393,9 @@
 	items	= add (items, `item (`id (i), label, package_set == i));
 	i	= i + 1;
     });
+    // combo box label
+    items	= add (items, `item (`id (i), _("Include in Boot Image"), package_set == i));
+    index2package_set[i]	= "bootinclude";
     UI::ChangeWidget (`id (id), `Items, items);
   }
 
