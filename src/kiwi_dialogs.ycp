@@ -479,7 +479,6 @@
   define void InitSize (string id) {
 
     map size_map    = get_current_size_map (KiwiConfig, kiwi_task);
-
     integer siz	= tointeger (size_map[Kiwi::content_key]:"0");
     if (siz == nil) siz	= 0;
     UI::ChangeWidget (`id ("size"), `Value, siz);
@@ -1125,9 +1124,16 @@ Try again."));
 	{
 	    Popup::ShowFeedback (_("Checking packages availability..."), _("Please wait..."));
 	    list<string> n_a	= [];
-	    foreach (map p, pmap["package"]:[], {
-		if (p["name"]:"" != "" && !Pkg::IsAvailable (p["name"]:""))
+
+	    list bi_packages	= [];
+	    map original_pmap	= pmap;
+	    pmap["package"]	= filter (map p, pmap["package"]:[], {
+		if (p["bootinclude"]:"" == "true")
+		    bi_packages	= add (bi_packages, p);
+		// do not check bootinclude packages
+		else if (p["name"]:"" != "" && !Pkg::IsAvailable (p["name"]:""))
 		    n_a	= add (n_a, p["name"]:"");
+		return p["bootinclude"]:"" != "true";
 	    });
 	    Popup::ClearFeedback ();
 	    if (size (n_a) > 0)
@@ -1162,16 +1168,17 @@ Going to detailed package selection and accepting the view without any further c
 		UI::CloseDialog ();
 		if (r == `remove)
 		{
-		    KiwiConfig["packages",index,"package"]	= filter (map p, pmap["package"]:[], {
+		    KiwiConfig["packages",index,"package"]	= filter (map p, original_pmap["package"]:[], {
 			return !contains (n_a, p["name"]:"");
 		    });
 		    ret	= `removed;
 		}
 		if (r == `selection)
 		{
-		    map sw_contents		= modifyPackageSelection (KiwiConfig["packages",index]:$[]);
+		    map sw_contents		= modifyPackageSelection (pmap);
 		    if (sw_contents != nil)
 		    {
+			sw_contents["package"]  = union (sw_contents["package"]:[], bi_packages);
 			KiwiConfig["packages",index]	= sw_contents;
 			ret	= `selection;
 		    }
