@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Aug 12 15:24:09 CEST 2011 - jsuchome@suse.cz
+
+- ignore bootinclude packages during the check what is available
+- 2.21.7 
+
+-------------------------------------------------------------------
 Fri Aug  5 16:13:24 CEST 2011 - jsuchome@suse.cz
 
 - added support for 'bootinclude' tag (fate#310978)
