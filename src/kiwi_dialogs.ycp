@@ -1267,7 +1267,7 @@ Going to detailed package selection and accepting the view without any further c
 	    {
 		symbol transact_by	= package["transact_by"]:`none;
 		string name		= package["name"]:"";
-		if (transact_by == `solver || transact_by == `user)
+		if (transact_by == `solver || transact_by == `user || transact_by == `app_high)
 		{
 		    if (haskey (to_delete, name))
 		    {
