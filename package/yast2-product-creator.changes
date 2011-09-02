@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Sep  2 08:33:39 CEST 2011 - jsuchome@suse.cz
+
+- during test for delete conflicts, check for packages selected
+  by YaST (bnc#710733
+- 2.17.44 
+
+-------------------------------------------------------------------
 Fri Aug 12 15:21:48 CEST 2011 - jsuchome@suse.cz
 
 - ignore bootinclude packages during the check what is available
