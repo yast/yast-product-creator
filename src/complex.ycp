@@ -22,7 +22,7 @@
     import "Report";
     import "String";
     import "Wizard";
-    import "Wizard_hw";
+    import "UIHelper";
 
     include "product-creator/helps.ycp";
     include "product-creator/dialogs.ycp";
@@ -129,7 +129,7 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
 	    }
 	}
 
-        term contents = Wizard_hw::ConfiguredContent(
+        term contents = UIHelper::EditTable(
                 /* Table header */
                 `header(_("Name"), _("Product"), _("Image"), _("GPG Key")),
                 overview, nil, nil, nil, nil );
@@ -166,7 +166,7 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
 	    )
         );
 
-        contents = Wizard_hw::SpacingAround(contents2, 1.5, 1.5, 1.0, 1.0);
+        contents = UIHelper::SpacingAround(contents2, 1.5, 1.5, 1.0, 1.0);
 
         Wizard::SetContentsButtons(caption, contents, HELPS["overview"]:"",
                 Label::BackButton(), Label::CloseButton());
@@ -743,7 +743,7 @@ define symbol ImagesOverviewDialog() {
 	)
     );
 
-    contents = Wizard_hw::SpacingAround(contents, 1.5, 1.5, 1.0, 1.0);
+    contents = UIHelper::SpacingAround(contents, 1.5, 1.5, 1.0, 1.0);
 
     Wizard::SetContentsButtons(caption, contents, help_text,
         Label::BackButton(), Label::CloseButton());

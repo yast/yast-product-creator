@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Mon Sep 19 09:21:49 CEST 2011 - visnov@suse.cz
+
+- remove dependency on Wizard_hw
+
+-------------------------------------------------------------------
 Thu Sep  1 12:03:01 CEST 2011 - jsuchome@suse.cz
 
 - during test for delete conflicts, check for packages selected
