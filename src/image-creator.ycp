@@ -15,8 +15,6 @@ import "Label";
 import "ProductCreator";
 import "Sequencer";
 import "Wizard";
-import "Wizard_hw";
-
 include "product-creator/wizards.ycp";
 
 

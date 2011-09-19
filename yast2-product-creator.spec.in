@@ -16,7 +16,8 @@ Requires:	yast2-add-on-creator >= 2.17.1
 Requires:	yast2-packager >= 2.16.20
 
 # changes in ag_anyxml agent
-Requires:	yast2 >= 2.17.8
+# Wizard_hw drop
+Requires:	yast2 >= 2.21.22
 
 # Pkg::SourceForceRefreshNow()
 Requires:	yast2-pkg-bindings >= 2.17.6
