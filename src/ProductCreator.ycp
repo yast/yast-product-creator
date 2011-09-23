@@ -327,11 +327,7 @@ symbol autoyastPackages ()
 	}
 	else
 	{
-	    boolean pkgret = Pkg::SetSelection( ProductCreator::Config["base"]:"" );
-
-	    foreach(string addon, ProductCreator::Config["addons"]:[], ``{
-		    Pkg::SetSelection( addon );
-		    });
+	    y2warning("Unsupported software selection type: %1", ProductCreator::Config["type"]:`unknown);
 	}
 
 	if (size(ProductCreator::Config["packages"]:[] ) > 0)
@@ -2738,19 +2734,7 @@ global define boolean setPackages() ``{
     }
     else
     {
-	// Base Selection
-	if (base!="")
-	{
-	    Pkg::SetSelection(base);
-	}
-
-	// Addons
-	if (size(addons) > 0 )
-	{
-	    foreach(string s, addons, ``{
-		Pkg::SetSelection(s);
-	    });
-	}
+	y2warning("Unsupported software selection type: %1", ProductCreator::Config["type"]:`unknown);
     }
 
     packages = (list<string>) union(packages, post_packages);
