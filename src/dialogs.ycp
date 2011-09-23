@@ -1131,11 +1131,7 @@ The created medium will not be bootable.\n"))
 	    }
 	    else
 	    {
-		boolean pkgret = Pkg::SetSelection( ProductCreator::Config["base"]:"" );
-
-		foreach(string addon, ProductCreator::Config["addons"]:[], ``{
-			Pkg::SetSelection( addon );
-			});
+		y2warning("Unsupported software selection type: %1", ProductCreator::Config["type"]:`unknown);
 	    }
 
             if (size(ProductCreator::Config["packages"]:[] ) > 0)
@@ -1315,205 +1311,56 @@ more <b>add-on</b> selections and packages.
                 `HVCenter(`Label(_("Reading package database..."))),
                 helptext, false, true);
 
-        list<string> available_base_selections = Pkg::GetSelections( `available, "base" );
-        y2milestone ("available_base_selections %1", available_base_selections);
+	list<string> addons = patterns;
 
-        list<string> current_base_selections = Pkg::GetSelections( `selected, "base" );
-        y2milestone ("current_base_selections %1", current_base_selections);
+	// ensure that a langugage is selected
+	ProductCreator::CheckLanguage();
 
-	boolean using_patterns = false;
-
-	// use patterns instead of selections
-	if (size(available_base_selections) == 0)
+	if (size(addons) > 0 || ProductCreator::Config["base"]:"" != "")
 	{
-	    y2milestone("No selections, using patterns");
-	    using_patterns = true;
+	    y2milestone("base pattern: %1, addons: %2", base_pattern, addons);
 
-	    list<string> addons = patterns;
-
-	    // ensure that a langugage is selected
-	    ProductCreator::CheckLanguage();
-
-	    if (size(addons) > 0 || ProductCreator::Config["base"]:"" != "")
+	    // select the base pattern
+	    if (base_pattern != "")
 	    {
-		y2milestone("base pattern: %1, addons: %2", base_pattern, addons);
-
-		// select the base pattern
-		if (base_pattern != "")
-		{
-		    Pkg::ResolvableInstall(base_pattern, `pattern);
-		}
-
-		// select the addons
-		foreach(string addon, addons,
-		{
-		    Pkg::ResolvableInstall(addon, `pattern);
-		});
-
-		// mark taboo packages
-		ProductCreator::MarkTaboo(taboo);
-
-		Pkg::PkgSolve(true);
-
+		Pkg::ResolvableInstall(base_pattern, `pattern);
 	    }
 
-	    // add extra packages
-	    if (size(packages) > 0)
+	    // select the addons
+	    foreach(string addon, addons,
 	    {
-		foreach(string p, packages,
-		{
-		    InstallPackageOrProvider (p);
-		});
-	    }
+		Pkg::ResolvableInstall(addon, `pattern);
+	    });
 
-	    y2milestone("package selection mode: %1", mode);
+	    // mark taboo packages
+	    ProductCreator::MarkTaboo(taboo);
 
-	    if (mode == `packages)
+	    Pkg::PkgSolve(true);
+
+	}
+
+	// add extra packages
+	if (size(packages) > 0)
+	{
+	    foreach(string p, packages,
 	    {
-		ret = detailedSelection(nil);
-	    }
-	    else if (mode == `patterns)
-	    {
-		ret = patternSelection();
-	    }
-	    else
-	    {
-		y2error("Unknown mode parameter: %1", mode);
-	    }
+		InstallPackageOrProvider (p);
+	    });
+	}
+
+	y2milestone("package selection mode: %1", mode);
+
+	if (mode == `packages)
+	{
+	    ret = detailedSelection(nil);
+	}
+	else if (mode == `patterns)
+	{
+	    ret = patternSelection();
 	}
 	else
 	{
-	    // save the current base selection
-	    string save_selection = current_base_selections[0]:"default";
-
-	    // Construct a box with radiobuttons for each software base configuration
-	    term baseconfs_box = `VBox();
-
-	    // sort available_base_selections by order
-	    // $[ "order" : [ "name", "summary" ], .... ]
-
-	    map<string, list> sorted_base_selections = $[];
-	    foreach( string selection, available_base_selections,
-		    ``{
-		    map selection_data = Pkg::SelectionData (selection);
-		    if (selection_data != nil)
-		    {
-		    string order = selection_data["order"]:"";
-		    // use selection name as sort criteria if not given
-		    if (order == "")
-		    {
-		    order = selection;
-		    }
-		    sorted_base_selections[order] = [selection, selection_data["summary"]:("'"+selection+"'")];
-		    }
-		    });
-	    // construct display box in order
-	    boolean selected = false;
-	    foreach(string  order, list data, sorted_base_selections,
-		    ``{
-		    {
-		    if (base_pattern == "" && !selected)
-		    {
-		    base_pattern = data[0]:"";
-		    selected = true;
-		    }
-		    baseconfs_box = add( baseconfs_box, `Left(`RadioButton(`id(data[0]:""),     // id
-				`opt(`notify, `autoShortcut),
-				data[1]:"",              // descrption
-				(data[0]:"" == base_pattern)   )));
-		    }
-		    });
-
-	    term contents = `HVSquash(
-		    `VBox(
-			`HSquash(
-			    `VBox(
-				`Frame(
-				    // Frame caption for software selection
-				    _("Software"),
-				    `VBox(
-					`VSpacing(0.3),
-					`RadioButtonGroup(`id(`baseconf),`opt(`notify), baseconfs_box),
-					`VSpacing(0.3)
-					)
-				    ),
-				`VSpacing(),
-
-				// Push button that will pop up the detailed
-				// software selection (e.g. Multimedia, Games,
-				// KDE, Gnome, ... - not the individual packages!)
-				`PushButton( `id(`details),  _("&Detailed selection...") )
-				)
-			    )
-			)
-		    );
-
-	    Wizard::SetContentsButtons(caption, contents, helptext,
-		    Label::BackButton(), Label::NextButton());
-
-
-
-	    boolean selret = false;
-	    repeat
-	    {
-		ret = Wizard::UserInput();
-
-		// get the newly selected base configuration
-		base_selection = (string) UI::QueryWidget( `id(`baseconf),`CurrentButton );
-
-		// Inform the package manager on `next about the new (only about a NEW) selection
-		// or if the selection has changed
-
-		if (ret == `next)
-		{
-		    // set the new selection
-		    boolean pkgret = Pkg::SetSelection( base_selection );
-		    y2milestone("base selection: %1", pkgret);
-		    if (size(packages) > 0)
-		    {
-			foreach(string p, packages, ``{
-				y2debug("selecting package for installation: %1 -> %2", p, Pkg::PkgInstall(p));
-				});
-		    }
-
-		    // mark taboo packages
-		    ProductCreator::MarkTaboo(taboo);
-		}
-		else if ( ret == `abort)
-		{
-		    if(ProductCreator::ReallyAbort()) break;
-		    else continue;
-		}
-		else if ( ret == `details )
-		{
-		    ret = `again;
-
-		    Pkg::SetSelection( base_selection );
-
-		    foreach(string addon, patterns, ``{
-			    Pkg::SetSelection( addon );
-			    });
-
-		    // mark taboo packages
-		    ProductCreator::MarkTaboo(taboo);
-
-		    Pkg::PkgSolve(true);
-		    if (size(packages) > 0)
-		    {
-			foreach(string p, packages, ``{
-				y2milestone("selecting package for installation: %1 -> %2", p, Pkg::PkgInstall(p));
-				});
-		    }
-
-		    while ( ret == `again )
-		    {
-			ret = PackagesUI::RunPackageSelector($["mode" : `searchMode]);
-
-			if ( ret == `accept )
-			    ret = `next;
-		    }
-		}
-	    }  until ( ret == `next  || ret == `back);
+	    y2error("Unknown mode parameter: %1", mode);
 	}
 
         y2milestone("Selected packages: %1 ", size(Pkg::GetPackages(`selected, true)));
@@ -1540,27 +1387,19 @@ more <b>add-on</b> selections and packages.
         list selbase = [];
         if ( ret != `back && ret != `cancel)
         {
-	    if (!using_patterns)
+	    // do not return patterns selected by dependencies
+	    foreach (map pat, Pkg::ResolvableProperties ("", `pattern, ""),
 	    {
-		seladd =  Pkg::GetSelections(`selected, "");
-		selbase =  Pkg::GetSelections(`selected, "base");
-	    }
-	    else
-	    {
-		// do not return patterns selected by dependencies
-		foreach (map pat, Pkg::ResolvableProperties ("", `pattern, ""),
+		y2debug("Processing pattern: %1", pat);
+		if (pat["status"]:`none == `selected)
 		{
-		    y2debug("Processing pattern: %1", pat);
-		    if (pat["status"]:`none == `selected)
-		    {
-			y2milestone ("pat %1 selected by %2" , pat["name"]:"",
-			    pat["transact_by"]:nil);
-			if (pat["transact_by"]:nil != `solver)
-			    seladd	= add (seladd, pat["name"]:"");
-		    }
-		});
-		selbase =  Pkg::GetPatterns(`selected, "base");
-	    }
+		    y2milestone ("pat %1 selected by %2" , pat["name"]:"",
+			pat["transact_by"]:nil);
+		    if (pat["transact_by"]:nil != `solver)
+			seladd	= add (seladd, pat["name"]:"");
+		}
+	    });
+	    selbase =  Pkg::GetPatterns(`selected, "base");
         }
         else
         {
@@ -1591,8 +1430,8 @@ more <b>add-on</b> selections and packages.
 	ret_map["taboo"] = Pkg::GetPackages(`taboo, true);
 	y2milestone("taboo packages: %1", ret_map["taboo"]:[]);
 
-	// selections or patterns are used in the product
-        ret_map["type"] = using_patterns ? `patterns : `selections;
+	// patterns are used in the product
+        ret_map["type"] = `patterns;
 
 	ret_map["ui"] = ret;
 
