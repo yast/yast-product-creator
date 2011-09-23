@@ -1393,13 +1393,18 @@ more <b>add-on</b> selections and packages.
 		y2debug("Processing pattern: %1", pat);
 		if (pat["status"]:`none == `selected)
 		{
-		    y2milestone ("pat %1 selected by %2" , pat["name"]:"",
-			pat["transact_by"]:nil);
+		    string pat_name = pat["name"]:"";
+		    y2milestone ("pat %1 selected by %2" , pat_name, pat["transact_by"]:nil);
+
 		    if (pat["transact_by"]:nil != `solver)
-			seladd	= add (seladd, pat["name"]:"");
+			seladd	= add (seladd, pat_name);
+
+		    if (pat["category"]:"" == "base")
+		    {
+			selbase = add(selbase, pat_name);
+		    }
 		}
 	    });
-	    selbase =  Pkg::GetPatterns(`selected, "base");
         }
         else
         {

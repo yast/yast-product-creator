@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Fri Sep 23 10:04:48 UTC 2011 - lslezak@suse.cz
+
+- code cleanup - removed obsoled code for handling selections
+  (replaced by patterns long time ago)
+- use Pkg::ResolvableProperties() instead of obsoleted
+  Pkg::GetPatterns()
+- 2.21.10
+
+-------------------------------------------------------------------
 Mon Sep 19 09:21:49 CEST 2011 - visnov@suse.cz
 
 - remove dependency on Wizard_hw
