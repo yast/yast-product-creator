@@ -17,6 +17,7 @@ Requires:	yast2-packager >= 2.16.20
 
 # changes in ag_anyxml agent
 # Wizard_hw drop
+# Wizard::SetDesktopTitleAndIcon
 Requires:	yast2 >= 2.21.22
 
 # Pkg::SourceForceRefreshNow()
