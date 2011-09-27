@@ -43,7 +43,7 @@ define boolean ShortKiwiSequence() {
     ];
 
     Wizard::CreateDialog();
-    Wizard::SetDesktopIcon("kiwi");
+    Wizard::SetDesktopTitleAndIcon("kiwi");
 
     if (!Confirm::MustBeRoot ())
     {

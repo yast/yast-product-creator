@@ -23,7 +23,7 @@ include "product-creator/wizards.ycp";
 define boolean ICSequence() {
 
     Wizard::CreateDialog();
-    Wizard::SetDesktopIcon("product-creator");
+    Wizard::SetDesktopTitleAndIcon("product-creator");
 
     if (!Confirm::MustBeRoot ())
     {

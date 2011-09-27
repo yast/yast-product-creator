@@ -303,7 +303,7 @@ define boolean ProductCreatorSequence() ``{
     ];
 
     Wizard::CreateDialog();
-    Wizard::SetDesktopIcon("product-creator");
+    Wizard::SetDesktopTitleAndIcon("product-creator");
     list<string> required_packages = ["inst-source-utils", "mkisofs", "createrepo"];
 
     // add PPC specific packages
