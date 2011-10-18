@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Mon Oct 17 15:28:32 CEST 2011 - jsuchome@suse.cz
+
+- call SLEPOS specific XSL transformation (bnc#723031) 
+
+-------------------------------------------------------------------
 Tue Sep 27 15:00:13 CEST 2011 - visnov@suse.cz
 
 - set dialog title
