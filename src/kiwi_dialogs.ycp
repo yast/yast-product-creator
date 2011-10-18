@@ -140,7 +140,7 @@
   void StoreDiskPassword (string key, map event) {
 
     string disk_password = (string) UI::QueryWidget (`id (key), `Value);
-    if (UI::ChangeWidget (`id ("encrypt_disk"), `Value) == false)
+    if (UI::QueryWidget (`id ("encrypt_disk"), `Value) == false)
 	disk_password	= "";
 
     KiwiConfig["preferences",0,"type"]	= maplist (map typemap,
