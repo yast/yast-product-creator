@@ -219,6 +219,32 @@
     return ret;
   }
 
+  /**
+   * Transform given XML file using given XSL transformation file
+   * Return path to new file if transformation was done and was successful
+   * @param config_path path to XML file
+   * @param xsl_file path to XSL file
+   */
+  string XSLTTransform (string config_path, string xsl_file) {
+    string ret_path	= config_path;
+    if (Package::Installed ("libxslt") && FileUtils::Exists (xsl_file))
+    {
+	// new path identified by xsl file:
+	// config-usr-share-kiwi-xsl-convertSleposSp1toSp2-xsl.xml
+	ret_path	= sformat ("%1/config%2.xml",
+	    Directory::tmpdir,
+	    mergestring (splitstring (xsl_file, "/ ."), "-"));
+	map out = (map) SCR::Execute (.target.bash_output, sformat (
+	    "/usr/bin/xsltproc '%1' '%2' > %3",
+	    String::Quote (xsl_file), String::Quote (config_path), ret_path));
+	if (out["exit"]:0 != 0)
+	{
+	    y2error ("xslt transformation failed: %1", out);
+	    ret_path	= config_path;
+	}
+    }
+    return ret_path;
+  }
 
   /**
    * import the data from given config.xml
@@ -234,16 +260,24 @@
 	return ret;
     }
     string file_path	=  base_path + "/config.xml";
-    if (FileUtils::Exists ("/usr/share/kiwi/xsl/master.xsl"))
+
+    // transformation to latest kiwi version
+    file_path = XSLTTransform (file_path, "/usr/share/kiwi/xsl/master.xsl");
+    // transformation to latest SLEPOs version (bnc#723031)
+    string slepos_path = XSLTTransform (file_path, "/usr/share/kiwi/xsl/convertSleposSp1toSp2.xsl");
+    // make a backup when SLEPOS transformation changed anything
+    if (slepos_path != file_path)
     {
-	file_path	= Directory::tmpdir + "/transformed-config.xml";
 	map out = (map) SCR::Execute (.target.bash_output, sformat (
-	    "xsltproc /usr/share/kiwi/xsl/master.xsl %1/config.xml > %2",
-	    base_path, file_path));
+	    "diff -1 '%1' '%2'", file_path, slepos_path));
 	if (out["exit"]:0 != 0)
 	{
-	    y2error ("xslt transformation failed: %1", out);
+	    string backup	=  base_path + "/config.xml.POSsave";
+	    y2milestone ("creating backup of config file: %1", backup);
+	    SCR::Execute (.target.bash, sformat ("cp -- '%1' '%2'",
+	        String::Quote (file_path), String::Quote (backup)));
 	}
+	file_path	= slepos_path;
     }
 
     // read rest of config.xml using more generic agent
