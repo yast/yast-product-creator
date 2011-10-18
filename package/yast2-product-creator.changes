@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Tue Oct 18 11:09:16 CEST 2011 - jsuchome@suse.cz
+
+- added UI for disk encryption (fate#312486)
+
+-------------------------------------------------------------------
 Mon Oct 17 15:28:32 CEST 2011 - jsuchome@suse.cz
 
 - call SLEPOS specific XSL transformation (bnc#723031) 
