@@ -123,6 +123,54 @@
     return nil;
   }
 
+  void InitDiskPassword (string id) {
+
+    string disk_password	= "";
+    foreach (map typemap, (list<map>)KiwiConfig["preferences",0,"type"]:[], {
+	if (typemap["image"]:"" == kiwi_task)
+	{
+	    disk_password	= typemap["luks"]:disk_password;
+	}
+    });
+    UI::ChangeWidget (`id (id), `Value, disk_password);
+    UI::ChangeWidget (`id (id), `Enabled, disk_password != "");
+    UI::ChangeWidget (`id ("encrypt_disk"), `Value, disk_password != "");
+  }
+
+  void StoreDiskPassword (string key, map event) {
+
+    string disk_password = (string) UI::QueryWidget (`id (key), `Value);
+    if (UI::QueryWidget (`id ("encrypt_disk"), `Value) == false)
+	disk_password	= "";
+
+    KiwiConfig["preferences",0,"type"]	= maplist (map typemap,
+	(list<map>)KiwiConfig["preferences",0,"type"]:[],
+    {
+	if (typemap["image"]:"" == kiwi_task)
+	{
+	    if (disk_password == "")
+	    {
+		if (haskey (typemap, "luks"))
+		    typemap	= remove (typemap, "luks");
+	    }
+	    else
+		typemap["luks"]	= disk_password;
+	}
+	return typemap;
+    });
+  }
+
+  symbol HandleDiskPassword (string key, map event) {
+    if (event["ID"]:nil == `next) StoreDiskPassword (key, event);
+    return nil;
+  }
+
+  symbol HandleEncryptDisk (string key, map event) {
+    boolean value = (boolean) UI::QueryWidget (`id (key), `Value);
+    UI::ChangeWidget (`id ("disk_password"), `Enabled, value);
+    return nil;
+  }
+
   /**
    * Initialize the widget with ignored packages
    */
@@ -1680,6 +1728,13 @@ directory."), out_dir));
 		    show_compression ? `HWeight (1, "compression") : `HBox ()
 		),
 		`HBox (
+			`VBox (
+			    `Label (""),
+			    "encrypt_disk"
+			),
+			"disk_password"
+		),
+		`HBox (
 		    `HWeight (2, `VBox (
 			"sw_selection",
 			`Left (`Label (_("Installed Software"))),
@@ -1693,6 +1748,7 @@ directory."), out_dir));
 	"widget_names" : [
 	    "version",
 	    "size", "sizeunit", "additive",
+	    "encrypt_disk", "disk_password",
 	    "sw_selection",
 	    "rt_sw", "configure_sw",
 	    "delete_sw",
@@ -1886,6 +1942,24 @@ If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is th
 	"widget"	: `checkbox,
 	// check box label
 	"label"		: _("Additive"),
+	"no_help"	: true,
+    ],
+    "encrypt_disk"	: $[
+	"widget"	: `checkbox,
+	"opt"		: [ `notify ],
+	// check box label
+	"label"		: _("Encrypt Image with LUKS"),
+	// help text
+	"help"		: _("<p>For creating encrypted file system, check <b>Encrypt Image with LUKS</b> and enter the password.</p>"),
+	"handle"	: HandleEncryptDisk,
+    ],
+    "disk_password" : $[
+	"widget"	: `textentry,
+	// textentry label
+	"label"		: _("Encrypted Image LUKS Password"),
+	"init"		: InitDiskPassword,
+	"store"		: StoreDiskPassword,
+	"handle"	: HandleDiskPassword,
 	"no_help"	: true,
     ],
     // ---------------- widgtes for directory structure
