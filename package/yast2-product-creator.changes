@@ -1,7 +1,8 @@
 -------------------------------------------------------------------
-Tue Oct 18 11:09:16 CEST 2011 - jsuchome@suse.cz
+Tue Oct 25 09:58:49 CEST 2011 - jsuchome@suse.cz
 
 - added UI for disk encryption (fate#312486)
+- 2.21.12
 
 -------------------------------------------------------------------
 Mon Oct 17 15:28:32 CEST 2011 - jsuchome@suse.cz
