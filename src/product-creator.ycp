@@ -29,8 +29,8 @@ PackageCallbacks::InitPackageCallbacks();
 
 map cmdline_description = $[
     "id"	: "product-creator",
-    // transltors: command line help text for the Xproduct-creator module
-    "help"	: _("Configuration of Product creator"),
+    // transltors: command line help text for the product-creator module
+    "help"	: _("Configuration of Product Creator"),
     "guihandler"        : ProductCreatorSequence,
     "initialize"        : ProductCreator::Read,
     "finish"            : ProductCreator::Write,

@@ -437,7 +437,7 @@
 	    label       = type;
 	if (pmap["profiles"]:"" != "")
 	    // combo box label, %1 is profile name
-	    label = sformat(_("Image, profile %1"),pmap["profiles"]:"");
+	    label = sformat(_("Image, Profile %1"),pmap["profiles"]:"");
 	items	= add (items, `item (`id (i), label, package_set == i));
 	i	= i + 1;
     });
@@ -793,7 +793,7 @@
     UI::OpenDialog (`opt(`decorated), `HBox (`HSpacing (0.5), `VBox (
 	`VSpacing (0.5),
 	// popup label
-	`Label (`id (`label), _("Add new user")),
+	`Label (`id (`label), _("Add New User")),
 	// text entry label
 	`InputField (`id (`username), `opt (`hstretch), _("Login &Name")),
 	// text entry label
@@ -1195,18 +1195,19 @@ Try again."));
 			`Left(`Heading (_("Missing packages"))),
 			`VSpacing(0.2),
 			// popup text
-			`RichText (sformat (_("<p>These packages from section '%1' are not available with selected repositories:</p>
+			`RichText (sformat (_("<p>Packages from section '%1' are not available with selected repositories:</p>
 <p>%2.</p>
 <p>
-You can remove the packages from the section, check the detailed package selection or ignore the situation.</p>
+Either remove the packages from the section, check the detailed package selection or ignore the situation.</p>
 <p>
 Going to detailed package selection and accepting the view without any further changes results in removal of problematic packages from the section.
-</p>"), type_label, mergestring (sort (n_a), "<br>"))),
+</p>
+"), type_label, mergestring (sort (n_a), "<br>"))),
 			`HBox (
 			    // button label
-			    `PushButton (`id (`remove), `opt (`default), _("Remove the packages")),
+			    `PushButton (`id (`remove), `opt (`default), _("Remove Packages")),
 			    // button label
-			    `PushButton (`id (`selection), _("Check package selection")),
+			    `PushButton (`id (`selection), _("Check Package Selection")),
 			    // button label
 			    `PushButton (`id (`ignore), ignore_allowed ? _("Ignore") : _("Cancel")) 
 			)
@@ -1854,7 +1855,7 @@ directory."), out_dir));
 	// textentry label
 	"label"		: _("Co&mpression"),
 	// help text
-	"help"		:_("<p>Select the value for image <b>Compression</b>. This will modify the <i>flags</i> value of the image type. Check the kiwi manual for the meaning of the available values.</p>"),
+	"help"		:_("<p>Select the value for image <b>Compression</b>. This will modify the\n<i>flags</i> value of the image type. Check the kiwi manual for an explanation of available values.</p>"),
 	"init"		: InitCompressionCombo,
 	"store"		: StoreCompressionCombo,
 	"handle"	: HandleCompressionCombo,
@@ -1892,7 +1893,7 @@ directory."), out_dir));
 	"store"		: StoreSWIgnore,
 	"handle"	: HandleSWIgnore,
 	// help text for "&Ignored software"
-	"help"		: _("<p>For <b>ignored software</b>, enter each entry (like 'smtp_daemon') on new line</p>"),
+	"help"		: _("<p>For <b>ignored software</b>, enter each entry (like 'smtp_daemon') on a new line.</p>"),
     ],
     "delete_sw"	: $[
 	"widget"	: `multi_line_edit,
@@ -1946,7 +1947,7 @@ If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is th
 	// check box label
 	"label"		: _("Encrypt Image with LUKS"),
 	// help text
-	"help"		: _("<p>For creating encrypted file system, check <b>Encrypt Image with LUKS</b> and enter the password.</p>"),
+	"help"		: _("<p>To create an encrypted file system, check <b>Encrypt Image with LUKS</b> and enter the password.</p>"),
 	"handle"	: HandleEncryptDisk,
     ],
     "disk_password" : $[
@@ -1962,12 +1963,12 @@ If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is th
     "general_scripts"	: $[
 	"widget"	: `empty,
 	// general help for directory structure tab
-	"help"		: _("<p>Here, edit the configuration scripts used to build your image.</p>"),
+	"help"		: _("<p>Edit the configuration scripts used to build your image.</p>"),
     ],
     "general_directories"	: $[
 	"widget"	: `empty,
 	// general help for directory structure tab
-	"help"		: _("<p>Here, point to the configuration directories that should help to build your image.</p>"),
+	"help"		: _("<p>Point to the configuration directories for building your image.</p>"),
     ],
     "root_dir"		: $[
 	"widget"	: `textentry,
@@ -2145,30 +2146,30 @@ If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is th
 	"widget"	: `combobox,
 	"opt"		: [ `hstretch, `notify, `editable ],
 	// textentry label
-	"label"		: _("&Keyboard layout"),
+	"label"		: _("&Keyboard Layout"),
 	"init"		: InitKeytableCombo,
 	"store"		: StorePreferences,
 	"handle"	: HandlePreferences,
 	// help text for keytable
-	"help"		: _("<p><b>Keyboard layout</b> specifies the name of the console keymap to use. The value corresponds to a map file in <tt>/usr/share/kbd/keymaps</tt>.</p>"),
+	"help"		: _("<p><b>Keyboard Layout</b> specifies the name of the console keymap to use. The value corresponds to a map file in <tt>/usr/share/kbd/keymaps</tt>.</p>"),
     ],
     "timezone" : $[
 	"widget"	: `combobox,
 	"opt"		: [ `hstretch, `notify ],
 	"items"		: [],
 	// textentry label
-	"label"		: _("&Time zone"),
+	"label"		: _("&Time Zone"),
 	"init"		: InitTimezoneCombo,
 	"store"		: StorePreferences,
 	"handle"	: HandlePreferences,
 	// help text for timezone
-	"help"		: _("<p>It is also possible to set a specific <b>Time zone</b>. Available time zones are located in the <tt>/usr/share/zoneinfo</tt> directory.</p>"),
+	"help"		: _("<p>It is possible to set a specific <b>Time zone</b>. Available time zones are located in the <tt>/usr/share/zoneinfo</tt> directory.</p>"),
     ],
     // ---------------- widgtes for users tab
     "general_users"	: $[
 	"widget"	: `empty,
 	// general help for users tab
-	"help"		: _("<p>Here, create users that should be available in the target system.</p>"),
+	"help"		: _("<p>Create users that should be available on the target system.</p>"),
     ],
     "userstable" : $[
 	"widget"	: `custom,
@@ -2317,7 +2318,7 @@ return ret;
     _("<p>Modify the list of <b>Package Repositories</b> that will be used for creating the image. Use <b>Add From System</b> to add one of the current system repositories.</p>") +
 
     // help text for kiwi UI preparation, cont.
-    _("<p>Use <b>Next</b> to continue with the configuration.</p>");
+    _("<p>Click <b>Next</b> to continue with the configuration.</p>");
 
     list basic_type_items	= [
 	    // combo box item
@@ -2425,7 +2426,7 @@ return ret;
 	{
 	    y2warning ("%1 does not have 'system' image type, skipping", dir);
 	    // error popup
-	    Popup::Error (_("Selected directory does not contain valid description of system configuration"));
+	    Popup::Error (_("Selected directory does not contain valid description of system configuration."));
 	    return false;
 	}
 
@@ -2498,12 +2499,12 @@ return ret;
 	`VBox (
 	    `InputField (`id (`config), `opt (`hstretch),
 		// text entry label
-		_("&Kiwi configuration"), name),
+		_("&Kiwi Configuration"), name),
 	    `RadioButtonGroup (`id (`imp), `HBox (`HSpacing (), `VBox (
 		`VSpacing (0.2),
 		`Left (`RadioButton (`id ("rb_new"), `opt (`notify),
 		    // radio button label
-		    _("Create from beginning"), true)
+		    _("Create from Scratch"), true)
 		),
 		template_items == [] ? `VSpacing (0) :
 		`Left (`RadioButton (`id ("rb_template"), `opt (`notify),
@@ -2535,7 +2536,7 @@ return ret;
 	`HBox (
 	    `InputField (`id (`out_dir), `opt (`hstretch),
 		// text entry label
-		_("&Output directory"), out_dir),
+		_("&Output Directory"), out_dir),
 	    `VBox (
 		`Label (""),
 		`PushButton (`id (`browse), Label::BrowseButton ())
@@ -2550,7 +2551,7 @@ return ret;
 	`HBox (
 	    `PushButton (`id (`add), Label::AddButton ()),
 	    // menu butto label
-	    `MenuButton (`id (`addsystem), _("A&dd From System"),
+	    `MenuButton (`id (`addsystem), _("A&dd from System"),
 		system_repo_items),
 	    `PushButton (`id (`edit), Label::EditButton ()),
 	    `PushButton (`id (`delete), Label::DeleteButton ()),
@@ -2658,7 +2659,8 @@ return ret;
 			    Report::Error (sformat (
 				// popup error message, %1 is the package name
 				_("Cannot search for SLP repositories
-without having %1 package installed"),
+without having %1 package installed.
+"),
 				required_package
 			    ));
 			    y2warning ("Not searching for SLP repositories");

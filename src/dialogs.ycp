@@ -837,8 +837,9 @@ Change the target architecture?
 			Report::Error(_("There is a mismatch between the selected
 repositories and the machine architecture.
 
-Either select another repositories or
-change the target architecture."));
+Either select a different repository or
+change the target architecture.
+"));
 
 			// don't leave the dialog
 			continue;
@@ -1372,7 +1373,7 @@ more <b>add-on</b> selections and packages.
 	{
 	    string details = (string)SCR::Read(.target.string, "/var/log/YaST2/badlist");
 	    // error message, %1 = details
-	    Report::LongError(sformat(_("The dependencies cannot be resolved.
+	    Report::LongError(sformat(_("Dependencies cannot be resolved.
 
 %1
 "), details));
@@ -1549,7 +1550,7 @@ To make it possible for users to verify your product, sign it with a GPG key.
 This key is checked when the product is added as a repository.</p>")
 		// part of the help text (signing dialog), the URL can be modified to the translated language
 		// (if the page exists in that language, you have to check that!)
-		+ _("<P>If the product is not signed Yast automatically adds option 'Insecure: 1' to the linuxrc configuration file, otherwise linuxrc would deny loading unsigned installation system at boot. See http://en.opensuse.org/Linuxrc for more information.</P>")
+		+ _("<P>If the product is not signed, Yast automatically adds the option 'Insecure:\n1' to the linuxrc configuration file, otherwise linuxrc would deny loading an unsigned installation system at boot. See http://en.opensuse.org/Linuxrc for more information.</P>")
 	    ]
 	];
     }
@@ -1695,9 +1696,9 @@ This key is checked when the product is added as a repository.</p>")
         term contents =
             `RichText(summary);
 
-        string help_text = _("<p>Verify if the data in the summary is correct then
-press Next to continue.
-</p>");
+        string help_text = _("<p>Verify the data in the summary then press Next to continue.
+</p>
+");
 
         Wizard::SetContentsButtons ( caption,
                 contents,

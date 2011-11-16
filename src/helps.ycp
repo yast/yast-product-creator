@@ -17,7 +17,7 @@ textdomain "product-creator";
 map HELPS = $[
 
     "bootconfig": _("<p><b><big>Boot Options</big></b><br>
-Here, add additional boot menu entries with some boot options.
+Add additional boot menu entries with boot options.
 </p>
 ") +
     _("<p>For example, 
@@ -26,8 +26,7 @@ source location. If you are not sure, leave the file untouched and the original 
 "),
 
     /* Read dialog help 1/2 */
-    "read" : _("<p><b><big>Initializing Configuration</big></b><br>
-Please wait...<br></p>
+    "read" : _("<p><b><big>Initializing Configuration</big></b></p>
 ") +
 
     /* Read dialog help 2/2 */
@@ -36,14 +35,13 @@ Safely abort the configuration utility by pressing <b>Abort</b> now.</p>
 "),
 
     /* Write dialog help 1/2 */
-    "write" : _("<p><b><big>Saving Configuration</big></b><br>
-Please wait...<br></p>
+    "write" : _("<p><b><big>Saving Configuration</big></b></p>
 ") +
 
     /* Write dialog help 2/2 */
 _("<p><b><big>Aborting Saving:</big></b><br>
 Abort the save procedure by pressing <b>Abort</b>.
-An additional dialog informs whether it is safe to do so.
+An additional dialog will inform you whether it is safe to do so.
 </p>
 "),
 
@@ -61,11 +59,11 @@ Press <b>Add</b> to create a new configuration.</p>") +
     /* Ovreview dialog help 3/3 */
 _("<p><b><big>Editing or Deleting:</big></b><br>
 Choose a configuration to change or remove.
-Then press <b>Edit</b> or <b>Delete</b> as desired.</p>
+Then press <b>Edit</b> or <b>Delete</b> respectively.</p>
 ")	+
 
     // overview dialog help part 4
-_("<p>Use <b>Create Product</b> to create the ISO image or installation repository directory with selected product.</p>") +
+_("<p>Use <b>Create Product</b> to create the ISO image or installation\nrepository directory with the selected product.</p>") +
 
     // overview dialog help part 5
 _("<p>Press <b>Create Image with KIWI</b> for additional configuration of various
@@ -97,10 +95,11 @@ Select at least one package source.<br></p>
 ")
     /* Source selection help 2/2 */
     + _("<p><b><big>Target Architecture</big></b><br>
-It is possible to create a product for different architecture than the architecture of this machine.
+It is possible to create a product for a different architecture than that of
+the machine you are currently working on.
 All selected repositories must support the target architecture.<br>
-<b>Note:</b> KIWI does not support different architectures yet, do not change the
-architecture if you intend to create a KIWI image from the current configuration.</p>
+<b>Note:</b> KIWI does not support different architectures yet, do not change
+the architecture if you intend to create a KIWI image from the current configuration.</p>
 ")
     ,
 
@@ -113,7 +112,7 @@ space.
 ") +
 
     /* Configure2 dialog help 2/3 */
-_("<p>Create an ISO image or just a directory that is suitable for 
+_("<p>Create an ISO image or a directory that is suitable for 
 creating an ISO image at a later time.
 </p>
 ") +
@@ -137,8 +136,9 @@ _("<p>The other repositories will be used as add-ons for the base repository.</p
 
     /* help text - the base selection dialog 4/4 */
 + _("<p>The product creator solves dependencies of the selected products and proposes
-the base product. If the proposed value is wrong then select the right base
-repository from the list.</p>"),
+the base product. If the proposed value is wrong, select the right base
+repository from the list.</p>
+"),
 
 
 ];

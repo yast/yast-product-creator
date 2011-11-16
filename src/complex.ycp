@@ -316,9 +316,7 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
         import "Progress";
 
 
-        string help = _("<P>
-                Please wait while the directory structure for the new ISO image is created.
-                </P>
+        string help = _("<P>Creating the directory structure for the new ISO image.</P>
                 
 ");
         help = help + _("<p>Press <b>Next</b> to start creating the ISO file.</p>");
@@ -460,7 +458,7 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
 
 		    if (!Mode::commandline())
 		    {
-			Popup::ShowFeedback(_("Creating CD Image..."), _("This may take a while"));
+			Popup::ShowFeedback(_("Creating CD Image..."), _("This may take a while."));
 		    }
 
 		    string command = sformat("/usr/lib/YaST2/bin/y2mkiso '%1' '%2' '%3'", String::Quote(isodir), String::Quote(isofile), String::Quote(boot_arch));
@@ -507,7 +505,7 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
         term contents =
             `RichText(html);
 
-        string help_text = _("<p>Verify if the data in the summary box is correct then
+        string help_text = _("<p>Verify the data in the summary box then
 press Finish to return to main dialog.</p>
 ");
 
@@ -538,9 +536,10 @@ press Finish to return to main dialog.</p>
             // caption
             string caption = _("Custom CDs");
 
-            string help = _("<p>Please wait while the data and packages are verified...
+            string help = _("<p>Verifying data and packages...
                     </p>
-                    ");
+                    
+");
             help = help +  _("<p>If there is something missing, the process will be aborted.
 Fix the problem and try again.</p>
                     ");
@@ -715,13 +714,13 @@ define symbol ImagesOverviewDialog() {
     }
 
     // help text
-    string help_text	= _("<p>Start the creating of new image configuration with <b>Add</b>.</p>") +
+    string help_text	= _("<p>Start creating a new image configuration with <b>Add</b>.</p>") +
 
     // help text
     _("<p>Use <b>Edit</b> to change selected image configuration or create the image.</p>") +
 
     // help text
-    _("<p>Delete the directory with selected configuration using <b>Delete</b>.</p>") +
+    _("<p>Delete the directory with the selected configuration by selecting <b>Delete</b>.</p>") +
 
     // help text, %1 is directory
     sformat (_("<p>All image configurations are saved in <tt>%1</tt> directory.</p>"), images_dir);
