@@ -100,7 +100,7 @@
   string logs_directory	= "/tmp";
 
   // all available locales
-  global list<string> all_locales	= [];
+  global map<string,integer> all_locales        = $[];
 
   // all available time zones
   global list<string> all_timezones	= [];
