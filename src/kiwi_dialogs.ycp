@@ -633,15 +633,16 @@
     string lang	= KiwiConfig["preferences",0,id,0,content_key]:"";
     list items		= [];
 
-    if (Kiwi::all_locales == [])
+    if (Kiwi::all_locales == $[])
     {
 	map out = (map) SCR::Execute (.target.bash_output, "/usr/bin/locale -a");
-	Kiwi::all_locales	= filter (string s, splitstring (out["stdout"]:"", "\n"), {
-	    return s != "";
+	foreach (string line, splitstring (out["stdout"]:"", "\n"), {
+	    string code = splitstring (line, ".@")[0]:line;
+            if (code != "")
+	        Kiwi::all_locales[code] = 1;
 	});
     }
-    foreach (string line, Kiwi::all_locales, {
-	string code = splitstring (line, ".@")[0]:line;
+    foreach (string code, integer i, Kiwi::all_locales, {
 	items	= add (items, `item (`id (code), code, lang == code));
     });
 
