@@ -362,9 +362,54 @@
   }
 
   /**
+   * check the conflicts between packages selected and marked for deletion (fate#305254)
+   * @param packages_before map of packages already selected before entering package selector
+   */
+  define boolean CheckForDeletedPackages (map packages_before) {
+
+    y2milestone ("checking list of selected packages...");
+    StoreSWDelete ("delete_sw", $[]);
+    map to_delete	= $[];
+    foreach (map pmap, KiwiConfig["packages"]:[], {
+	string type	= pmap["type"]:"";
+	if (type == "delete")
+	{
+	    to_delete	= listmap (map pacmap, pmap["package"]:[], ``(
+		$[ pacmap["name"]:"" : true ])
+	    );
+	}
+    });
+    boolean conflicting	= false;
+    if (size (to_delete) > 0)
+    {
+	foreach (map package, Pkg::ResolvableProperties("", `package, ""), {
+	    if (conflicting)
+		break;
+	    string name		= package["name"]:"";
+            // only look at packages selected in last package selector run
+	    if (package["status"]:nil == `selected && !haskey (packages_before, name))
+	    {
+		symbol transact_by	= package["transact_by"]:`none;
+		if (transact_by == `solver || transact_by == `user || transact_by == `app_high)
+		{
+		    if (haskey (to_delete, name))
+		    {
+			y2milestone ("packege %1 selected by %2 is present in the delete list",
+			    name, transact_by);
+			conflicting	= true;
+		    }
+		}
+	    }
+	});
+    }
+    return conflicting;
+  }
+
+  /**
    * Handler for software selection
    */
   define symbol HandleSWSelection (string key, map event) {
+
     if (event["ID"]:nil == key)
     {
 	integer package_set	= KiwiConfig["package_set"]:0;
@@ -376,10 +421,12 @@
 	}
 
 	map sw_contents		= KiwiConfig["packages",package_set]:$[];
+        map packages_before     = $[];
 
 	// separate bootinclude packages from normal ones
 	list bi_packages	= [];
 	sw_contents["package"]	= filter (map p, sw_contents["package"]:[], {
+            packages_before[p["name"]:""]       =  true;
 	    if (p["bootinclude"]:"" == "true")
 		bi_packages	= add (bi_packages, p);
 	    return p["bootinclude"]:"" != "true";
@@ -391,7 +438,18 @@
 	}
 	else
 	{
-	    sw_contents	= modifyPackageSelection (sw_contents);
+            boolean again       = true;
+            while (again)
+            {
+	      sw_contents	= modifyPackageSelection (sw_contents);
+              again             = CheckForDeletedPackages (packages_before);
+              if (again && Popup::YesNo (_("Some of the packages that are selected for installation
+are also included in the list for deletion.
+Continue anyway?")))
+              {
+                  again         = false;
+              }
+            }
 	}
 
 	if (sw_contents != nil && bi_packages != nil)
@@ -1288,6 +1346,7 @@ Going to detailed package selection and accepting the view without any further c
     return ret;
   }
 
+
   /**
    * handler for main action: create the iso image with kiwi
    */
@@ -1295,45 +1354,6 @@ Going to detailed package selection and accepting the view without any further c
     if (event["ID"]:nil != `next)
 	return true;
 
-    // check the conflicts between packages selected and marked for deletion (fate#305254)
-    y2milestone ("checking list of selected packages...");
-    map to_delete	= $[];
-    foreach (map pmap, KiwiConfig["packages"]:[], {
-	string type	= pmap["type"]:"";
-	if (type == "delete")
-	{
-	    to_delete	= listmap (map pacmap, pmap["package"]:[], ``(
-		$[ pacmap["name"]:"" : true ])
-	    );
-	}
-    });
-    boolean conflicting	= false;
-    if (size (to_delete) > 0)
-    {
-	foreach (map package, Pkg::ResolvableProperties("", `package, ""), {
-	    if (conflicting)
-		break;
-	    if (package["status"]:nil == `selected)
-	    {
-		symbol transact_by	= package["transact_by"]:`none;
-		string name		= package["name"]:"";
-		if (transact_by == `solver || transact_by == `user || transact_by == `app_high)
-		{
-		    if (haskey (to_delete, name))
-		    {
-			y2milestone ("packege %1 selected by %2 is present in the delete list",
-			    name, transact_by);
-			conflicting	= true;
-		    }
-		}
-	    }
-	});
-    }
-    // yes/no popup
-    if (conflicting && !Popup::YesNo (_("Some of the packages that are selected for installation
-are also included in the list for deletion.
-Continue anyway?")))
-	return false;
 
     boolean ret	= true;
     map question	= $[
