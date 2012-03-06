@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Mar  6 17:32:14 CET 2012 - jsuchome@suse.cz
+
+- new check for conflicting delete packages (bnc#748488)
+- allow writing empty package list (bnc#749029)
+- 2.17.48 
+
+-------------------------------------------------------------------
 Wed Feb 22 08:07:48 CET 2012 - jsuchome@suse.cz
 
 - do not show duplicates in locale entry (bnc#748122)
