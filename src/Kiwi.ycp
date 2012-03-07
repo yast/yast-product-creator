@@ -417,7 +417,6 @@
 	    size (packagemap["package"]:[]) == 0)
 	{
 	    y2milestone ("no patterns/packages in %1", packagemap);
-	    return;
 	}
 	image_contents	= image_contents +
 	    MapAny2XML ("packages", packagemap, 1) + "\n";
