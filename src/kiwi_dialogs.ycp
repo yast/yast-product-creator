@@ -1343,16 +1343,30 @@ Going to detailed package selection and accepting the view without any further c
 
 	    ProductCreator::MarkTaboo (maplist (map i, pmap["ignore"]:[], ``(i["name"]:"")));
 
-	    foreach (map p, KiwiConfig["packages",index,"package"]:[], {
+            // remember bootinclude packages: in Package selector we will lose this information (bnc#750739)
+            map bi_packages	= $[];
+            foreach (map p, KiwiConfig["packages",index,"package"]:[], {
+	        if (p["bootinclude"]:"" == "true")
+                {
+                    bi_packages[p["name"]:""]   = true;
+                }
 		InstallPackageOrProvider (p["name"]:"");
-	    });
-
+            });
 	    boolean solved = Pkg::PkgSolve (true);
 	    if (!solved)
 	    {
 		map sw_contents		= modifyPackageSelection (KiwiConfig["packages",index]:$[]);
 		if (sw_contents != nil)
 		{
+                    sw_contents["package"]      = maplist (map p, sw_contents["package"]:[], {
+                        string name     = p["name"]:"";
+                        if (bi_packages[name]:false)
+                        {
+                            y2milestone ("package %1 was marked as bootinclude", name);
+                            p["bootinclude"]    = "true";
+                        }
+                        return p;
+                    });
 		    KiwiConfig["packages",index]	= sw_contents;
 		}
 		else
