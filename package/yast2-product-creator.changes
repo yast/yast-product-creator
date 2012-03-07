@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Mar  7 16:19:01 CET 2012 - jsuchome@suse.cz
+
+- do not discard bootinclude packages after conflict (bnc#750739)
+- backup the original version of config.xml (bnc#750989)
+- 2.17.49 
+
+-------------------------------------------------------------------
 Tue Mar  6 17:32:14 CET 2012 - jsuchome@suse.cz
 
 - new check for conflicting delete packages (bnc#748488)
