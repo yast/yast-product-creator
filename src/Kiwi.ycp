@@ -294,8 +294,8 @@
 	{
 	    string backup	=  base_path + "/config.xml.POSsave";
 	    y2milestone ("creating backup of config file: %1", backup);
-	    SCR::Execute (.target.bash, sformat ("cp -- '%1' '%2'",
-	        String::Quote (file_path), String::Quote (backup)));
+	    SCR::Execute (.target.bash, sformat ("cp -- '%1/config.xml' '%2'",
+                String::Quote (base_path), String::Quote (backup)));
 	}
 	file_path	= slepos_path;
     }
