@@ -689,14 +689,15 @@ Continue anyway?")))
   define void InitLocaleCombo (string id) {
 
     string lang	= KiwiConfig["preferences",0,id,0,content_key]:"";
-    list items		= [];
-
+    list items		= [
+      `item (`id ("none"), "---", false)
+    ];
     if (Kiwi::all_locales == $[])
     {
 	map out = (map) SCR::Execute (.target.bash_output, "/usr/bin/locale -a");
 	foreach (string line, splitstring (out["stdout"]:"", "\n"), {
 	    string code = splitstring (line, ".@")[0]:line;
-            if (code != "")
+            if (code != "" && code != "C" && code != "POSIX")
 	        Kiwi::all_locales[code] = 1;
 	});
     }
@@ -747,6 +748,7 @@ Continue anyway?")))
     list items		= maplist (string zone, Kiwi::all_timezones, {
 	return `item (`id (zone), zone, tz == zone);
     });
+    items		= prepend (items, `item (`id ("none"), "---"));
 
     UI::ChangeWidget (`id (id), `Items, items);
   }
@@ -773,12 +775,12 @@ Continue anyway?")))
 	val	= split[0]:val;
 	UI::ChangeWidget (`id (key), `Value, val);
     }
-    if (val == "" && haskey (KiwiConfig["preferences",0]:$[], key))
+    if ((val == "" || val == "none") && haskey (KiwiConfig["preferences",0]:$[], key))
     {
 	KiwiConfig["preferences",0]	=
 	    remove (KiwiConfig["preferences",0]:$[], key);
     }
-    else if (val != "")
+    else if (val != "" && val != "none")
     {
 	KiwiConfig["preferences",0,key]	= [ $[
 	    content_key : UI::QueryWidget (`id(key), `Value)
