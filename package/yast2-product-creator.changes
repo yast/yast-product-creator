@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu Mar 15 15:53:28 CET 2012 - jsuchome@suse.cz
+
+- locale settings: remove unsupported entries, allow deleting
+  (bnc#751588)
+- 2.17.50 
+
+-------------------------------------------------------------------
 Wed Mar  7 16:19:01 CET 2012 - jsuchome@suse.cz
 
 - do not discard bootinclude packages after conflict (bnc#750739)
