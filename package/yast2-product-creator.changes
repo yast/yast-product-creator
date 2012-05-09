@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Apr  3 11:08:41 CEST 2012 - jsuchome@suse.cz
+
+- updated list of compression flags (bnc#755004)
+- 2.17.51 
+
+-------------------------------------------------------------------
 Thu Mar 15 15:53:28 CET 2012 - jsuchome@suse.cz
 
 - locale settings: remove unsupported entries, allow deleting

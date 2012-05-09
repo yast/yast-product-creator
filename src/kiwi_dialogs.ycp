@@ -87,8 +87,7 @@
     map<string,string> methods	= $[
 	"unified"		: "unified",
 	"compressed"		: "compressed",
-	"unified-cromfs"	: "unified-cromfs",
-	"compressed-cromfs"	: "compressed-cromfs",
+	"clic"                  : "clic",
 	// combo box label
 	"none"			: _("None")
     ];
