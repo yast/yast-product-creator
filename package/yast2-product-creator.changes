@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu Jun 28 16:09:16 CEST 2012 - jsuchome@suse.cz
+
+- enable forcing package version to be present in the product
+  (bnc#767614) 
+- 2.17.52
+
+-------------------------------------------------------------------
 Tue Apr  3 11:08:41 CEST 2012 - jsuchome@suse.cz
 
 - updated list of compression flags (bnc#755004)

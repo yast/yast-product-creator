@@ -196,7 +196,6 @@ global void ResetArch()
 }
 
 
-
 /**
  * Data was modified?
  */
@@ -2836,11 +2835,17 @@ global define string checkPackageAvail() ``{
 
     list<string> failed = [];
     toCopy = $[];
+
+    map<string,string> versions = listmap (map p, Config["package_versions"]:[], {
+      return $[ p["name"]:"" : p["version"]:"" ];
+    });
+
     foreach(string package, selectedPackages, ``{
 
-	list<map> package_data_list = Pkg::ResolvableProperties(package, `package, "");
-	map package_data = package_data_list[0]:$[];
+        string version  = versions[package]:"";
 
+	list<map> package_data_list = Pkg::ResolvableProperties(package, `package, version);
+	map package_data = package_data_list[0]:$[];
 	if (package_data == nil || package_data == $[])
 	{
 	    failed = add (failed, package);
@@ -2849,6 +2854,16 @@ global define string checkPackageAvail() ``{
 	{
 	    y2debug("package_data: %1", package_data);
 	    string arch =  package_data["arch"]:"noarch";
+            // find the package with correct version
+            if (version != "")
+            {
+              package_data      = $[];
+              foreach (map data, package_data_list, {
+                if (data["arch"]:"" == arch && data["version"]:"" == version)
+                  package_data = data;
+              });
+            }
+
 	    integer src = package_data["source"]:-1;
 	    integer medianr = package_data["medium_nr"]:1;
 
