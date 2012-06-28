@@ -111,7 +111,37 @@
 
     }
 
-    
+    /**
+     * Select package for installation. If package itself is not available, find package providing it
+     * If version is not empty, select specific package version
+     */
+    boolean InstallPackageOrProviderVersion (string p, string version) {
+
+		    boolean selected	= (version == "") ?
+                      Pkg::PkgInstall(p) :
+                      Pkg::ResolvableInstallArchVersion (p, `package, ProductCreator::GetArch(), version);
+
+		    y2milestone("selecting package for installation: %1 -> %2", p, selected);
+		    if (!selected)
+		    {
+			list <list> provides	= Pkg::PkgQueryProvides (p);
+			provides	= filter (list l, provides, {
+			    return l[1]:`NONE != `NONE;
+			});
+			string pp	= provides[0,0]:"";
+			if (pp != "")
+			{
+			    y2milestone("selecting first package providing %1: %2 -> %3", p, pp, Pkg::PkgInstall (pp));
+			}
+		    }
+
+		    return true;
+    }
+
+    boolean InstallPackageOrProvider (string p) {
+      return InstallPackageOrProviderVersion (p, "");
+    }
+
 
     /**
      * General configuration dialog
@@ -1157,9 +1187,22 @@ The created medium will not be bootable.\n"))
 
             if (size(ProductCreator::Config["packages"]:[] ) > 0)
             {
+                map<string,string> versions = listmap (map p, ProductCreator::Config["package_versions"]:[], {
+                  return $[ p["name"]:"" : p["version"]:"" ];
+                });
+
                 foreach(string p, ProductCreator::Config["packages"]:[], ``{
-                        y2milestone("selecting package for installation: %1 -> %2", p, Pkg::PkgInstall(p));
-                        });
+                    string version = versions[p]:"";
+                    if (version != "")
+                    {
+                      y2milestone("selecting package for installation: %1 (%2) -> %3",
+                        p, version, InstallPackageOrProviderVersion (p, version));
+                    }
+                    else
+                    {
+                      y2milestone("selecting package for installation: %1 -> %2", p, Pkg::PkgInstall(p));
+                    }
+                });
             }
 
 	    // mark taboo packages
@@ -1264,37 +1307,14 @@ more <b>add-on</b> selections and packages.
 	return result;
     }
 
-    boolean InstallPackageOrProvider (string p) {
-
-		    boolean selected	= Pkg::PkgInstall(p);
-		    y2milestone("selecting package for installation: %1 -> %2", p, selected);
-		    if (!selected)
-		    {
-			list <list> provides	= Pkg::PkgQueryProvides (p);
-			provides	= filter (list l, provides, {
-			    return l[1]:`NONE != `NONE;
-			});
-			string pp	= provides[0,0]:"";
-			if (pp != "")
-			{
-			    y2milestone("selecting first package providing %1: %2 -> %3", p, pp, Pkg::PkgInstall (pp));
-			}
-		    }
-
-    }
-
     /**
      * Display package selection dialog with preselected packages.
-     * @param base_pattern base pattern to install, can be empty ("") if there is no base pattern
-     * @param patterns list of patterns to install
-     * @param packages list of packages to install
-     * @param taboo list of packages marked as taboo
-     * @param mode UI mode selection, use `packages for detailed package selection or `patterns for pattern selection.
-     * @return map<string,any>
+     * See runPackageSelector
+     * @param versions map of specific package versions that need to be selected
      */
-    map<string,any> runPackageSelector(string base_pattern, list<string> patterns, list<string> packages, list<string> taboo, symbol mode)
+    map<string,any> runPackageSelectorVersions (string base_pattern, list<string> patterns, list<string> packages, map<string,string> versions, list<string> taboo, symbol mode)
     {
-	y2milestone("running package selector: base_pattern: %1, patterns: %2, packages: %3, taboo: %4, mode: %5", base_pattern, patterns, packages, taboo, mode);
+	y2milestone("running package selector: base_pattern: %1, patterns: %2, packages: %3, versions: %4 taboo: %5, mode: %6", base_pattern, patterns, packages, versions, taboo, mode);
 
         any ret = nil;
 
@@ -1365,7 +1385,7 @@ more <b>add-on</b> selections and packages.
 	{
 	    foreach(string p, packages,
 	    {
-		InstallPackageOrProvider (p);
+                InstallPackageOrProviderVersion (p, versions[p]:"");
 	    });
 	}
 
@@ -1466,6 +1486,21 @@ more <b>add-on</b> selections and packages.
     }
 
     /**
+     * Display package selection dialog with preselected packages.
+     * @param base_pattern base pattern to install, can be empty ("") if there is no base pattern
+     * @param patterns list of patterns to install
+     * @param packages list of packages to install
+     * @param taboo list of packages marked as taboo
+     * @param mode UI mode selection, use `packages for detailed package selection or `patterns for pattern selection.
+     * @return map<string,any>
+     */
+    map<string,any> runPackageSelector(string base_pattern, list<string> patterns, list<string> packages, list<string> taboo, symbol mode)
+
+    {
+        return runPackageSelectorVersions (base_pattern, patterns, packages, $[], taboo, mode);
+    }
+
+    /**
      * Select packages
      * @return symbol
      */
@@ -1480,7 +1515,11 @@ more <b>add-on</b> selections and packages.
 	    list<string> packages = ProductCreator::Config["packages"]:[];
 	    list<string> taboo = ProductCreator::Config["taboo"]:[];
 
-	    result = runPackageSelector(base_pattern, patterns, packages, taboo, `patterns);
+	    map<string,string> versions = listmap (map p, ProductCreator::Config["package_versions"]:[], {
+                return $[ p["name"]:"" : p["version"]:"" ];
+            });
+
+	    result = runPackageSelectorVersions(base_pattern, patterns, packages, versions, taboo, `patterns);
 
 	    y2debug("Package selector result: %1", result);
 
