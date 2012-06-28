@@ -117,7 +117,6 @@
      */
     boolean InstallPackageOrProviderVersion (string p, string version) {
 
-                    y2internal ("p %1, version '%2'", p, version);
 		    boolean selected	= (version == "") ?
                       Pkg::PkgInstall(p) :
                       Pkg::ResolvableInstallArchVersion (p, `package, ProductCreator::GetArch(), version);
@@ -136,6 +135,7 @@
 			}
 		    }
 
+		    return true;
     }
 
     boolean InstallPackageOrProvider (string p) {
@@ -1515,7 +1515,7 @@ more <b>add-on</b> selections and packages.
 	    list<string> packages = ProductCreator::Config["packages"]:[];
 	    list<string> taboo = ProductCreator::Config["taboo"]:[];
 
-            map<string,string> versions = listmap (map p, ProductCreator::Config["package_versions"]:[], {
+	    map<string,string> versions = listmap (map p, ProductCreator::Config["package_versions"]:[], {
                 return $[ p["name"]:"" : p["version"]:"" ];
             });
 
