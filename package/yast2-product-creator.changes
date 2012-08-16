@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu Aug 16 15:53:29 CEST 2012 - jsuchome@suse.cz
+
+- added README.expert file, describing the option for forcing
+  the package version (bnc#767614)
+- 2.22.8 
+
+-------------------------------------------------------------------
 Thu Jun 28 14:43:19 CEST 2012 - jsuchome@suse.cz
 
 - enable forcing package version to be present in the product

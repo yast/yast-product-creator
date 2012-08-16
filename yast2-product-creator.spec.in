@@ -62,6 +62,8 @@ install -d $RPM_BUILD_ROOT/var/lib/YaST2/product-creator
 @desktopdir@/image-creator.desktop
 @ybindir@/y2mkiso
 %doc @docdir@
+%doc @docdir@/README.expert
+
 %dir @ydatadir@/product-creator
 @ydatadir@/product-creator/*
 #%dir /etc/YaST2/product-creator

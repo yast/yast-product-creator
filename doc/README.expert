@@ -1,0 +1,61 @@
+CD Creator/Product Creator
+++++++++++++++++++++++++++
+
+Enables the user to create an CD image suitable for installation from a 
+list of packages and files.
+
+	- plain list of packages and product data
+ 	- an AutoYaST control file
+	- Clone on CD using AutoYaST and the Backup modules
+
+
+Options:
+
+	- Create a bootable CD without packages suitable for installation
+	  from a network source
+	- Create a source directory that can be used to create an ISO image
+
+
+How to specify a version of package
+-----------------------------------
+
+In usual cases, you add only package names (via software selector UI) into the
+software set you need to create a product. YaST will always pick the latest
+available version for you. This is handy especially in the cases when you use
+update repository as one of your sources.
+
+However, in special cases there might be need to use specific package version.
+We do not offer specific UI option for that, you must edit the config file directly.
+
+The whole product configuration is stored in /var/lib/YaST2/cd-creator/cdcreator.xml
+file. The file has a section where all selected packages are listed:
+
+      <packages config:type="list">
+          <package>samba</package>
+          <package>samba-client</package>
+          <package>samba-winbind</package>
+      </packages>
+
+If you want to pick specific package versions, leave the 'packages' section as it is
+and add a new section to the config file, called 'package_versions'. It has following
+syntax:
+
+      <package_versions config:type="list">
+            <package>
+                <name>samba</name>
+                <version>1.2.3</version>
+            </package>
+            <package>
+                <name>samba-client</name>
+                <version>5.6</version>
+            </package>
+      </package_versions>
+
+In this example, packages 'samba' and 'samba-client' will stay with specified version.
+All other packages that are part of 'packages' and not part of 'package_versions'
+(like 'samba-winbind' in this example) will be present in the latest version available.
+
+And as usual: do not touch the file unless you know what you are doing.
+
+For further discussion about this feature, see bug 767614 at:
+https://bugzilla.novell.com/show_bug.cgi?id=767614
