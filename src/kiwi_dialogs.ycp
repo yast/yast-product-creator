@@ -2865,8 +2865,6 @@ Choose a different one."), name));
 		    }
 		    current_sources[url]	= srcid;
 		});
-		// map of new repo aliases
-		map<string,integer> aliases	= $[];
 		// initialize new repos now
 		new_repositories = filter (string url, map repo, repositories, {
 		    if (substring (url, 0, 1) == "/")
@@ -2881,16 +2879,8 @@ Choose a different one."), name));
 		    if (repo["full_url"]:"" != "" && repo["full_url"]:"" != url)
 			full_url	= repo["full_url"]:"";
 
-		    string alias = mergestring (splitstring (repo["name"]:full_url, " "), "_");
-		    if (aliases[alias]:0 > 0)
-		    {
-			alias	= sformat ("%1%2", alias, aliases[alias]:0);
-		    }
-		    aliases[alias]	= aliases[alias]:0 + 1;
-
 		    map<string,any> repo_map	= $[
-			    "name"	: repo["name"]:alias,
-			    "alias"	: alias,
+                            "name"      : repo["name"]:"" == "" ? full_url : repo["name"]:"",
 			    "base_urls"	: [ full_url ],
 		    ];
 
