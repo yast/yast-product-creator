@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Oct 24 14:05:10 CEST 2012 - jsuchome@suse.cz
+
+- do not create alias for new repo, let zypp handle it (bnc#773968)
+- 2.17.53
+
+-------------------------------------------------------------------
 Thu Jun 28 16:09:16 CEST 2012 - jsuchome@suse.cz
 
 - enable forcing package version to be present in the product
