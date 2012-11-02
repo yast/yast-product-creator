@@ -604,8 +604,16 @@ Continue anyway?")))
   define void InitSize (string id) {
 
     map size_map    = get_current_size_map (KiwiConfig, kiwi_task);
-    integer siz	= tointeger (size_map[Kiwi::content_key]:"0");
-    if (siz == nil) siz	= 0;
+    integer siz	= tointeger (size_map[Kiwi::content_key]:"");
+    // fallback values when size is not given
+    if (siz == nil)
+    {
+        siz	= tointeger (Kiwi::default_size);
+        if (size_map["additive"]:"" == "")
+        {
+            size_map["additive"]        = "true";
+        }
+    }
     UI::ChangeWidget (`id ("size"), `Value, siz);
     UI::ChangeWidget (`id ("additive"), `Value, size_map["additive"]:"" == "true");
     UI::ChangeWidget (`id ("sizeunit"), `Items, maplist (string u, [ "M", "G" ], ``(
