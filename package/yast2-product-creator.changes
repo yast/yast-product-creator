@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Nov  2 12:59:24 CET 2012 - jsuchome@suse.cz
+
+- create reasonable default when size was not defined (bnc#786696)
+- 2.17.54 
+
+-------------------------------------------------------------------
 Wed Oct 24 14:05:10 CEST 2012 - jsuchome@suse.cz
 
 - do not create alias for new repo, let zypp handle it (bnc#773968)
