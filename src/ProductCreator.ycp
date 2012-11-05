@@ -600,13 +600,7 @@ global define boolean Write() ``{
     // translators: error message
     if(!ret) Report::Error (_("Error while writing settings."));
 
-
-    // run SuSEconfig
-    if(Abort()) return false;
     Progress::NextStage ();
-    // translators: error message
-    if(false) Report::Error (_("SuSEconfig script failed."));
-    sleep(sl);
 
     if(Abort()) return false;
     // translators: progress finished
