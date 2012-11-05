@@ -695,8 +695,17 @@ define symbol ImagesOverviewDialog() {
 		Configurations[i]	= config;
 		map size_map	= get_current_size_map (config, task);
 		string unit	= size_map["unit"]:"M";
-		string i_size	= size_map[Kiwi::content_key]:"0" + unit;
-
+		string i_size	= size_map[Kiwi::content_key]:"";
+                // fallback values when size is not given
+                if (i_size == "")
+                {
+                    i_size      = Kiwi::default_size;
+                    if (size_map["additive"]:"" == "")
+                    {
+                      size_map["additive"]      = "true";
+                    }
+                }
+                i_size          = i_size + unit;
 		// with "additive", "size" has a different meaning
 		if (size_map["additive"]:"" == "true")
 		    i_size	= "+" + i_size;

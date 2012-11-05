@@ -31,6 +31,9 @@
    */
   global string content_key	= "__yast_content__";
 
+  // default image size, if none was given (in MB)
+  global string default_size    = "10";
+
   include "product-creator/routines.ycp";
 
   string encryption_method	= nil;
