@@ -584,10 +584,13 @@ Continue anyway?")))
   define void InitSize (string id) {
 
     map size_map    = get_current_size_map (KiwiConfig, kiwi_task);
-
-    integer siz	= tointeger (size_map[Kiwi::content_key]:"");
+    integer siz = 0;
+    if (haskey (size_map, Kiwi::content_key))
+    {
+      siz       = tointeger (size_map[Kiwi::content_key]:"0");
+    }
     // fallback values when size is not given
-    if (siz == nil)
+    else
     {
         siz	= tointeger (Kiwi::default_size);
         if (size_map["additive"]:"" == "")
