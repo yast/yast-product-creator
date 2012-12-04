@@ -1,0 +1,17 @@
+/**
+ * Summary:     SCR Agent for reading /etc/kiwi/repoalias
+ */
+.etc.kiwi.repoalias
+
+`ag_ini(
+  `IniAgent(
+    "/etc/kiwi/repoalias",
+    $[ "options"        : [ "global_values" ],
+       "comments"       : [ "^#.*", "^[ \t]*$" ],
+       "params"         : [
+         $[
+            "match"     : [ "^[ \t]*\\{(.*[^ \t])\\}[ \t]*(.*[^ \t]|)[ \t]*$",
+                            "{%s}\t%s" ],
+	 ]
+       ]
+    ]))
