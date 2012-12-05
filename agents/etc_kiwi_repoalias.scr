@@ -1,0 +1,30 @@
+/**
+ * Summary:     SCR Agent for reading /etc/kiwi/repoalias
+ *
+ * Example of /etc/kiwi/repoalias file:
+
+--- cut
+
+#SLES SP2 repository
+{SLES 11 SP2 i386}    http://sleposlab.suse.cz/repo/$RCE/SLES11-SP2-Core/
+# SLES SP2 update
+{SLES 11 SP2 i386 update}http://sleposlab.suse.cz/repo/$RCE/SLES11-SP2-Updates/
+#openSUSE repository:
+{12.2 DVD}       iso:///?iso=openSUSE-12.2-DVD-x86_64.iso&url=file:///install/
+
+--- cut
+ */
+.etc.kiwi.repoalias
+
+`ag_ini(
+  `IniAgent(
+    "/etc/kiwi/repoalias",
+    $[ "options"        : [ "global_values" ],
+       "comments"       : [ "^#.*", "^[ \t]*$" ],
+       "params"         : [
+         $[
+            "match"     : [ "^[ \t]*(\\{.*\\})[ \t]*(.*[^ \t])[ \t]*$",
+                            "%s\t%s" ],
+	 ]
+       ]
+    ]))
