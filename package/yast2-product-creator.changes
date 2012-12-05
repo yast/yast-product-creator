@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Mon Dec  3 16:06:32 CET 2012 - jsuchome@suse.cz
+
+- read-only support for repository aliases (fate#312133)
+  (alias can be found in config.xml and defined in system 
+  /etc/kiwi/repoalias file)
+- 2.23.1
+
+-------------------------------------------------------------------
 Fri Nov  2 12:57:34 CET 2012 - jsuchome@suse.cz
 
 - create reasonable default when size was not defined (bnc#786696)
