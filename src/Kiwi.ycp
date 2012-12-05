@@ -25,6 +25,17 @@
   import "String";
   import "URL";
 
+  // path to file with global repo aliases (fate#312133)
+  string aliases_path           = "/etc/kiwi/repoalias";
+
+  // mapping of repository aliases to real URLs
+  // nil means not activated
+  map<string,string> alias2url  = nil;
+
+  // mapping of repo URLs to alias - only those used in last read
+  // (so not the reverse of alias2url map)
+  map<string,string> url2alias  = $[];
+
   /**
    * argument for any_xml agent: key indicating content of element without
    * attributes
@@ -132,6 +143,13 @@
 	    ret	= repo["org"]:$[];
 	}
     });
+    if (url2alias[source]:"" != "")
+    {
+        ret["source",0,"path"]  = url2alias[source]:"";
+        y2milestone ("alias for %1 is %2", source, url2alias[source]:"");
+        return ret;
+    }
+
     if (ret != $[])
     {
 	y2milestone ("imported source: %1", source);
@@ -250,6 +268,40 @@
   }
 
   /**
+   * Read global list of repository aliases
+   */
+  global map<string,string> ReadAliases (boolean force) {
+    if (alias2url != nil && !force)
+    {
+      return alias2url;
+    }
+    alias2url = $[];
+    if (FileUtils::Exists (aliases_path))
+    {
+      list<string> aliases      = (list<string>) SCR::Dir (.etc.kiwi.repoalias.v);
+      if (aliases == nil)
+      {
+        y2warning ("aliases file broken, empty or not for reading...");
+      }
+      else
+      {
+        foreach (string alias, aliases, {
+          string url    = (string) SCR::Read (add (.etc.kiwi.repoalias.v, alias));
+          if (url == nil || url == "")
+          {
+            y2warning ("alias '%1' incorrectly defined: '%2'", alias, url);
+          }
+          else
+          {
+            alias2url[alias]    = url;
+          }
+        });
+      }
+    }
+    return alias2url;
+  }
+
+  /**
    * import the data from given config.xml
    * @param directory where to look for config.xml
    * @ret map of imported data
@@ -262,6 +314,7 @@
 	y2warning ("no such file %1/config.xml", base_path);
 	return ret;
     }
+    url2alias           = $[];
     string file_path	=  base_path + "/config.xml";
 
     // transformation to latest kiwi version
@@ -322,7 +375,23 @@
     ret["split"]	= image["split"]:[];
 
     if (image["repository"]:nil != nil)
-	ret["repository"]	= image["repository"]:nil;
+    {
+        // check repo aliases and replace with real paths for YaST
+        ReadAliases (false);
+        list<map> image_repos   = image["repository"]:[];
+        ret["repository"]	= maplist (map repo, image["repository"]:[], {
+          string source	= repo["source",0,"path"]:"";
+          string url    = alias2url[source]:"";
+          if (url != "")
+          {
+              repo["source",0,"path"]   = url;
+              // save alias for writing:
+              url2alias[url]            = source;
+              y2milestone ("alias %1 replaced with %2", source, url);
+          }
+          return repo;
+        });
+    }
 
     // FIXME iso-directory should be used only when converting PC->IC
     if (haskey (ret["preferences",0]:$[], "defaultdestination"))
