@@ -163,10 +163,11 @@
 	    ret	= repo["org"]:$[];
 	}
     });
-    if (url2alias[source]:"" != "")
+    string adapted      = adapt_source_path (source);
+    if (haskey (url2alias, source) || haskey (url2alias, adapted))
     {
-        ret["source",0,"path"]  = url2alias[source]:"";
-        y2milestone ("alias for %1 is %2", source, url2alias[source]:"");
+        ret["source",0,"path"]  = url2alias[source]:url2alias[adapted]:"";
+        y2milestone ("alias for %1 is %2", source, ret["source",0,"path"]:"");
         return ret;
     }
 
@@ -183,7 +184,7 @@
 	integer srcid	= sourcemap["SrcId"]:-1;
         map data	= Pkg::SourceGeneralData (srcid);
 	string url	= data["url"]:"";
-	if (adapt_source_path (url) == adapt_source_path (source))
+	if (adapt_source_path (url) == adapted)
 	{
 	    if (data["type"]:"" == "NONE")
 		data["type"]	= Pkg::RepositoryProbe (url, "");
@@ -526,7 +527,7 @@
 	    }
 	});
     });
-    foreach (string file, ["images.sh", "config.sh" ], {
+    foreach (string file, ["images.sh", "config.sh", "root/build-custom" ], {
 	if (KiwiConfig[file]:"" != "")
 	{
 	    SCR::Write (.target.string, config_dir + "/" + file, KiwiConfig[file]:"");
