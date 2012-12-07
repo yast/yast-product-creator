@@ -648,6 +648,10 @@ Continue anyway?")))
    */
   define void InitGeneric (string id) {
     UI::ChangeWidget (`id (id), `Value, KiwiConfig[id]:"");
+    if ((id == "config.sh" || id == "images.sh") && haskey (KiwiConfig, "root/build-custom"))
+    {
+      UI::ChangeWidget (`id (id), `Enabled, false);
+    }
   }
 
   /**
@@ -1143,10 +1147,8 @@ Try again."));
    */
   string BrowseFileHandler (string key, string label) {
 
-    string current	= (string) UI::QueryWidget (`id (key), `Value);
-    if (current == nil) current = "";
-    string file = UI::AskForExistingFile (current, "", label);
-    if (file != nil && key != "config.sh")
+    string file = UI::AskForExistingFile (key, "", label);
+    if (file != nil && key != "config.sh" && key != "root/build-custom")
     {
 	UI::ChangeWidget (`id (key), `Value, file);
 	StoreGeneric (key, $[]);
@@ -1155,41 +1157,22 @@ Try again."));
   }
 
   /**
-   * Handler for browsing for images.sh file
-   */
-  symbol HandleBrowseImagesFile (string key, map event) {
-    if (event["ID"]:nil != key) return nil;
-    // popup for file selection dialog
-    BrowseFileHandler ("images_path", _("Path to images.sh File"));
-    return nil;
-  }
-
-  /**
-   * Handler for browsing for autoyast profile
-   */
-  symbol HandleBrowseAutoYaSTFile (string key, map event) {
-    if (event["ID"]:nil != key) return nil;
-    // popup for file selection dialog
-    BrowseFileHandler ("autoyast_path", _("Path to AutoYaST Profile"));
-    return nil;
-  }
-
-  /**
    * Handler for importing config.sh file
    */
   symbol HandleImportConfigFile (string key, map event) {
     if (event["ID"]:nil != key) return nil;
+    string name = substring (key, 7); // removing 'import_' button id prefix
     // popup for file selection dialog
-    string file	= BrowseFileHandler ("config.sh", _("Path to config.sh File"));
+    string file	= BrowseFileHandler (name, sformat (_("Path to %1 File"), name));
     if (file != nil)
     {
 	if (FileUtils::Exists (file))
 	{
-	    string configsh	= (string) SCR::Read (.target.string, file);
-	    if (configsh != nil)
+	    string cont = (string) SCR::Read (.target.string, file);
+	    if (cont != nil)
 	    {
-		UI::ChangeWidget (`id ("config.sh"), `Value, configsh);
-		StoreGeneric ("config.sh", event);
+		UI::ChangeWidget (`id (name), `Value, cont);
+		StoreGeneric (name, event);
 	    }
 	}
     }
@@ -1552,7 +1535,9 @@ directory."), out_dir));
 	// read all entries from root_dir and save to list
 	map out = (map) SCR::Execute (.target.bash_output,
 	    sformat ("ls -A1 -d %1/root/* 2>/dev/null", kiwi_configuration));
-	KiwiConfig["root_dir"]	= filter (string f, splitstring(out["stdout"]:"", "\n"), ``(f!=""));
+	KiwiConfig["root_dir"]	= filter (string f, splitstring(out["stdout"]:"", "\n"), {
+          return f != "" && f != kiwi_configuration + "/root/build-custom";
+        });
     }
     if (FileUtils::Exists (kiwi_configuration + "/config"))
     {
@@ -1561,10 +1546,17 @@ directory."), out_dir));
 	KiwiConfig["config_dir"] = filter (string f, splitstring(out["stdout"]:"", "\n"),``(f!=""));
     }
 
-    foreach (string file, [ "images.sh", "config.sh" ], {
+    // existence of manifesto.xml means studio-generated configuration
+    if (FileUtils::Exists (kiwi_configuration + "/root/studio/manifesto.xml"))
+    {
+        KiwiConfig["root/build-custom"] = "";
+    }
+
+    foreach (string file, [ "images.sh", "config.sh", "root/build-custom" ], {
 	string file_path	= kiwi_configuration + "/" + file;
 	if (FileUtils::Exists (file_path))
 	{
+
 	    string contents	= (string) SCR::Read (.target.string, file_path);
 	    if (contents != nil)
 		KiwiConfig[file]	= contents;
@@ -1757,6 +1749,10 @@ directory."), out_dir));
 	}
     });
 
+    // if root/build-custom file is present, offer its editing instead of
+    // config.sh & images.sh (fate#310978)
+    boolean show_buildcustom   = haskey (KiwiConfig, "root/build-custom");
+
     map ret	= $[
       "config.xml" : $[
 	// tab header
@@ -1849,14 +1845,27 @@ directory."), out_dir));
 	    `VBox (
 		"general_scripts",
 		`VSpacing (0.2),
-		`HBox ("config.sh", `Bottom ("import_config.sh")),
-		`HBox ("images.sh", `Bottom ("import_images.sh")),
+                show_buildcustom ?
+                `VBox (
+                  `VWeight (3, `HBox ("root/build-custom", `Bottom ("import_root/build-custom"))),
+                  `Left (
+                    // informative label
+                    `Label (_("Editing of following files is disabled for configurations imported from Studio."))
+                  ),
+                  `VWeight (1, "config.sh"),
+		  `VWeight (1, "images.sh")
+                ) :
+                `VBox (
+                  `HBox ("config.sh", `Bottom ("import_config.sh")),
+		  `HBox ("images.sh", `Bottom ("import_images.sh"))
+                ),
 		`VSpacing (0.2)
 	    ), `HSpacing (1)),
 	"widget_names" : [
 	    "general_scripts",
 	    "config.sh", "import_config.sh",
 	    "images.sh", "import_images.sh",
+	    "root/build-custom", "import_root/build-custom",
 	],
     ],
     "directories" : $[
@@ -2088,6 +2097,21 @@ If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is th
 	"no_help"	: true,
 	"handle"	: HandleDeleteFromConfigDir,
     ],
+    "root/build-custom" : $[
+	"widget"	: `multi_line_edit,
+	// textentry label
+	"label"		: _("Studio Custom Build Script"),
+	"init"		: InitGeneric,
+	"store"		: StoreGeneric,
+	"handle"	: HandleGeneric,
+    ],
+    "import_root/build-custom" : $[
+	"widget"	: `push_button,
+	// textentry label
+	"label"		: _("&Import..."),
+	"help"		: "",
+	"handle"	: HandleImportConfigFile
+    ],
     "config.sh" : $[
 	"widget"	: `multi_line_edit,
 	// textentry label
@@ -2119,19 +2143,6 @@ If <b>Additive</b> is checked, the meaning of <b>Size</b> is different: it is th
 	"label"		: _("Br&owse..."),
 	"help"		: "",
 	"handle"	: HandleBrowseConfigDirectory
-    ],
-    "autoyast_path" : $[
-	"widget"	: `textentry,
-	// textentry label
-	"label"		: _("Path to Auto&YaST Profile"),
-	"help"		: _("Choose the path to the AutoYaST profile (config.xml)."),
-    ],
-    "browse_autoyast"	: $[
-	"widget"	: `push_button,
-	// push button label
-	"label"		: _("Brow&se..."),
-	"help"		: "",
-	"handle"	: HandleBrowseAutoYaSTFile
     ],
     "images.sh" : $[
 	"widget"	: `multi_line_edit,
