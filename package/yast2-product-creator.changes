@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Dec 18 11:14:52 CET 2012 - jsuchome@suse.cz
+
+- reinitialize architecture after going back (bnc#794583)
+- 2.17.57 
+
+-------------------------------------------------------------------
 Wed Dec  5 13:20:59 CET 2012 - jsuchome@suse.cz
 
 - for images created in Studio, disable editing image.sh and
