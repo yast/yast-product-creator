@@ -2881,11 +2881,11 @@ Choose a different one."), name));
 		if (UI::QueryWidget (`id (`i386), `Value) == true)
 		{
 		    Kiwi::image_architecture	= "i386";
-		    // closing sources, so they are created again with correct arch (bnc#510971)
-		    Pkg::SourceFinishAll ();
-		    Pkg::SourceStartManager(false);
-		    ProductCreator::SetPackageArch ("i686");
 		}
+		// closing sources, so they are created again with correct arch (bnc#510971, bnc#794583)
+		Pkg::SourceFinishAll ();
+		Pkg::SourceStartManager(false);
+		ProductCreator::SetPackageArch (Kiwi::image_architecture == "i386" ? "i686" : "x86_64");
 	    }
 
 	    Kiwi::target_i586   = Kiwi::image_architecture == "i386" && (boolean) UI::QueryWidget (`id (`i586), `Value);
