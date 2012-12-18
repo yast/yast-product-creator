@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Dec  5 13:20:59 CET 2012 - jsuchome@suse.cz
+
+- for images created in Studio, disable editing image.sh and
+  config.sh, but enable editing root/build-custom (fate#310978) 
+- 2.17.56
+
+-------------------------------------------------------------------
 Tue Dec  4 10:00:06 CET 2012 - jsuchome@suse.cz
 
 - read-only support for repository aliases (fate#312133)
