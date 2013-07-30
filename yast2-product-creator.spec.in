@@ -31,6 +31,8 @@ Recommends:	kiwi-config-openSUSE
 
 BuildArchitectures:	noarch
 
+Requires:       yast2-ruby-bindings >= 1.0.0
+
 Summary:	YaST2 - Module for Creating New Products
 
 %description
@@ -53,11 +55,10 @@ install -d $RPM_BUILD_ROOT/var/lib/YaST2/product-creator
 %defattr(-,root,root)
 %dir @yncludedir@/product-creator
 @yncludedir@/product-creator/*
-@clientdir@/product-creator.ycp
-@clientdir@/image-creator.ycp
-@clientdir@/kiwi.ycp
-@moduledir@/*.ycp
-@moduledir@/*.ybc
+@clientdir@/product-creator.rb
+@clientdir@/image-creator.rb
+@clientdir@/kiwi.rb
+@moduledir@/*.rb
 @desktopdir@/product-creator.desktop
 @desktopdir@/image-creator.desktop
 @ybindir@/y2mkiso

@@ -11,6 +11,4 @@ ydata_DATA = \
 	message \
 	options.msg
 
-fillup_DATA = sysconfig.product-creator
-
-EXTRA_DIST = $(ydata_DATA) $(fillup_DATA)
+EXTRA_DIST = $(ydata_DATA)
