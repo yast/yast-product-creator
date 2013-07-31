@@ -1,42 +1,38 @@
-# Makefile.am for product-creator/src
-#
-#
-SUBDIRS = data
+# Sources for product-creator
+
+module_DATA = \
+  modules/Kiwi.rb \
+  modules/ProductCreator.rb
+
+client_DATA = \
+  clients/product-creator.rb \
+  clients/image-creator.rb \
+  clients/kiwi.rb
 
 yncludedir = @yncludedir@/product-creator
+ynclude_DATA = \
+  include/product-creator/kiwi_dialogs.rb \
+  include/product-creator/wizards.rb \
+  include/product-creator/commandline.rb \
+  include/product-creator/dialogs.rb \
+  include/product-creator/complex.rb \
+  include/product-creator/routines.rb \
+  include/product-creator/helps.rb
 
-YCPCFLAGS = -I ./include
+scrconf_DATA = \
+  scrconf/cfg_product-creator.scr \
+  scrconf/etc_kiwi_repoalias.scr
 
-client_DATA =			\
-	product-creator.ycp	\
-	image-creator.ycp	\
-	kiwi.ycp
+ybin_SCRIPTS = \
+  bin/y2mkiso
 
-ynclude_DATA =			\
-	helps.ycp		\
-	wizards.ycp		\
-	dialogs.ycp		\
-	complex.ycp		\
-	routines.ycp		\
-	commandline.ycp		\
-	kiwi_dialogs.ycp	
+desktop_DATA = \
+  desktop/image-creator.desktop \
+  desktop/product-creator.desktop
 
-desktop_DATA =			\
-	product-creator.desktop	\
-	image-creator.desktop
+fillup_DATA = \
+  fillup/sysconfig.product-creator
 
-module_DATA =			\
-	ProductCreator.ycp	\
-	Kiwi.ycp
-
-EXTRA_DIST = $(client_DATA) $(ynclude_DATA) $(module_DATA) $(desktop_DATA)
-
-include:
-	mkdir include && ln -sf ../ include/product-creator
-
-ycpchook = include
+EXTRA_DIST = $(module_DATA) $(client_DATA) $(ynclude_DATA) $(scrconf_DATA) $(ybin_SCRIPTS) $(desktop_DATA) $(fillup_DATA)
 
 include $(top_srcdir)/Makefile.am.common
-
-
-
