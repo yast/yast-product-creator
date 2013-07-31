@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Jul 31 08:37:51 UTC 2013 - yast-devel@opensuse.org
+
+- converted from YCP to Ruby by YCP Killer
+  (https://github.com/yast/ycp-killer)
+- version 3.0.0
+
+-------------------------------------------------------------------
 Mon Dec 17 14:32:04 CET 2012 - jsuchome@suse.cz
 
 - reinitialize architecture after going back (bnc#794583)
