@@ -1652,8 +1652,6 @@ module Yast
         # popup question
         "xen" => _("Create Xen image now?"),
         # popup question
-        "usb" => _("Create USB stick image now?"),
-        # popup question
         "vmx" => _("Create virtual disk image now?")
       }
 
@@ -1669,12 +1667,6 @@ module Yast
           "Xen image files successfully created in\n" +
             "%1\n" +
             "directory.\n"
-        ),
-        # popup message, %1 is a dir
-        "usb" => _(
-          "USB stick image successfully created in\n" +
-            "%1\n" +
-            "directory."
         ),
         # popup message, %1 is a dir
         "vmx" => _(
@@ -2117,10 +2109,6 @@ module Yast
       if @kiwi_task == "iso" && !Builtins.haskey(@KiwiConfig, "isoboot") &&
           boot_image != ""
         Ops.set(@KiwiConfig, "isoboot", boot_image)
-      elsif @kiwi_task == "usb"
-        if !Builtins.haskey(@KiwiConfig, "usbboot") && boot_image != ""
-          Ops.set(@KiwiConfig, "usbboot", boot_image)
-        end
       elsif @kiwi_task == "vmx"
         if !Builtins.haskey(@KiwiConfig, "vmxboot") && boot_image != ""
           Ops.set(@KiwiConfig, "vmxboot", boot_image)
@@ -2923,8 +2911,6 @@ module Yast
         "iso" => _("Live CD Configuration"),
         # dialog caption
         "xen" => _("Xen Image Configuration"),
-        # dialog caption
-        "usb" => _("USB Stick Image Configuration"),
         # button label
         "vmx" => _("Virtual Disk Image")
       }
@@ -2933,8 +2919,6 @@ module Yast
         "iso" => _("&Create ISO"),
         # button label
         "xen" => _("&Create Xen Image"),
-        # button label
-        "usb" => _("&Create USB Stick Image"),
         # button label
         "vmx" => _("&Create Virtual Disk Image")
       }
@@ -3019,8 +3003,6 @@ module Yast
         # combo box item
         Item(Id("xen"), _("Xen Image"), @kiwi_task == "xen"),
         # combo box item
-        Item(Id("usb"), _("USB Stick Image"), @kiwi_task == "usb"),
-        # combo box item
         Item(Id("vmx"), _("Virtual Disk Image"), @kiwi_task == "vmx")
       ]
 
@@ -3040,8 +3022,6 @@ module Yast
         "iso" => _("Live ISO Image"),
         # combo box item
         "xen" => _("Xen Image"),
-        # combo box item
-        "usb" => _("USB Stick Image"),
         # combo box item
         "vmx" => _("Virtual Disk Image"),
         # combo box item
@@ -3086,7 +3066,7 @@ module Yast
       present_types = Builtins.maplist(
         Convert.convert(type_items, :from => "list", :to => "list <term>")
       ) { |it| Ops.get_string(it, [0, 0], "") }
-      if !Builtins.contains(["iso", "xen", "usb", "vmx"], @kiwi_task) &&
+      if !Builtins.contains(["iso", "xen", "vmx"], @kiwi_task) &&
           !Builtins.contains(present_types, @kiwi_task)
         type_items = Builtins.add(
           type_items,
@@ -3668,7 +3648,7 @@ module Yast
             end
           end
           to_install = ""
-          if Builtins.contains(["iso", "xen", "vmx", "usb"], @kiwi_task)
+          if Builtins.contains(["iso", "xen", "vmx"], @kiwi_task)
             bootdir = get_bootdir(_Config, @kiwi_task)
             if bootdir == "" ||
                 !FileUtils.Exists(Ops.add("/usr/share/kiwi/image/", bootdir)) &&
