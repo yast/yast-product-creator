@@ -91,7 +91,6 @@ module Yast
             "kiwi",
             "kiwi-desc-isoboot",
             "kiwi-desc-xenboot",
-            "kiwi-desc-usbboot",
             "kiwi-desc-vmxboot",
             "squashfs"
           ]
