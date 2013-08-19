@@ -155,8 +155,6 @@ module Yast
         # push button label
         Item(Id(:xen_button), _("Xen Image")),
         # push button label
-        Item(Id(:usb_button), _("USB Stick Image")),
-        # push button label
         Item(Id(:vmx_button), _("Virtual Disk Image"))
       ]
       # build Live iso only for x86_64 and i386 (bnc#675101)
@@ -295,15 +293,6 @@ module Yast
           # check the architecture
           next if !SameArchitecture()
           Kiwi.kiwi_task = "xen"
-          ret = :kiwi
-          break
-        elsif ret == :usb_button &&
-            Package.InstallAll(["kiwi", "squashfs", "kiwi-desc-usbboot"])
-          current2 = Convert.to_string(UI.QueryWidget(Id(:table), :CurrentItem))
-          ProductCreator.Config = Ops.get(ProductCreator.Configs, current2, {})
-          # check the architecture
-          next if !SameArchitecture()
-          Kiwi.kiwi_task = "usb"
           ret = :kiwi
           break
         elsif ret == :vmx_button &&
