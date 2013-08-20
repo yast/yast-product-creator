@@ -1,7 +1,9 @@
 -------------------------------------------------------------------
-Mon Aug 19 14:17:56 CEST 2013 - jsuchome@suse.cz
+Tue Aug 20 12:52:59 CEST 2013 - jsuchome@suse.cz
 
 - drop obsoleted usbboot image support (bnc#834664)
+- enable all image types when not using the template (bnc#834845)
+- 3.0.1
 
 -------------------------------------------------------------------
 Wed Jul 31 08:37:51 UTC 2013 - yast-devel@opensuse.org
