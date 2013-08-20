@@ -3357,6 +3357,7 @@ module Yast
         elsif ret == "rb_new"
           UI.ChangeWidget(Id(:template), :Enabled, false)
           UI.ChangeWidget(Id(:import), :Enabled, false)
+          UI.ChangeWidget(Id(:type), :Items, default_type_items)
         end
         if ret == :i386
           UI.ChangeWidget(
