@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Aug 21 09:22:22 CEST 2013 - jsuchome@suse.cz
+
+- drop obsoleted usbboot image support (bnc#834664)
+- enable all image types when not using the template (bnc#834845)
+- 2.17.58 
+
+-------------------------------------------------------------------
 Tue Dec 18 11:14:52 CET 2012 - jsuchome@suse.cz
 
 - reinitialize architecture after going back (bnc#794583)

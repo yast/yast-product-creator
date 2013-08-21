@@ -138,8 +138,6 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
 		    // push button label
 		    `item(`id(`xen_button), _("Xen Image")),
 		    // push button label
-		    `item(`id(`usb_button), _("USB Stick Image")),
-		    // push button label
 		    `item(`id(`vmx_button), _("Virtual Disk Image")),
 	];
 	// build Live iso only for x86_64 and i386 (bnc#675101)
@@ -265,16 +263,6 @@ Kiwi cannot create images for different architectures."), arch, sysarch));
 		// check the architecture
 		if (!SameArchitecture()) continue;
 		Kiwi::kiwi_task	= "xen";
-                ret = `kiwi;
-		break;
-	    }
-	    else if (ret == `usb_button &&
-		Package::InstallAll (["kiwi", "kiwi-desc-usbboot"])) {
-                string current = (string) UI::QueryWidget(`id(`table), `CurrentItem);
-                ProductCreator::Config = ProductCreator::Configs[current]:$[];
-		// check the architecture
-		if (!SameArchitecture()) continue;
-		Kiwi::kiwi_task	= "usb";
                 ret = `kiwi;
 		break;
 	    }
