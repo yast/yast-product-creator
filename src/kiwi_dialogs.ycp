@@ -1371,8 +1371,6 @@ Going to detailed package selection and accepting the view without any further c
 	// popup question
 	"xen"	: _("Create Xen image now?"),
 	// popup question
-	"usb"	: _("Create USB stick image now?"),
-	// popup question
 	"vmx"	: _("Create virtual disk image now?"),
     ];
 
@@ -1386,10 +1384,6 @@ directory."),
 %1
 directory.
 "),
-	// popup message, %1 is a dir
-	"usb"	: _("USB stick image successfully created in
-%1
-directory."),
 	// popup message, %1 is a dir
 	"vmx"	: _("Virtual disk image successfully created in
 %1
@@ -1709,11 +1703,6 @@ directory."), out_dir));
     if (kiwi_task == "iso" && !haskey (KiwiConfig, "isoboot") && boot_image != "")
     {
 	KiwiConfig["isoboot"]	= boot_image;
-    }
-    else if (kiwi_task == "usb")
-    {
-	if (!haskey (KiwiConfig, "usbboot") && boot_image != "")
-	    KiwiConfig["usbboot"]	= boot_image;
     }
     else if (kiwi_task == "vmx")
     {
@@ -2312,8 +2301,6 @@ map caption		= $[
     "iso"	: _("Live CD Configuration"),
     // dialog caption
     "xen"	: _("Xen Image Configuration"),
-    // dialog caption
-    "usb"	: _("USB Stick Image Configuration"),
     // button label
     "vmx"	: _("Virtual Disk Image"),
 ];
@@ -2322,8 +2309,6 @@ map next_button	= $[
     "iso"	: _("&Create ISO"),
     // button label
     "xen"	: _("&Create Xen Image"),
-    // button label
-    "usb"	: _("&Create USB Stick Image"),
     // button label
     "vmx"	: _("&Create Virtual Disk Image"),
 ];
@@ -2385,8 +2370,6 @@ return ret;
 	    // combo box item
 	    `item (`id ("xen"), _("Xen Image"), kiwi_task == "xen"),
 	    // combo box item
-	    `item (`id ("usb"), _("USB Stick Image"), kiwi_task == "usb"),
-	    // combo box item
 	    `item (`id ("vmx"), _("Virtual Disk Image"), kiwi_task == "vmx")
     ];
 
@@ -2406,8 +2389,6 @@ return ret;
 	"iso"	: _("Live ISO Image"),
 	// combo box item
 	"xen"	: _("Xen Image"),
-	// combo box item
-	"usb"	: _("USB Stick Image"),
 	// combo box item
 	"vmx"	: _("Virtual Disk Image"),
 	// combo box item
@@ -2445,7 +2426,7 @@ return ret;
     }
     list present_types	= maplist (
 	term it, (list<term>)type_items, ``(it[0,0]:""));
-    if (!contains (["iso", "xen", "usb", "vmx"], kiwi_task) &&
+    if (!contains (["iso", "xen", "vmx"], kiwi_task) &&
 	!contains (present_types, kiwi_task))
     {
 	type_items	= add (type_items,
@@ -2671,6 +2652,7 @@ return ret;
 	{
 	    UI::ChangeWidget (`id (`template), `Enabled, false);
 	    UI::ChangeWidget (`id (`import), `Enabled, false);
+            UI::ChangeWidget (`id (`type), `Items, default_type_items);
 	}
 	if (ret == `i386)
 	{
@@ -2940,7 +2922,7 @@ Continue anyway?"), mergestring (failed_repositories, "\n"))))
 		}
 	    }
 	    string to_install	= "";
-	    if (contains ([ "iso", "xen", "vmx", "usb" ], kiwi_task))
+	    if (contains ([ "iso", "xen", "vmx" ], kiwi_task))
 	    {
 		string bootdir	= get_bootdir (Config, kiwi_task);
 		if (bootdir == "" ||
