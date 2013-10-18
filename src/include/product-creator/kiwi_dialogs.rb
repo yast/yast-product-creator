@@ -3109,7 +3109,9 @@ module Yast
       update_config = lambda do |dir, config|
         config = deep_copy(config)
         kiwi_configuration = dir
-        _Config = config == {} ? Kiwi.ReadConfigXML(kiwi_configuration) : config
+        _Config = config == {} ?
+          Kiwi.ReadConfigXML(kiwi_configuration) :
+          deep_copy(config)
 
         if Ops.get_string(_Config, ["description", 0, "type"], "") != "system"
           Builtins.y2warning(
@@ -3143,7 +3145,9 @@ module Yast
           )
         end
         update_repo_table.call
-        type_its = supported_images != "template" ? default_type_items : []
+        type_its = supported_images != "template" ?
+          deep_copy(default_type_items) :
+          []
 
         @kiwi_task = ""
         Builtins.foreach(Ops.get_list(_Config, ["preferences", 0, "type"], [])) do |typemap|
