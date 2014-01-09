@@ -238,7 +238,7 @@ module Yast
 
       Wizard.CreateDialog
       Wizard.SetDesktopTitleAndIcon("product-creator")
-      required_packages = ["inst-source-utils", "mkisofs", "createrepo"]
+      required_packages = ["inst-source-utils", "cdrkit-cdrtools-compat", "createrepo"]
 
       # add PPC specific packages
       if ProductCreator.GetArch == "ppc" || ProductCreator.GetArch == "ppc64"
