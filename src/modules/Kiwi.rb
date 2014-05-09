@@ -406,7 +406,7 @@ module Yast
             Ops.set(umap, "id", Builtins.sformat("%1", Ops.get(umap, "id")))
           end
           # add internal info if password was already crypted
-          Ops.set(umap, "encrypted", Ops.get(umap, "pwd") != nil)
+          Ops.set(umap, "encrypted", Ops.get(umap, "password") != nil)
           deep_copy(umap)
         end)
         if Ops.get(gmap, "id") != nil
@@ -521,10 +521,10 @@ module Yast
               encrypted = Ops.get_boolean(umap, "encrypted", false)
               Ops.set(
                 umap,
-                "pwd",
+                "password",
                 Ops.get_boolean(umap, "encrypted", false) ?
-                  Ops.get_string(umap, "pwd", "") :
-                  crypt_password(Ops.get_string(umap, "pwd", ""))
+                  Ops.get_string(umap, "password", "") :
+                  crypt_password(Ops.get_string(umap, "password", ""))
               )
               if Builtins.haskey(umap, "encrypted")
                 umap = Builtins.remove(umap, "encrypted")
@@ -562,7 +562,7 @@ module Yast
         )
       end
       Builtins.foreach(Ops.get_list(_KiwiConfig, "packages", [])) do |packagemap|
-        if Builtins.size(Ops.get_list(packagemap, "opensusePattern", [])) == 0 &&
+        if Builtins.size(Ops.get_list(packagemap, "namedCollection", [])) == 0 &&
             Builtins.size(Ops.get_list(packagemap, "package", [])) == 0
           Builtins.y2milestone("no patterns/packages in %1", packagemap)
         end

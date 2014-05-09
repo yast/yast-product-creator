@@ -17,7 +17,7 @@
 
 
 Name:           yast2-product-creator
-Version:        3.1.3
+Version:        3.1.4
 Release:        0
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
@@ -51,6 +51,8 @@ Conflicts:      yast2-storage < 2.16.1
 
 # prefer to install package with real templates
 Recommends:	kiwi-config-openSUSE
+
+Requires:       kiwi kiwi-schema = 5.8
 
 BuildArchitectures:	noarch
 
