@@ -518,17 +518,8 @@ module Yast
             gmap,
             "user",
             Builtins.maplist(Ops.get_list(gmap, "user", [])) do |umap|
-              encrypted = Ops.get_boolean(umap, "encrypted", false)
-              Ops.set(
-                umap,
-                "password",
-                Ops.get_boolean(umap, "encrypted", false) ?
-                  Ops.get_string(umap, "password", "") :
-                  crypt_password(Ops.get_string(umap, "password", ""))
-              )
-              if Builtins.haskey(umap, "encrypted")
-                umap = Builtins.remove(umap, "encrypted")
-              end
+              umap["password"] = crypt_password(umap["password"]) if (umap["encrypted"] || false)
+              umap.delete "encrypted"
               deep_copy(umap)
             end
           )

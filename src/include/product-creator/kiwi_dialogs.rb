@@ -1131,8 +1131,8 @@ module Yast
           Ops.get_string(group_map, "group", "")
         )
         if Ops.get_string(user_map, "password", "") != ""
-          UI.ChangeWidget(Id(:pw1), :Value, Ops.get_string(user_map, "password", ""))
-          UI.ChangeWidget(Id(:pw2), :Value, Ops.get_string(user_map, "password", ""))
+          UI.ChangeWidget(Id(:pw1), :Value, user_map["password"])
+          UI.ChangeWidget(Id(:pw2), :Value, user_map["password"])
         end
         # popup label
         UI.ChangeWidget(Id(:label), :Value, _("Edit User"))
