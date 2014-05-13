@@ -30,7 +30,9 @@ BuildRequires:  yast2-devtools >= 3.1.10
 
 PreReq:         %fillup_prereq
 
-Requires:	autoyast2-installation yast2-security yast2-country
+Requires:	autoyast2-installation yast2-security yast2-country kiwi
+
+Requires:       kiwi-schema = 5.8
 
 # ag_pattern handling gzipped files
 Requires:	yast2-add-on-creator >= 2.17.1
@@ -51,8 +53,6 @@ Conflicts:      yast2-storage < 2.16.1
 
 # prefer to install package with real templates
 Recommends:	kiwi-config-openSUSE
-
-Requires:       kiwi kiwi-schema = 5.8
 
 BuildArchitectures:	noarch
 
