@@ -353,7 +353,7 @@ module Yast
 
       if Ops.greater_than(
           Builtins.size(
-            Ops.get_list(packages, [package_set, "opensusePattern"], [])
+            Ops.get_list(packages, [package_set, "namedCollection"], [])
           ),
           0
         )
@@ -361,7 +361,7 @@ module Yast
         pat = Summary.AddHeader("", _("Patterns"))
       end
       Builtins.foreach(
-        Ops.get_list(packages, [package_set, "opensusePattern"], [])
+        Ops.get_list(packages, [package_set, "namedCollection"], [])
       ) do |patmap|
         pat = Summary.AddListItem(pat, Ops.get_string(patmap, "name", ""))
       end
@@ -411,7 +411,7 @@ module Yast
 
       ret_map = runPackageSelector(
         "",
-        Builtins.maplist(Ops.get_list(sw_contents, "opensusePattern", [])) do |pat|
+        Builtins.maplist(Ops.get_list(sw_contents, "namedCollection", [])) do |pat|
           Ops.get_string(pat, "name", "")
         end,
         Builtins.maplist(Ops.get_list(sw_contents, "package", [])) do |pat|
@@ -427,7 +427,7 @@ module Yast
       end
       Ops.set(
         sw_contents,
-        "opensusePattern",
+        "namedCollection",
         Builtins.maplist(Ops.get_list(ret_map, "addons", [])) do |name|
           { "name" => name }
         end
@@ -1130,9 +1130,9 @@ module Yast
           :Value,
           Ops.get_string(group_map, "group", "")
         )
-        if Ops.get_string(user_map, "pwd", "") != ""
-          UI.ChangeWidget(Id(:pw1), :Value, Ops.get_string(user_map, "pwd", ""))
-          UI.ChangeWidget(Id(:pw2), :Value, Ops.get_string(user_map, "pwd", ""))
+        if Ops.get_string(user_map, "password", "") != ""
+          UI.ChangeWidget(Id(:pw1), :Value, user_map["password"])
+          UI.ChangeWidget(Id(:pw2), :Value, user_map["password"])
         end
         # popup label
         UI.ChangeWidget(Id(:label), :Value, _("Edit User"))
@@ -1142,7 +1142,7 @@ module Yast
         ret = UI.UserInput
         if ret == :ok
           username = Convert.to_string(UI.QueryWidget(Id(:username), :Value))
-          pwd = Convert.to_string(UI.QueryWidget(Id(:pw1), :Value))
+          password = Convert.to_string(UI.QueryWidget(Id(:pw1), :Value))
           new_group = Convert.to_string(UI.QueryWidget(Id(:group), :Value))
           gid = Convert.to_string(UI.QueryWidget(Id(:gid), :Value))
           if username == ""
@@ -1151,7 +1151,7 @@ module Yast
             ret = :notnext
             next
           end
-          if pwd != UI.QueryWidget(Id(:pw2), :Value)
+          if password != UI.QueryWidget(Id(:pw2), :Value)
             # popup message
             Report.Error(_("The passwords do not match.\nTry again."))
             ret = :notnext
@@ -1159,9 +1159,9 @@ module Yast
           end
           # ok, now update the structures
           user_map = {
-            "pwd"       => pwd,
+            "password"       => password,
             "encrypted" => Ops.get_boolean(user_map, "encrypted", false) &&
-              pwd == Ops.get_string(user_map, "pwd", ""),
+              password == Ops.get_string(user_map, "password", ""),
             "name"      => username
           }
           Builtins.foreach(["home", "realname", "id"]) do |key2|
@@ -1586,7 +1586,7 @@ module Yast
           Pkg.ResolvableNeutral("", :package, true)
           Pkg.ResolvableNeutral("", :pattern, true)
 
-          Builtins.foreach(Ops.get_list(pmap, "opensusePattern", [])) do |pat|
+          Builtins.foreach(Ops.get_list(pmap, "namedCollection", [])) do |pat|
             Pkg.ResolvableInstall(Ops.get_string(pat, "name", ""), :pattern)
           end
 
@@ -1966,7 +1966,7 @@ module Yast
         sw_contents = Ops.get_map(@KiwiConfig, ["packages", index], {})
         Ops.set(
           sw_contents,
-          "opensusePattern",
+          "namedCollection",
           Builtins.maplist(Ops.get_list(ProductCreator.Config, "addons", [])) do |name2|
             { "name" => name2 }
           end
@@ -2073,7 +2073,7 @@ module Yast
         Ops.set(
           ProductCreator.Config,
           "addons",
-          Builtins.maplist(Ops.get_list(sw_contents, "opensusePattern", [])) do |pat|
+          Builtins.maplist(Ops.get_list(sw_contents, "namedCollection", [])) do |pat|
             Ops.get_string(pat, "name", "")
           end
         )

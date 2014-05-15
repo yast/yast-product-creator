@@ -17,7 +17,7 @@
 
 
 Name:           yast2-product-creator
-Version:        3.1.3
+Version:        3.1.4
 Release:        0
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
@@ -30,7 +30,9 @@ BuildRequires:  yast2-devtools >= 3.1.10
 
 PreReq:         %fillup_prereq
 
-Requires:	autoyast2-installation yast2-security yast2-country
+Requires:	autoyast2-installation yast2-security yast2-country kiwi
+
+Requires:       kiwi-schema = 5.8
 
 # ag_pattern handling gzipped files
 Requires:	yast2-add-on-creator >= 2.17.1
