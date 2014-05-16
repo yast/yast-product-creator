@@ -1,7 +1,7 @@
 -------------------------------------------------------------------
-Fri May 16 09:59:51 CEST 2014 - jsuchome@suse.cz
+Fri May 16 15:21:26 CEST 2014 - jsuchome@suse.cz
 
-- kiwi-schema>=5.8 for Factory and SLE12
+- kiwi-schema = 6.1 for Factory and SLE12
 - 3.1.5
 
 -------------------------------------------------------------------

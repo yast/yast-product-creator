@@ -32,7 +32,7 @@ PreReq:         %fillup_prereq
 
 Requires:	autoyast2-installation yast2-security yast2-country kiwi
 
-Requires:       kiwi-schema >= 5.8
+Requires:       kiwi-schema = 6.1
 
 # ag_pattern handling gzipped files
 Requires:	yast2-add-on-creator >= 2.17.1
