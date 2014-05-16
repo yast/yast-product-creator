@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri May 16 09:59:51 CEST 2014 - jsuchome@suse.cz
+
+- kiwi-schema>=5.8 for Factory and SLE12
+- 3.1.5
+
+-------------------------------------------------------------------
 Fri May  9 10:20:31 CEST 2014 - jsuchome@suse.cz
 
 - update to support kiwi version 5.05.57 (fate#317123)
