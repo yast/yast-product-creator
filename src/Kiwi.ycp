@@ -364,7 +364,7 @@
 	    if (umap["id"]:nil != nil)
 		umap["id"]	= sformat ("%1", umap["id"]:nil);
 	    // add internal info if password was already crypted
-	    umap["encrypted"]	= (umap["pwd"]:nil != nil);
+	    umap["encrypted"]	= (umap["password"]:nil != nil);
 	    return umap;
 	});
 	if (gmap["id"]:nil != nil)
@@ -444,9 +444,9 @@
 	foreach (map gmap, KiwiConfig["users"]:[], {
 	    gmap["user"] = maplist (map umap, (list<map>) gmap["user"]:[], {
 		boolean encrypted	= umap["encrypted"]:false;
-		umap["pwd"]	= (umap["encrypted"]:false) ?
-		    umap["pwd"]:"" :
-		    crypt_password (umap["pwd"]:"");
+		umap["password"]	= (umap["encrypted"]:false) ?
+		    umap["password"]:"" :
+		    crypt_password (umap["password"]:"");
 		if (haskey (umap, "encrypted"))
 		    umap	= remove (umap, "encrypted");
 		return umap;
@@ -466,7 +466,7 @@
 	    MapAny2XML ("repository", sourcemap, 1) + "\n";
     });
     foreach (map packagemap, KiwiConfig["packages"]:[], {
-	if (size (packagemap["opensusePattern"]:[]) == 0 &&
+	if (size (packagemap["namedCollection"]:[]) == 0 &&
 	    size (packagemap["package"]:[]) == 0)
 	{
 	    y2milestone ("no patterns/packages in %1", packagemap);

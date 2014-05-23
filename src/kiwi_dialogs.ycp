@@ -271,10 +271,10 @@
 	return;
     }
 
-    if (size (packages[package_set,"opensusePattern"]:[]) > 0)
+    if (size (packages[package_set,"namedCollection"]:[]) > 0)
 	// richtext header
 	pat     = Summary::AddHeader ("", _("Patterns"));
-    foreach (map patmap, packages[package_set,"opensusePattern"]:[], {
+    foreach (map patmap, packages[package_set,"namedCollection"]:[], {
 	pat	= Summary::AddListItem (pat, patmap["name"]:"");
     });
     if (size (packages[package_set,"package"]:[]) > 0)
@@ -309,7 +309,7 @@
 	    ProductCreator::max_size_mb	= 999 * 1024 * 1024;
 
 	map<string,any> ret_map	= runPackageSelector ("",
-	    maplist (map pat, sw_contents["opensusePattern"]:[],
+	    maplist (map pat, sw_contents["namedCollection"]:[],
 		``(pat["name"]:"")),
 	    maplist (map pat, sw_contents["package"]:[],
 		``(pat["name"]:"")),
@@ -319,7 +319,7 @@
 	);
 	if (ret_map["ui"]:nil == `cancel || ret_map["ui"]:nil == `failed)
 	    return nil;
-	sw_contents["opensusePattern"]	= maplist (string name,
+	sw_contents["namedCollection"]	= maplist (string name,
 	    ret_map["addons"]:[], ``($[ "name" : name]));
 	sw_contents["package"]	= maplist (string name,
 	    ret_map["packages"]:[], ``($[ "name" : name]));
@@ -902,10 +902,10 @@ Continue anyway?")))
 	UI::ChangeWidget (`id ("id"), `Value, user_map["id"]:"");
 	UI::ChangeWidget (`id (`gid), `Value, group_map["id"]:"");
 	UI::ChangeWidget (`id (`group), `Value, group_map["group"]:"");
-	if (user_map["pwd"]:"" != "")
+	if (user_map["password"]:"" != "")
 	{
-	    UI::ChangeWidget (`id (`pw1), `Value, user_map["pwd"]:"");
-	    UI::ChangeWidget (`id (`pw2), `Value, user_map["pwd"]:"");
+	    UI::ChangeWidget (`id (`pw1), `Value, user_map["password"]:"");
+	    UI::ChangeWidget (`id (`pw2), `Value, user_map["password"]:"");
 	}
 	// popup label
 	UI::ChangeWidget (`id (`label), `Value, _("Edit User"));
@@ -917,7 +917,7 @@ Continue anyway?")))
 	if (ret == `ok)
 	{
 	    string username = (string) UI::QueryWidget (`id (`username),`Value);
-	    string pwd	= (string) UI::QueryWidget (`id(`pw1), `Value);
+	    string password = (string) UI::QueryWidget (`id(`pw1), `Value);
 	    string new_group = (string) UI::QueryWidget (`id (`group),`Value);
 	    string gid = (string) UI::QueryWidget (`id (`gid),`Value);
 	    if (username == "")
@@ -927,7 +927,7 @@ Continue anyway?")))
 		ret     = `notnext;
 		continue;
 	    }
-	    if (pwd != UI::QueryWidget (`id(`pw2), `Value))
+	    if (password != UI::QueryWidget (`id(`pw2), `Value))
 	    {
 		// popup message
 		Report::Error (_("The passwords do not match.
@@ -937,8 +937,8 @@ Try again."));
 	    }
 	    // ok, now update the structures
 	    user_map	= $[
-		"pwd"		: pwd,
-		"encrypted"	: user_map["encrypted"]:false && pwd == user_map["pwd"]:"",
+		"password"		: password,
+		"encrypted"	: user_map["encrypted"]:false && password == user_map["password"]:"",
 		"name"		: username,
 	    ];
 	    foreach (string key, ["home", "realname", "id"], {
@@ -1312,7 +1312,7 @@ Going to detailed package selection and accepting the view without any further c
 	    Pkg::ResolvableNeutral ("", `package, true);
 	    Pkg::ResolvableNeutral ("", `pattern, true);
 
-	    foreach (map pat, pmap["opensusePattern"]:[], {
+	    foreach (map pat, pmap["namedCollection"]:[], {
 		Pkg::ResolvableInstall(pat["name"]:"", `pattern);
 	    });
 
@@ -1596,7 +1596,7 @@ directory."), out_dir));
 	    }
 	});
 	map sw_contents		= KiwiConfig["packages",index]:$[];
-	sw_contents["opensusePattern"]	= maplist (string name,
+	sw_contents["namedCollection"]	= maplist (string name,
 	    ProductCreator::Config["addons"]:[], ``($[ "name" : name]));
 	sw_contents["package"]	= maplist (string name,
 	    ProductCreator::Config["packages"]:[], ``($[ "name" : name]));
@@ -1680,7 +1680,7 @@ directory."), out_dir));
 	// ("sources" are already there...)
 	map sw_contents	= KiwiConfig["packages",0]:$[];
 	ProductCreator::Config["addons"]	= maplist (
-	    map pat, sw_contents["opensusePattern"]:[], ``(pat["name"]:""));
+	    map pat, sw_contents["namedCollection"]:[], ``(pat["name"]:""));
 	ProductCreator::Config["packages"]	= maplist (
 	    map pat, sw_contents["package"]:[], ``(pat["name"]:""));
 	ProductCreator::Config["taboo"]		= maplist (
