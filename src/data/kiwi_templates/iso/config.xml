@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<image schemaversion="5.2" name="kiwi-image-template">
+<image name="kiwi-image-template" schemaversion="5.8">
 	<description type="system">
 		<author/>
 		<contact/>
@@ -13,11 +13,10 @@
 		<type image="vmx" boot="vmxboot/suse-SLES11" filesystem="ext3" format="vmdk">
 			<size unit="M">2000</size>
 		</type>
-		<type image="usb" boot="usbboot/suse-SLES11" filesystem="ext3">
+		<type boot="vmxboot/suse-SLES11" filesystem="ext3" image="vmx" bootkernel="xenk" bootprofile="xen">
 			<size unit="M">2000</size>
-		</type>
-		<type boot="vmxboot/suse-SLES11" filesystem="ext3" image="vmx" bootkernel="xenk" bootprofile="xen">2000</type>
-		<type image="oem" boot="oemboot/suse-SLES11" filesystem="ext3" flags="unified">
+                </type>
+		<type image="oem" boot="oemboot/suse-SLES11" filesystem="ext3">
 			<size unit="M">2000</size>
 		</type>
 		<version>1.0.0</version>
@@ -27,11 +26,11 @@
 		<locale>en_US</locale>
 	</preferences>
 	<users group="users">
-		<user name="linux" pwd="" home="/home/linux" realname="Live-CD User"/>
-		<user name="root" pwd="" home="/root"/>
+		<user name="linux" password="" home="/home/linux" realname="Live-CD User"/>
+		<user name="root" password="" home="/root"/>
 	</users>
 	<packages type="image" patternType="plusRecommended">
-		<opensusePattern name="Minimal"/>
+		<namedCollection name="Minimal"/>
 	</packages>
 	<packages type="bootstrap">
 		<package name="filesystem"/>

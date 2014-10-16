@@ -85,9 +85,11 @@
 	}
     });
     map<string,string> methods	= $[
-	"unified"		: "unified",
 	"compressed"		: "compressed",
 	"clic"                  : "clic",
+        "clic_udf"              : "clic_udf",
+        "overlay"               : "overlay",
+        "seed"                  : "seed",
 	// combo box label
 	"none"			: _("None")
     ];
@@ -484,9 +486,6 @@ Continue anyway?")))
 	if (type == "bootstrap")
 	    // combo box label
 	    label	= _("Bootstrap");
-	else if (type == "xen")
-	    // combo box label
-	    label	= _("Xen Specific Packages");
 	else if (type == "testsuite")
 	    // combo box label
 	    label       = _("Testing");
@@ -1517,8 +1516,7 @@ directory."), out_dir));
 	// use local template if default dir does not exist (bug #289552)
 	if (!FileUtils::Exists (default_dir))
 	{
-	    default_dir = Directory::datadir+"/product-creator/kiwi_templates/";
-	    default_dir	= default_dir + (kiwi_task == "xen" ? "xen" : "iso");
+	    default_dir = Directory::datadir+"/product-creator/kiwi_templates/iso";
 	}
 	y2warning ("directory %1 is not available, using %2", kiwi_configuration, default_dir);
 	kiwi_configuration	= default_dir;
@@ -1662,8 +1660,7 @@ directory."), out_dir));
 	    if (default_dir == "")
 	    {
 		default_dir =
-		    Directory::datadir+"/product-creator/kiwi_templates/";
-		default_dir = default_dir + (kiwi_task== "xen" ? "xen" : "iso");
+		    Directory::datadir+"/product-creator/kiwi_templates/iso";
 	    }
 	    map<string,any> def_map = Kiwi::ReadConfigXML (default_dir);
 	    foreach (map typemap, (list<map>)def_map["preferences",0,"type"]:[],
