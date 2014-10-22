@@ -352,7 +352,7 @@
 
     // attributes of 'image' tag:
     ret["name"]		= image["name"]:"";
-    ret["schemaversion"]= image["schemaversion"]:"5.2";
+    ret["schemaversion"]= image["schemaversion"]:"5.8";
     if (haskey (image, "inherit"))
 	ret["inherit"]	= image["inherit"]:"";
 
@@ -429,7 +429,7 @@
     }
 
     string image_tag	= sformat ("<image name=\"%1\" schemaversion=\"%2\"%3>",
-	KiwiConfig["name"]:"", KiwiConfig["schemaversion"]:"5.2",
+	KiwiConfig["name"]:"", KiwiConfig["schemaversion"]:"5.8",
 	(KiwiConfig["inherit"]:"" == "" ?
 	    "" :
 	    sformat (" inherit=\"%1\"", KiwiConfig["inherit"]:"")
