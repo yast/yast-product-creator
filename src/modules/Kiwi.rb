@@ -391,7 +391,7 @@ module Yast
       Ops.set(
         ret,
         "schemaversion",
-        Ops.get_string(image, "schemaversion", "5.2")
+        Ops.get_string(image, "schemaversion", "6.2")
       )
       if Builtins.haskey(image, "inherit")
         Ops.set(ret, "inherit", Ops.get_string(image, "inherit", ""))
@@ -485,7 +485,7 @@ module Yast
       image_tag = Builtins.sformat(
         "<image name=\"%1\" schemaversion=\"%2\"%3>",
         Ops.get_string(_KiwiConfig, "name", ""),
-        Ops.get_string(_KiwiConfig, "schemaversion", "5.2"),
+        Ops.get_string(_KiwiConfig, "schemaversion", "6.2"),
         Ops.get_string(_KiwiConfig, "inherit", "") == "" ?
           "" :
           Builtins.sformat(
