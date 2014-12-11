@@ -1,23 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<image schemaversion="5.2" name="kiwi-image-template">
+<image name="kiwi-image-template" schemaversion="6.2">
 	<description type="system">
 		<author/>
 		<contact/>
 		<specification>Template for system image configuration</specification>
 	</description>
 	<preferences>
-		<type image="iso" primary="true" boot="isoboot/suse-11.4" bootprofile="default" bootkernel="desktop" flags="clic" hybrid="true">
+		<type image="iso" primary="true" boot="isoboot/suse-13.2" bootprofile="default" bootkernel="desktop" flags="clic" hybrid="true">
 			<size unit="M">3000</size>
 		</type>
-		<type image="vmx" boot="vmxboot/suse-11.4" filesystem="ext3" format="vmdk">
+		<type image="vmx" boot="vmxboot/suse-13.2" filesystem="ext3" format="vmdk">
 			<size unit="M">3000</size>
 		</type>
-		<type image="usb" boot="usbboot/suse-11.4" filesystem="ext3">
-			<size unit="M">3000</size>
-		</type>
-		<type boot="vmxboot/suse-11.1" filesystem="ext3" image="vmx" bootkernel="xenk" bootprofile="xen">3000</type>
-		<type image="oem" boot="oemboot/suse-11.4" filesystem="ext3" flags="unified">
+		<type image="oem" boot="oemboot/suse-13.2" filesystem="ext3">
 			<size unit="M">3000</size>
 			<oemconfig>
 				<oem-boot-title>USB</oem-boot-title>
@@ -26,21 +22,20 @@
 		</type>
 		<version>1.0.0</version>
 		<packagemanager>zypper</packagemanager>
-		<boot-theme>openSUSE</boot-theme>
 		<rpm-check-signatures>false</rpm-check-signatures>
 		<rpm-force>false</rpm-force>
 		<locale>en_US</locale>
 		<rpm-excludedocs>false</rpm-excludedocs>
 	</preferences>
 	<users group="users">
-		<user name="linux" pwd="" home="/home/linux" realname="Live-CD User"/>
-		<user name="root" pwd="" home="/root"/>
+		<user name="linux" password="" home="/home/linux" realname="Live-CD User"/>
+		<user name="root" password="" home="/root"/>
 	</users>
 	<repository type="rpm-md">
 		<source path="http://download.opensuse.org/repositories/openSUSE:/Factory:/Live/standard/"/>
 	</repository>
 	<packages type="image">
-		<opensusePattern name="Minimal"/>
+		<namedCollection name="Minimal"/>
 	</packages>
 	<packages type="bootstrap">
 		<package name="filesystem"/>
