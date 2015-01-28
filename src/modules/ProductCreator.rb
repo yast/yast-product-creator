@@ -2354,7 +2354,7 @@ module Yast
         )
       end
 
-      # initrd is a cpio.gz archive
+      # initrd is a cpio.xz archive
 
       parts = Builtins.splitstring(initrd_file, "/")
       if Ops.greater_than(Builtins.size(parts), 1)
@@ -2367,7 +2367,7 @@ module Yast
       Builtins.y2milestone("Uncompressing initrd: %1", initrd_file)
       ret = Exec(
         Builtins.sformat(
-          "cd '%1' && gunzip < '%2' > '%2.cpio'",
+          "cd '%1' && unxz < '%2' > '%2.cpio'",
           String.Quote(base),
           String.Quote(initrd_file)
         )
