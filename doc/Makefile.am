@@ -2,8 +2,6 @@
 # Makefile.am for devtools/devtools/skeletons/config/doc
 #
 
-SUBDIRS = autodocs
-
 htmldir = $(docdir)
 
 doc_DATA = README.expert
