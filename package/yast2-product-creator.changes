@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Mon Jun  6 07:25:59 UTC 2016 - igonzalezsosa@suse.com
+
+- Stop generating autodocs
+
+-------------------------------------------------------------------
 Thu Dec 11 08:52:49 CET 2014 - jsuchome@suse.cz
 
 - require latest version of kiwi-schema: 6.2 (bnc#909280)
