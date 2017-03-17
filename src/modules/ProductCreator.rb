@@ -34,6 +34,9 @@ module Yast
   class ProductCreatorClass < Module
     include Yast::Logger
 
+    # @return [Array<Integer>] Temporarily enabled repositories
+    attr_accessor :tmp_enabled
+
     def main
       Yast.import "UI"
       Yast.import "Pkg"
@@ -3799,7 +3802,6 @@ module Yast
     publish :variable => :ConfigFile, :type => "string"
     publish :variable => :gpg_passphrase, :type => "string"
     publish :variable => :AbortFunction, :type => "block <boolean>"
-    publish :variable => :tmp_enabled, :type => "list <integer>"
     publish :function => :SetPackageArch, :type => "boolean (string)"
     publish :function => :GetArch, :type => "string ()"
     publish :function => :GetPackageArch, :type => "string ()"
