@@ -1467,7 +1467,7 @@ module Yast
             result = nil
           end
         end
-      end until result == :cancel || result == :accept
+      end until result == :cancel || result == :accept || result == :next
 
       result = :next if result == :accept
 
