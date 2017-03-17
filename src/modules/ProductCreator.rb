@@ -126,6 +126,7 @@ module Yast
 
       # map additional products to "Addon" directory
       @product_map = {}
+
       ProductCreator()
     end
 
