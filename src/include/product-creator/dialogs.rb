@@ -800,7 +800,7 @@ module Yast
       # dialog caption
       caption = _("Source Selection")
 
-      restore_repos_state
+      ProductCreator.restore_repos_state
 
       SourceManager.ReadSources
       sources = fillSourceTable([], true, "")
@@ -1030,7 +1030,7 @@ module Yast
             # finish the target
             Pkg.TargetFinish
           else
-            enable_needed_repos(selected_items)
+            ProductCreator.enable_needed_repos(selected_items)
           end
 
           @going_back = false
@@ -2019,41 +2019,6 @@ module Yast
       Wizard.CloseDialog
 
       Convert.to_symbol(ret)
-    end
-
-    # Restore repositories state
-    #
-    # Undo changes introduced by #enabled_needed_repos.
-    #
-    # @see enable_needed_repos
-    def restore_repos_state
-      ProductCreator.Config.fetch("enabled", []).each do |src|
-        Builtins.y2milestone("Disabling repository #{src}")
-        Pkg.SourceSetEnabled(src, false)
-      end
-      ProductCreator.Config["enabled"] = []
-    end
-
-    # Enable needed repositories
-    #
-    # The idea is to make patterns/packages available during selection
-    # (bsc#1028661). The list of enabled repositories is stored at
-    # ProductCreator.Config.
-    #
-    # @param selected [Array<Integer>] Selected sources
-    # @see restore_repos_state
-    def enable_needed_repos(selected)
-      Builtins.y2milestone("selected items: %1", selected)
-      ProductCreator.Config["enabled"] = selected.each_with_object([]) do |src, list|
-        general_info = Pkg.SourceGeneralData(src)
-        list << src unless general_info["enabled"]
-      end
-
-      ProductCreator.Config["enabled"].each do |src|
-        Builtins.y2milestone("Enabling and refreshing repository #{src}")
-        Pkg.SourceSetEnabled(src, true)
-        Pkg.SourceRefreshNow(src)
-      end
     end
   end
 end
