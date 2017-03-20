@@ -32,6 +32,11 @@ require "yast"
 
 module Yast
   class ProductCreatorClass < Module
+    include Yast::Logger
+
+    # @return [Array<Integer>] Temporarily enabled repositories
+    attr_accessor :tmp_enabled
+
     def main
       Yast.import "UI"
       Yast.import "Pkg"
@@ -126,6 +131,10 @@ module Yast
 
       # map additional products to "Addon" directory
       @product_map = {}
+
+      # temporarily enabled repositories
+      @tmp_enabled = []
+
       ProductCreator()
     end
 
@@ -3727,6 +3736,40 @@ module Yast
       Builtins.y2milestone("Config: %1", @Config)
       @profile_parsed = true
       true
+    end
+
+    # Enable needed repositories
+    #
+    # The idea is to make patterns/packages available during selection
+    # (bsc#1028661). The list of enabled repositories is stored at
+    # ProductCreator.Config.
+    #
+    # @param selected [Array<Integer>] Selected sources
+    # @see restore_repos_state
+    def enable_needed_repos(selected)
+      self.tmp_enabled = selected.each_with_object([]) do |src, list|
+        general_info = Pkg.SourceGeneralData(src)
+        list << src unless general_info["enabled"]
+      end
+
+      tmp_enabled.each do |src|
+        log.info "Enabling and refreshing repository #{src}"
+        Pkg.SourceSetEnabled(src, true)
+        Pkg.SourceRefreshNow(src)
+      end
+    end
+
+    # Restore repositories state
+    #
+    # Undo changes introduced by #enabled_needed_repos.
+    #
+    # @see enable_needed_repos
+    def restore_repos_state
+      tmp_enabled.each do |src|
+        log.info "Disabling repository #{src}"
+        Pkg.SourceSetEnabled(src, false)
+      end
+      tmp_enabled.clear
     end
 
     # Constructor
