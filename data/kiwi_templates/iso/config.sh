@@ -51,8 +51,6 @@ cd /
 patch -p0 < /tmp/config.patch
 rm /tmp/config.patch
 
-insserv 
-
 rm -rf /var/cache/zypp/raw/*
 
 zypper addrepo -d http://download.opensuse.org/distribution/SL-OSS-factory/inst-source/ factory-oss
