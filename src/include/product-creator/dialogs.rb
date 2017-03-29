@@ -794,12 +794,13 @@ module Yast
       false
     end
 
-
     # Dialog for selecting the sources
     # @return [Symbol]
     def sourceDialog
       # dialog caption
       caption = _("Source Selection")
+
+      ProductCreator.restore_repos_state
 
       SourceManager.ReadSources
       sources = fillSourceTable([], true, "")
@@ -1028,6 +1029,8 @@ module Yast
 
             # finish the target
             Pkg.TargetFinish
+          else
+            ProductCreator.enable_needed_repos(selected_items)
           end
 
           @going_back = false
@@ -1464,7 +1467,7 @@ module Yast
             result = nil
           end
         end
-      end until result == :cancel || result == :accept
+      end until result == :cancel || result == :accept || result == :next
 
       result = :next if result == :accept
 
