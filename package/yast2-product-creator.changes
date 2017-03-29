@@ -1,4 +1,18 @@
 -------------------------------------------------------------------
+Wed Mar 29 07:09:03 UTC 2017 - mfilka@suse.com
+
+- bnc#1026027
+  - removed calls to insserv
+- 3.1.10
+
+-------------------------------------------------------------------
+Fri Mar 17 12:07:40 UTC 2017 - igonzalezsosa@suse.com
+
+- Fix patterns list initialization (bsc#1028661)
+- Fix 'Next' button behaviour in pattern selection
+- 3.1.9
+
+-------------------------------------------------------------------
 Mon Jun  6 07:25:59 UTC 2016 - igonzalezsosa@suse.com
 
 - Stop generating autodocs (fate#320356)
