@@ -28,3 +28,6 @@ Makefile.am.common
 tmp.*
 *.log
 *.ybc
+/.yardoc
+/coverage
+/doc/autodocs
