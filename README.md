@@ -1,5 +1,13 @@
-# YaST - The Product Creator Module #
+Obsoleted Module
+================
 
-[![Travis Build](https://travis-ci.org/yast/yast-product-creator.svg?branch=master)](https://travis-ci.org/yast/yast-product-creator)
-[![Jenkins Build](http://img.shields.io/jenkins/s/https/ci.opensuse.org/yast-product-creator-master.svg)](https://ci.opensuse.org/view/Yast/job/yast-product-creator-master/)
+**This module is obsoleted and is not developed anymore.**
 
+The Product Creator module was dropped, the functionality is available
+via kiwi, OBS or SUSE studio.
+
+
+GIT
+---
+
+If you want to see the last state check the [*master_old*](../master_old) branch.
