@@ -249,6 +249,8 @@ module Yast
     # Check for pending Abort press
     # @return true if pending abort
     def PollAbort
+      return false if Mode.commandline
+
       UI.PollInput == :abort
     end
 
@@ -3436,6 +3438,8 @@ module Yast
     end
 
     def ProgressDownload(percent, bps_avg, bps_current)
+      return true if Mode.commandline
+
       UI.PollInput != :abort
     end
 
