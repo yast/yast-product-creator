@@ -2114,6 +2114,10 @@ module Yast
             )
             prof = Builtins.mergestring(parts, "/")
 
+            # Do not merge defined profile settings with settings of the
+            # installed system. (bnc#1083259)
+            Profile.prepare = false
+
             saved = Profile.Save(prof)
             Builtins.y2milestone(
               "Modified profile saved to %1: %2",
