@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu Mar 15 09:59:53 CET 2018 - schubi@suse.de
+
+- Wrong AutoYaST settings: Do not merge defined profile settings
+  with settings of the installed system (bnc#1083259).
+- 3.2.2
+
+-------------------------------------------------------------------
 Thu Dec 14 14:10:25 UTC 2017 - lslezak@suse.cz
 
 - Fixed crash when creating an image from command line
