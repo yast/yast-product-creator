@@ -3647,16 +3647,6 @@ module Yast
               )
             )
         else
-          # TODO FIXME get datadir from the source
-          ret = ret &&
-            Exec(
-              Builtins.sformat(
-                "cd '%1/%2/%3' && /usr/bin/create_package_descr -x setup/descr/EXTRA_PROV -M 3",
-                String.Quote(basedir),
-                String.Quote(subdir),
-                String.Quote(datadir)
-              )
-            )
 
           # check if the metadata are gzipped
           compressed_meta = FileUtils.Exists(
@@ -3668,6 +3658,30 @@ module Yast
             )
           )
           Builtins.y2milestone("Compressed metadata: %1", compressed_meta)
+
+          # TODO FIXME get datadir from the source
+
+          # remove the translation files, they would get out of sync with the main data
+          # and confuse libzypp (bsc#1165247)
+          ret = ret &&
+            Exec(
+              Builtins.sformat(
+                "rm %1/%2/%3/setup/descr/packages.*",
+                String.Quote(basedir),
+                String.Quote(subdir),
+                String.Quote(datadir)
+              )
+            )
+
+          ret = ret &&
+            Exec(
+              Builtins.sformat(
+                "cd '%1/%2/%3' && /usr/bin/create_package_descr -x setup/descr/EXTRA_PROV -M 3",
+                String.Quote(basedir),
+                String.Quote(subdir),
+                String.Quote(datadir)
+              )
+            )
 
           if compressed_meta
             ret = ret &&
