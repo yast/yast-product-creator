@@ -29,6 +29,7 @@
 # Representation of the configuration of product-creator.
 # Input and output routines.
 require "yast"
+require "shellwords"
 
 module Yast
   class ProductCreatorClass < Module
@@ -3667,9 +3668,9 @@ module Yast
             Exec(
               Builtins.sformat(
                 "rm %1/%2/%3/setup/descr/packages.*",
-                String.Quote(basedir),
-                String.Quote(subdir),
-                String.Quote(datadir)
+                basedir.shellescape,
+                subdir.shellescape,
+                datadir.shellescape
               )
             )
 
