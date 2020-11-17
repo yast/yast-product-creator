@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon May 25 09:34:56 CEST 2020 - schubi@suse.de
+
+- Removing incompatible packages.<language>.gz files before
+  creating the image (bsc#1165247).
+- 3.2.3
+
+-------------------------------------------------------------------
 Thu Mar 15 09:59:53 CET 2018 - schubi@suse.de
 
 - Wrong AutoYaST settings: Do not merge defined profile settings
